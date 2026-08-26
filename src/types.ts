@@ -1,4 +1,4 @@
-import { extraerLetrasYNumeroDeValorPagar, formatearObjetoConPeriodo } from './utils/numberToWords';
+import { extraerLetrasYNumeroDeValorPagar, formatearObjetoConPeriodo, formatFechaAnioMesDia, formatFechaFiduciaria } from './utils/numberToWords';
 
 export type UserRole = 'super_admin' | 'secretaria_admin' | 'contratista';
 
@@ -590,26 +590,7 @@ export interface SoporteFiduciariaData {
 export const createDefaultFiduciariaData = (report?: ReportData): SoporteFiduciariaData => {
   const rep = report || initialMockData;
   const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(rep.valorPagar);
-
-  let fiduDia = '28';
-  if (rep.periodoHasta) {
-    const pParts = rep.periodoHasta.split('/');
-    if (pParts.length >= 3) {
-      fiduDia = pParts[0];
-    }
-  }
-
-  let fiduMes = 'febrero';
-  let fiduAno = '2026';
-  if (rep.fechaAplicacion) {
-    const parts = rep.fechaAplicacion.trim().split(' ');
-    if (parts.length > 0) {
-      fiduMes = parts[0].toLowerCase();
-      fiduAno = parts[parts.length - 1];
-    }
-  }
-
-  const fechaFiduciaria = `${fiduDia} de ${fiduMes} ${fiduAno}`;
+  const fechaFiduciaria = formatFechaFiduciaria(rep);
 
   return {
     reportId: rep.id,
@@ -646,9 +627,12 @@ export interface DeclaracionRentaData {
 }
 
 export const createDefaultDeclaracionRentaData = (report?: ReportData): DeclaracionRentaData => {
+  const rawDate = report?.periodoHasta || report?.fechaPresentacion || '2026-07-14';
+  const fechaFormatted = formatFechaAnioMesDia(rawDate);
+
   return {
     reportId: report?.id,
-    fecha: report?.fechaPresentacion || 'Quibdó, 14 de julio de 2026',
+    fecha: `Quibdó, ${fechaFormatted}`,
     senores: 'ALCALDIA\nCiudad.',
     nombresApellidos: report?.contratistaNombre || 'HAMINTON MENA MENA',
     cedula: report?.contratistaDocumento || '80.772.379',
@@ -706,12 +690,17 @@ export const createDefaultAutorizacionDesembolsoData = (report?: ReportData): Au
     rep?.fechaAplicacion,
     rep?.fechaInicio,
     rep?.fechaTerminacion,
-    rep?.fechaPresentacion
+    rep?.fechaPresentacion,
+    rep?.periodoDesde,
+    rep?.periodoHasta
   );
+
+  const rawExp = rep?.periodoHasta || rep?.fechaPresentacion || '2026-07-14';
+  const fechaExpedicion = formatFechaAnioMesDia(rawExp);
 
   return {
     reportId: rep?.id,
-    fechaExpedicion: rep?.fechaPresentacion || '15/07/2026',
+    fechaExpedicion: fechaExpedicion,
     consecutivoNro: rep?.informeNro || '1',
     nombre: rep?.contratistaNombre || 'HAMINTON MENA MENA',
     nitCc: rep?.contratistaDocumento || '80.772.379',

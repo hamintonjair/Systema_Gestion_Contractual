@@ -643,11 +643,12 @@ export default function CertificadoSupervisionDoc({
       </div>
 
       {/* DOCUMENTO OFICIAL EXACTO - Times New Roman */}
-      <div 
-        id="certificado-supervision-document"
-        className="w-full max-w-[850px] bg-white border-2 border-black p-4 sm:p-6 text-black print:p-2.5 print:border-2 print:border-black print:w-[205.9mm] print:h-[269.4mm] print:overflow-hidden print:mx-auto text-[10px] sm:text-[10.5px] leading-tight select-text"
-        style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }}
-      >
+      <div className="w-full max-w-full overflow-x-auto pb-4 flex justify-start sm:justify-center">
+        <div 
+          id="certificado-supervision-document"
+          className="min-w-[760px] max-w-[850px] w-full bg-white border-2 border-black p-4 sm:p-6 text-black shrink-0 print:p-2.5 print:border-2 print:border-black print:w-[205.9mm] print:h-[269.4mm] print:overflow-hidden print:mx-auto text-[10px] sm:text-[10.5px] leading-tight select-text"
+          style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }}
+        >
         <style>{`
           @media print {
             @page {
@@ -2143,6 +2144,7 @@ export default function CertificadoSupervisionDoc({
           </div>
         </div>
 
+        </div>
       </div>
     </div>
   );

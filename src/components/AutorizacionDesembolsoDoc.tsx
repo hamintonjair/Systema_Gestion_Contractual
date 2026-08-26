@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AutorizacionDesembolsoData, ReportData, createDefaultAutorizacionDesembolsoData } from '../types';
-import { extraerLetrasYNumeroDeValorPagar, formatearObjetoConPeriodo } from '../utils/numberToWords';
+import { extraerLetrasYNumeroDeValorPagar, formatearObjetoConPeriodo, formatFechaAnioMesDia } from '../utils/numberToWords';
 import { supabaseService } from '../services/supabaseService';
 import { Printer, Save, Check, Edit3, Sparkles } from 'lucide-react';
 import QuibdoLogo from './QuibdoLogo';
@@ -58,7 +58,7 @@ export default function AutorizacionDesembolsoDoc({
       return {
         ...baseData,
         reportId: reportData.id || baseData.reportId,
-        fechaExpedicion: reportData.fechaPresentacion || baseData.fechaExpedicion,
+        fechaExpedicion: formatFechaAnioMesDia(reportData.periodoHasta || reportData.fechaPresentacion) || baseData.fechaExpedicion,
         consecutivoNro: reportData.informeNro || baseData.consecutivoNro,
         nombre: reportData.contratistaNombre || baseData.nombre,
         nitCc: reportData.contratistaDocumento || baseData.nitCc,
@@ -122,7 +122,7 @@ export default function AutorizacionDesembolsoDoc({
         setFormData({
           ...baseData,
           reportId: reportData.id || baseData.reportId,
-          fechaExpedicion: reportData.fechaPresentacion || baseData.fechaExpedicion,
+          fechaExpedicion: formatFechaAnioMesDia(reportData.periodoHasta || reportData.fechaPresentacion) || baseData.fechaExpedicion,
           consecutivoNro: reportData.informeNro || baseData.consecutivoNro,
           nombre: reportData.contratistaNombre || baseData.nombre,
           nitCc: reportData.contratistaDocumento || baseData.nitCc,
@@ -391,16 +391,17 @@ export default function AutorizacionDesembolsoDoc({
       )}
 
       {/* CONTENIDO DEL DOCUMENTO */}
-      <div 
-        id="desembolso-document"
-        className="bg-white p-4 sm:p-6 shadow-md text-black transition-all scale-[0.85] sm:scale-100 origin-top print:scale-100 print:shadow-none print:p-0 print:m-0"
-        style={{
-          width: '21.59cm',
-          fontFamily: '"Times New Roman", Times, serif',
-          color: '#000000',
-          position: 'relative'
-        }}
-      >
+      <div className="w-full max-w-full overflow-x-auto pb-4 flex justify-start sm:justify-center">
+        <div 
+          id="desembolso-document"
+          className="bg-white p-3 sm:p-6 shadow-md text-black transition-all origin-top shrink-0 print:scale-100 print:shadow-none print:p-0 print:m-0"
+          style={{
+            width: '21.59cm',
+            fontFamily: '"Times New Roman", Times, serif',
+            color: '#000000',
+            position: 'relative'
+          }}
+        >
         {/* Contenedor Principal con borde perimetral grueso */}
         <div className="w-full text-[11px] leading-snug border-2 border-black font-serif">
           
@@ -955,5 +956,6 @@ export default function AutorizacionDesembolsoDoc({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

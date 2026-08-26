@@ -498,14 +498,15 @@ export default function SoporteFiduciariaDoc({
       </div>
 
       {/* DOCUMENTO SOPORTE IMPRESO */}
-      <div
-        id="soporte-fiduciaria-document"
-        className="w-full bg-white border-[1.5px] border-black shadow-md p-6 sm:p-10 text-black leading-normal select-text relative"
-        style={{
-          fontFamily: '"Courier New", Courier, monospace',
-          boxSizing: 'border-box',
-        }}
-      >
+      <div className="w-full max-w-full overflow-x-auto pb-4 flex justify-start sm:justify-center">
+        <div
+          id="soporte-fiduciaria-document"
+          className="min-w-[760px] max-w-[850px] w-full bg-white border-[1.5px] border-black shadow-md p-4 sm:p-10 text-black leading-normal select-text relative shrink-0"
+          style={{
+            fontFamily: '"Courier New", Courier, monospace',
+            boxSizing: 'border-box',
+          }}
+        >
         {/* Cabecera / Header */}
         <div className="relative mb-6 pt-2 h-[120px]">
           {/* Logo Fiduprevisora */}
@@ -762,6 +763,7 @@ export default function SoporteFiduciariaDoc({
           <div></div>
         </div>
 
+        </div>
       </div>
     </div>
   );

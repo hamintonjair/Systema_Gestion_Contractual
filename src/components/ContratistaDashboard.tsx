@@ -1293,16 +1293,16 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
             {/* Selector de Informes radicados para generar / ver su certificado */}
             {reportsList.length > 0 && (
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-bold text-slate-700">Seleccionar Informe para Certificado:</span>
+              <div className="p-3 sm:p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full max-w-full overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs w-full sm:w-auto min-w-0">
+                  <span className="font-bold text-slate-700 shrink-0">Seleccionar Informe para Certificado:</span>
                   <select
                     value={(selectedCertReport || reportsList[0])?.informeNro}
                     onChange={(e) => {
                       const found = reportsList.find(r => String(r.informeNro) === e.target.value);
                       if (found) setSelectedCertReport(found);
                     }}
-                    className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    className="w-full sm:w-auto max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none truncate"
                   >
                     {reportsList.map(r => (
                       <option key={r.id || r.informeNro} value={r.informeNro}>
@@ -1312,7 +1312,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                   </select>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                     (selectedCertReport || reportsList[0])?.estado === 'Aprobado'
                       ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
@@ -1331,7 +1331,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           </div>
 
           {/* DOCUMENTO OFICIAL CERTIFICADO DE SUPERVISIÓN */}
-          <div className="bg-slate-100 p-3 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center">
+          <div className="bg-slate-100 p-2 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center w-full max-w-full overflow-x-auto scrollbar-thin">
             <CertificadoSupervisionDoc
               reportData={selectedCertReport || reportsList[0] || initialMockData}
               storageKey={`cert_data_${user.documentoIdentidad || ''}_${(selectedCertReport || reportsList[0])?.informeNro || '1'}`}
@@ -1369,16 +1369,16 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
             {/* Selector de Informes radicados para generar / ver su soporte fiduciario */}
             {reportsList.length > 0 && (
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-bold text-slate-700">Seleccionar Informe para Soporte:</span>
+              <div className="p-3 sm:p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full max-w-full overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs w-full sm:w-auto min-w-0">
+                  <span className="font-bold text-slate-700 shrink-0">Seleccionar Informe para Soporte:</span>
                   <select
                     value={(selectedFidReport || reportsList[0])?.informeNro}
                     onChange={(e) => {
                       const found = reportsList.find(r => String(r.informeNro) === e.target.value);
                       if (found) setSelectedFidReport(found);
                     }}
-                    className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    className="w-full sm:w-auto max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none truncate"
                   >
                     {reportsList.map(r => (
                       <option key={r.id || r.informeNro} value={r.informeNro}>
@@ -1388,7 +1388,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                   </select>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                     (selectedFidReport || reportsList[0])?.estado === 'Aprobado'
                       ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
@@ -1407,7 +1407,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           </div>
 
           {/* DOCUMENTO OFICIAL SOPORTE FIDUCIARIA */}
-          <div className="bg-slate-100 p-3 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center">
+          <div className="bg-slate-100 p-2 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center w-full max-w-full overflow-x-auto scrollbar-thin">
             <SoporteFiduciariaDoc
               reportData={selectedFidReport || reportsList[0] || initialMockData}
               storageKey={`fid_data_${user.documentoIdentidad || ''}_${(selectedFidReport || reportsList[0])?.informeNro || '1'}`}
@@ -1487,16 +1487,16 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
             {/* Selector de Informes radicados para generar / ver su declaracion */}
             {reportsList.length > 0 && (
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-bold text-slate-700">Seleccionar Informe para Soporte:</span>
+              <div className="p-3 sm:p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full max-w-full overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs w-full sm:w-auto min-w-0">
+                  <span className="font-bold text-slate-700 shrink-0">Seleccionar Informe para Soporte:</span>
                   <select
                     value={(selectedJuramentoReport || reportsList[0])?.informeNro}
                     onChange={(e) => {
                       const found = reportsList.find(r => String(r.informeNro) === e.target.value);
                       if (found) setSelectedJuramentoReport(found);
                     }}
-                    className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    className="w-full sm:w-auto max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none truncate"
                   >
                     {reportsList.map(r => (
                       <option key={r.id || r.informeNro} value={r.informeNro}>
@@ -1505,7 +1505,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                     ))}
                   </select>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {(selectedJuramentoReport || reportsList[0])?.estado === 'Aprobado' 
                     ? (
                       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200">
@@ -1525,7 +1525,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           </div>
 
           {/* DOCUMENTO OFICIAL DECLARACIÓN RENTA */}
-          <div className="bg-slate-100 p-3 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center">
+          <div className="bg-slate-100 p-2 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center w-full max-w-full overflow-x-auto scrollbar-thin">
             <DeclaracionRentaDoc
               reportData={selectedJuramentoReport || reportsList[0] || initialMockData}
               storageKey={`dec_renta_${user.documentoIdentidad || ''}_${(selectedJuramentoReport || reportsList[0])?.informeNro || '1'}`}
@@ -1563,16 +1563,16 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
             {/* Selector de Informes radicados para generar / ver su desembolso */}
             {reportsList.length > 0 && (
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-bold text-slate-700">Seleccionar Informe para Desembolso:</span>
+              <div className="p-3 sm:p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full max-w-full overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs w-full sm:w-auto min-w-0">
+                  <span className="font-bold text-slate-700 shrink-0">Seleccionar Informe para Desembolso:</span>
                   <select
                     value={(selectedDesembolsoReport || reportsList[0])?.informeNro}
                     onChange={(e) => {
                       const found = reportsList.find(r => String(r.informeNro) === e.target.value);
                       if (found) setSelectedDesembolsoReport(found);
                     }}
-                    className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    className="w-full sm:w-auto max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none truncate"
                   >
                     {reportsList.map(r => (
                       <option key={r.id || r.informeNro} value={r.informeNro}>
@@ -1581,7 +1581,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                     ))}
                   </select>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {(selectedDesembolsoReport || reportsList[0])?.estado === 'Aprobado' 
                     ? (
                       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200">
@@ -1601,7 +1601,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           </div>
 
           {/* DOCUMENTO OFICIAL AUTORIZACION DESEMBOLSO */}
-          <div className="bg-slate-100 p-3 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center">
+          <div className="bg-slate-100 p-2 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center w-full max-w-full overflow-x-auto scrollbar-thin">
             <AutorizacionDesembolsoDoc
               reportData={selectedDesembolsoReport || reportsList[0] || initialMockData}
               storageKey={`desembolso_${user.documentoIdentidad || ''}_${(selectedDesembolsoReport || reportsList[0])?.informeNro || '1'}`}

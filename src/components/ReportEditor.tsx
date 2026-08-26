@@ -197,7 +197,7 @@ export default function ReportEditor({
       id: `obs-${Date.now()}`,
       descripcion: '',
       actividades: '',
-      soportes: 'Planilla de seguridad social, informes, actas, registros fotográficos.'
+      soportes: 'Anexo fotográfico'
     };
     handleChange('obligaciones', [...data.obligaciones, newObs]);
   };

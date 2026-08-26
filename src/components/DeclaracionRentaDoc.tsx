@@ -53,6 +53,7 @@ export default function DeclaracionRentaDoc({
       setFormData({
         ...baseData,
         reportId: reportData?.id || baseData.reportId,
+        fecha: reportData ? createDefaultDeclaracionRentaData(reportData).fecha : baseData.fecha,
       });
     };
     loadData();
@@ -293,18 +294,19 @@ export default function DeclaracionRentaDoc({
       )}
 
       {/* DOCUMENT PAGE */}
-      <div 
-        id="declaracion-renta-document"
-        className="bg-white shadow-xl origin-top transition-transform duration-300 scale-[0.85] sm:scale-100"
-        style={{
-          width: '21.59cm',
-          minHeight: '27.94cm', // Letter size
-          padding: '2.54cm', // 1 inch margins approx
-          fontFamily: 'Arial, sans-serif',
-          color: '#000000',
-          position: 'relative'
-        }}
-      >
+      <div className="w-full max-w-full overflow-x-auto pb-4 flex justify-start sm:justify-center">
+        <div 
+          id="declaracion-renta-document"
+          className="bg-white shadow-xl origin-top transition-transform duration-300 shrink-0"
+          style={{
+            width: '21.59cm',
+            minHeight: '27.94cm', // Letter size
+            padding: '2.54cm', // 1 inch margins approx
+            fontFamily: 'Arial, sans-serif',
+            color: '#000000',
+            position: 'relative'
+          }}
+        >
         <div className="text-[14px] leading-relaxed relative">
           
           <div className="mb-6">
@@ -451,5 +453,6 @@ export default function DeclaracionRentaDoc({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

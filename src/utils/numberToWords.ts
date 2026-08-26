@@ -222,13 +222,123 @@ const NOMBRES_MESES_ESP = [
 ];
 
 /**
+ * Convierte cualquier fecha a formato 'YYYY-MM-DD' (año-mes-día)
+ */
+export function formatFechaAnioMesDia(rawDate?: string): string {
+  if (!rawDate) return '2026-01-14';
+  const str = rawDate.trim();
+
+  // Si ya es YYYY-MM-DD
+  if (/^20\d{2}-\d{2}-\d{2}$/.test(str)) {
+    return str;
+  }
+
+  // Si es DD/MM/YYYY o DD-MM-YYYY
+  const matchDMY = str.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2}|\d{2})$/);
+  if (matchDMY) {
+    const day = matchDMY[1].padStart(2, '0');
+    const month = matchDMY[2].padStart(2, '0');
+    const year = matchDMY[3].length === 2 ? `20${matchDMY[3]}` : matchDMY[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  // Si es texto tipo "14 de julio de 2026" o "Quibdó, 14 de julio de 2026"
+  const matchText = str.match(/(\d{1,2})\s+de\s+([a-zA-ZA-Za-zA-ZáéíóúÁÉÍÓÚ]+)\s+de\s+(20\d{2})/i);
+  if (matchText) {
+    const day = matchText[1].padStart(2, '0');
+    const monthName = matchText[2].toLowerCase();
+    const year = matchText[3];
+    const monthMap: Record<string, string> = {
+      enero: '01', febrero: '02', marzo: '03', abril: '04',
+      mayo: '05', junio: '06', julio: '07', agosto: '08',
+      septiembre: '09', octubre: '10', noviembre: '11', diciembre: '12'
+    };
+    const monthNum = monthMap[monthName] || '01';
+    return `${year}-${monthNum}-${day}`;
+  }
+
+  // Partes separadas por / o -
+  const parts = str.split(/[\/-]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    } else {
+      const yr = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+      return `${yr}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+
+  return str;
+}
+
+/**
+ * Formatea la fecha para el Soporte Fiduciaria tomando estrictamente SOLO EL DÍA
+ * del campo "Período Hasta" (ej. "14 de julio de 2026").
+ */
+export function formatFechaFiduciaria(rep?: any): string {
+  if (!rep) return '14 de julio de 2026';
+  let fiduDia = '14';
+  let fiduMes = 'julio';
+  let fiduAno = '2026';
+
+  // Extraer el DÍA de periodoHasta obligatoriamente
+  if (rep.periodoHasta) {
+    const pTrim = rep.periodoHasta.trim();
+    const parts = pTrim.split(/[\/-]/);
+    if (parts.length >= 3) {
+      if (parts[0].length === 4) {
+        fiduDia = parseInt(parts[2], 10).toString();
+      } else {
+        fiduDia = parseInt(parts[0], 10).toString();
+      }
+    } else {
+      const match = pTrim.match(/^(\d{1,2})/);
+      if (match) fiduDia = parseInt(match[1], 10).toString();
+    }
+  } else if (rep.fechaPresentacion) {
+    const parts = rep.fechaPresentacion.trim().split(/[\/-]/);
+    if (parts.length >= 3) {
+      if (parts[0].length === 4) fiduDia = parseInt(parts[2], 10).toString();
+      else fiduDia = parseInt(parts[0], 10).toString();
+    }
+  }
+
+  if (rep.fechaAplicacion) {
+    const parts = rep.fechaAplicacion.trim().split(/\s+/);
+    if (parts.length > 0) {
+      fiduMes = parts[0].toLowerCase();
+      const lastPart = parts[parts.length - 1];
+      if (/^20\d{2}$/.test(lastPart)) {
+        fiduAno = lastPart;
+      }
+    }
+  } else if (rep.periodoHasta) {
+    const parts = rep.periodoHasta.trim().split(/[\/-]/);
+    if (parts.length >= 3) {
+      let mIdx = 0;
+      if (parts[0].length === 4) {
+        mIdx = parseInt(parts[1], 10) - 1;
+        fiduAno = parts[0];
+      } else {
+        mIdx = parseInt(parts[1], 10) - 1;
+        fiduAno = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+      }
+      if (mIdx >= 0 && mIdx < NOMBRES_MESES_ESP.length) {
+        fiduMes = NOMBRES_MESES_ESP[mIdx].toLowerCase();
+      }
+    }
+  }
+
+  return `${fiduDia} de ${fiduMes} de ${fiduAno}`;
+}
+
+/**
  * Genera la cláusula de periodo para la autorización de desembolso:
  * CORRESPONDIENTE AL PERIODO DEL XX DE XXX AL XX DE XXX XXXX
  * 
- * - Días: Obtenidos directamente de fechaInicio (día inicial) y fechaTerminacion (día final).
- * - Meses: Obtenidos de fechaAplicacion, periodoDesde / periodoHasta o fechaInicio / fechaTerminacion.
- *   Si el día de inicio es mayor al día de fin (ej: 15 al 14), abarca el mes anterior al mes actual (ej: 15 DE ENERO AL 14 DE FEBRERO).
- * - Año: 4 dígitos (ej: 2026).
+ * - Días: Obtenidos prioritariamente de periodoDesde y periodoHasta.
+ * - Meses y Año: Obtenidos de periodoHasta / periodoDesde / fechaAplicacion.
+ *   Año corregido a 4 dígitos válidos (ej: 2026).
  */
 export function generarTextoPeriodoDesembolso(
   fechaAplicacion?: string,
@@ -238,94 +348,88 @@ export function generarTextoPeriodoDesembolso(
   periodoDesde?: string,
   periodoHasta?: string
 ): string {
-  // 1. Extraer día de inicio SOLO de fechaInicio
-  let diaInicio = '01';
-  if (fechaInicio) {
-    const cleanIni = fechaInicio.trim();
-    const matchDia = cleanIni.match(/^(\d{1,2})/) || cleanIni.match(/(\d{1,2})/);
-    if (matchDia) {
-      diaInicio = matchDia[1].padStart(2, '0');
+  const parseDetails = (str?: string) => {
+    if (!str) return null;
+    const s = str.trim();
+
+    const matchDMY = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2}|\d{2})$/);
+    if (matchDMY) {
+      const day = matchDMY[1].padStart(2, '0');
+      const monthIdx = parseInt(matchDMY[2], 10) - 1;
+      const year = matchDMY[3].length === 2 ? `20${matchDMY[3]}` : matchDMY[3];
+      return { day, monthIdx, year };
     }
-  } else if (periodoDesde) {
-    const matchDia = periodoDesde.trim().match(/^(\d{1,2})/);
-    if (matchDia) diaInicio = matchDia[1].padStart(2, '0');
-  }
 
-  // 2. Extraer día de fin SOLO de fechaTerminacion
-  let diaFin = '31';
-  if (fechaTerminacion) {
-    const cleanFin = fechaTerminacion.trim();
-    const matchDia = cleanFin.match(/^(\d{1,2})/) || cleanFin.match(/(\d{1,2})/);
-    if (matchDia) {
-      diaFin = matchDia[1].padStart(2, '0');
+    const matchYMD = s.match(/^(20\d{2})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+    if (matchYMD) {
+      const year = matchYMD[1];
+      const monthIdx = parseInt(matchYMD[2], 10) - 1;
+      const day = matchYMD[3].padStart(2, '0');
+      return { day, monthIdx, year };
     }
-  } else if (periodoHasta) {
-    const matchDia = periodoHasta.trim().match(/^(\d{1,2})/);
-    if (matchDia) diaFin = matchDia[1].padStart(2, '0');
-  }
 
-  // 3. Extraer mes y año de periodoDesde / periodoHasta o fechaAplicacion
-  let mesAppIdx: number | null = null;
-  let anioApp = '2026';
+    const matchDay = s.match(/^(\d{1,2})/);
+    let day = matchDay ? matchDay[1].padStart(2, '0') : null;
 
-  const buscarMesEnTexto = (txt?: string) => {
-    if (!txt) return;
-    const upper = txt.toUpperCase().trim();
+    let monthIdx: number | null = null;
+    const upper = s.toUpperCase();
     for (let i = 0; i < NOMBRES_MESES_ESP.length; i++) {
       if (upper.includes(NOMBRES_MESES_ESP[i])) {
-        mesAppIdx = i;
+        monthIdx = i;
         break;
       }
     }
-    const matchAnio = upper.match(/20\d{2}/);
-    if (matchAnio) {
-      anioApp = matchAnio[0];
+
+    let year: string | null = null;
+    const matchYr = s.match(/\b(202\d|2030)\b/);
+    if (matchYr) {
+      year = matchYr[1];
     }
+
+    return { day, monthIdx, year };
   };
 
-  buscarMesEnTexto(fechaAplicacion);
+  const pDesde = parseDetails(periodoDesde);
+  const pHasta = parseDetails(periodoHasta);
+  const fIni = parseDetails(fechaInicio);
+  const fTer = parseDetails(fechaTerminacion);
+  const fApp = parseDetails(fechaAplicacion);
 
-  // Si no se encontró el mes en fechaAplicacion, intentar con periodoHasta o periodoDesde
-  let mesInicioIdx: number | null = null;
-  let mesFinIdx: number | null = null;
+  // Día Inicio: prioritario periodoDesde, luego fechaInicio
+  const diaInicio = pDesde?.day || fIni?.day || '01';
 
-  if (periodoDesde) {
-    const m = periodoDesde.match(/\d{1,2}[/-](\d{1,2})[/-](20\d{2}|\d{2})/);
-    if (m) {
-      mesInicioIdx = parseInt(m[1], 10) - 1;
-      anioApp = m[2].length === 2 ? `20${m[2]}` : m[2];
+  // Día Fin: prioritario periodoHasta, luego fechaTerminacion
+  const diaFin = pHasta?.day || fTer?.day || '31';
+
+  // Año: prioritario periodoHasta -> periodoDesde -> fechaAplicacion -> fechaTerminacion -> '2026'
+  let anio = pHasta?.year || pDesde?.year || fApp?.year || fTer?.year || fIni?.year || '2026';
+  if (parseInt(anio, 10) > 2030) {
+    anio = '2026';
+  }
+
+  // Meses
+  let mesInicioIdx = pDesde?.monthIdx ?? fIni?.monthIdx ?? fApp?.monthIdx;
+  let mesFinIdx = pHasta?.monthIdx ?? fTer?.monthIdx ?? fApp?.monthIdx;
+
+  if (mesInicioIdx === undefined || mesInicioIdx === null) {
+    mesInicioIdx = fApp?.monthIdx ?? 0;
+  }
+  if (mesFinIdx === undefined || mesFinIdx === null) {
+    mesFinIdx = mesInicioIdx;
+  }
+
+  if (pDesde?.monthIdx === undefined && pHasta?.monthIdx === undefined) {
+    const dIniNum = parseInt(diaInicio, 10);
+    const dFinNum = parseInt(diaFin, 10);
+    if (dIniNum > dFinNum) {
+      mesInicioIdx = (mesFinIdx - 1 + 12) % 12;
     }
   }
 
-  if (periodoHasta) {
-    const m = periodoHasta.match(/\d{1,2}[/-](\d{1,2})[/-](20\d{2}|\d{2})/);
-    if (m) {
-      mesFinIdx = parseInt(m[1], 10) - 1;
-      anioApp = m[2].length === 2 ? `20${m[2]}` : m[2];
-    }
-  }
+  const mesInicioNombre = NOMBRES_MESES_ESP[mesInicioIdx ?? 0] || 'ENERO';
+  const mesFinNombre = NOMBRES_MESES_ESP[mesFinIdx ?? 0] || 'ENERO';
 
-  if (mesAppIdx === null) {
-    mesAppIdx = mesFinIdx !== null ? mesFinIdx : (mesInicioIdx !== null ? mesInicioIdx : 6); // default Julio
-  }
-
-  // 4. Calcular nombres de mes para inicio y fin
-  let mesInicioNombre = NOMBRES_MESES_ESP[mesInicioIdx !== null ? mesInicioIdx : mesAppIdx];
-  let mesFinNombre = NOMBRES_MESES_ESP[mesFinIdx !== null ? mesFinIdx : mesAppIdx];
-
-  const numDiaIni = parseInt(diaInicio, 10);
-  const numDiaFin = parseInt(diaFin, 10);
-
-  // Si no hay meses definidos explicitamente en periodoDesde/Hasta, y el dia inicio > dia fin, asumir mes anterior
-  if (mesInicioIdx === null && mesFinIdx === null) {
-    if (numDiaIni > numDiaFin) {
-      const prevMonthIdx = (mesAppIdx - 1 + 12) % 12;
-      mesInicioNombre = NOMBRES_MESES_ESP[prevMonthIdx];
-      mesFinNombre = NOMBRES_MESES_ESP[mesAppIdx];
-    }
-  }
-
-  return `CORRESPONDIENTE AL PERIODO DEL ${diaInicio} DE ${mesInicioNombre} AL ${diaFin} DE ${mesFinNombre} ${anioApp}`;
+  return `CORRESPONDIENTE AL PERIODO DEL ${diaInicio} DE ${mesInicioNombre} AL ${diaFin} DE ${mesFinNombre} ${anio}`;
 }
 
 /**
