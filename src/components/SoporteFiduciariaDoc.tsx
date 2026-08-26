@@ -170,7 +170,7 @@ export default function SoporteFiduciariaDoc({
         outline: none;
         box-shadow: none;
         color: #000000;
-        font-weight: bold;
+        font-weight: normal;
         font-family: "Courier New", Courier, monospace;
         padding: 0 2px 2px 2px;
         margin: 0;
@@ -198,7 +198,7 @@ export default function SoporteFiduciariaDoc({
         outline: none;
         box-shadow: none;
         color: #000000;
-        font-weight: bold;
+        font-weight: normal;
         font-family: "Courier New", Courier, monospace;
         padding: 2px;
         margin: 0;
@@ -566,10 +566,10 @@ export default function SoporteFiduciariaDoc({
                   value={formData.docSoporteNro || ''}
                   placeholder=""
                   onChange={(e) => handleFieldChange('docSoporteNro', e.target.value)}
-                  className="w-full h-full text-center font-bold text-[12px] bg-amber-50 text-amber-950 rounded-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
+                  className="w-full h-full text-center font-normal text-[12px] bg-amber-50 text-amber-950 rounded-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
                 />
               ) : (
-                <span className="font-bold text-[12px] text-black font-mono">
+                <span className="font-normal text-[12px] text-black font-mono">
                   {formData.docSoporteNro || ''}
                 </span>
               )}
@@ -582,87 +582,87 @@ export default function SoporteFiduciariaDoc({
           
           {/* Ciudad y Fecha */}
           <div className="flex flex-row items-end pr-[32%]">
-             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">Ciudad y Fecha:</div>
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono font-normal">Ciudad y Fecha:</div>
              <div className="flex-grow border-b-[1.5px] border-black flex flex-row items-end pb-0 leading-none">
                <div className="w-[45%] text-center font-mono">
                  {isEditing ? (
-                   <input type="text" value={formData.ciudad} onChange={(e) => handleFieldChange('ciudad', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
-                 ) : <span className="block pb-0 leading-none font-mono font-bold">{formData.ciudad}</span>}
+                   <input type="text" value={formData.ciudad} onChange={(e) => handleFieldChange('ciudad', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none font-mono font-normal" />
+                 ) : <span className="block pb-0 leading-none font-mono font-normal">{formData.ciudad}</span>}
                </div>
-               <div className="w-[10%] text-center text-black font-bold font-mono">|</div>
+               <div className="w-[10%] text-center text-black font-normal font-mono">|</div>
                <div className="w-[45%] text-center font-mono">
                  {isEditing ? (
-                   <input type="text" value={formData.fecha} onChange={(e) => handleFieldChange('fecha', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
-                 ) : <span className="block pb-0 leading-none font-mono font-bold">{formData.fecha}</span>}
+                   <input type="text" value={formData.fecha} onChange={(e) => handleFieldChange('fecha', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none font-mono font-normal" />
+                 ) : <span className="block pb-0 leading-none font-mono font-normal">{formData.fecha}</span>}
                </div>
              </div>
           </div>
 
           {/* Nombres y Apellidos */}
           <div className="flex flex-row items-end pr-[32%]">
-             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">Nombres y Apellidos:</div>
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono font-normal">Nombres y Apellidos:</div>
              <div className="flex-grow border-b-[1.5px] border-black text-center pb-0 leading-none">
                 {isEditing ? (
-                  <input type="text" value={formData.nombresApellidos} onChange={(e) => handleFieldChange('nombresApellidos', e.target.value)} className="w-full text-center uppercase bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
-                ) : <span className="block pb-0 leading-none uppercase font-mono font-bold">{formData.nombresApellidos}</span>}
+                  <input type="text" value={formData.nombresApellidos} onChange={(e) => handleFieldChange('nombresApellidos', e.target.value)} className="w-full text-center uppercase bg-amber-50 outline-none pb-0 leading-none font-mono font-normal" />
+                ) : <span className="block pb-0 leading-none uppercase font-mono font-normal">{formData.nombresApellidos}</span>}
              </div>
           </div>
 
           {/* Cédula */}
           <div className="flex flex-row items-end pr-[32%]">
-             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">N° Cédula de Ciudadanía:</div>
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono font-normal">N° Cédula de Ciudadanía:</div>
              <div className="flex-grow border-b-[1.5px] border-black text-right pr-4 pb-0 leading-none">
                 {isEditing ? (
-                  <input type="text" value={formData.cedula} onChange={(e) => handleFieldChange('cedula', e.target.value)} className="w-full text-right pr-4 bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
-                ) : <span className="block pb-0 leading-none font-mono font-bold pr-4">{formData.cedula}</span>}
+                  <input type="text" value={formData.cedula} onChange={(e) => handleFieldChange('cedula', e.target.value)} className="w-full text-right pr-4 bg-amber-50 outline-none pb-0 leading-none font-mono font-normal" />
+                ) : <span className="block pb-0 leading-none font-mono font-normal pr-4">{formData.cedula}</span>}
              </div>
           </div>
 
           {/* Dirección */}
           <div className="flex flex-row items-end pr-[32%]">
-             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">Dirección:</div>
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono font-normal">Dirección:</div>
              <div className="flex-grow border-b-[1.5px] border-black text-center uppercase pb-0 leading-none">
                 {isEditing ? (
-                  <input type="text" value={formData.direccion} onChange={(e) => handleFieldChange('direccion', e.target.value)} className="w-full text-center uppercase bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
-                ) : <span className="block pb-0 leading-none uppercase font-mono font-bold">{formData.direccion}</span>}
+                  <input type="text" value={formData.direccion} onChange={(e) => handleFieldChange('direccion', e.target.value)} className="w-full text-center uppercase bg-amber-50 outline-none pb-0 leading-none font-mono font-normal" />
+                ) : <span className="block pb-0 leading-none uppercase font-mono font-normal">{formData.direccion}</span>}
              </div>
           </div>
 
           {/* Teléfono */}
           <div className="flex flex-row items-end pr-[32%]">
-             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">Teléfono:</div>
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono font-normal">Teléfono:</div>
              <div className="flex-grow border-b-[1.5px] border-black text-center pb-0 leading-none">
                 {isEditing ? (
-                 <input type="text" value={formData.telefono} onChange={(e) => handleFieldChange('telefono', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
-               ) : <span className="block pb-0 leading-none font-mono font-bold">{formData.telefono}</span>}
+                 <input type="text" value={formData.telefono} onChange={(e) => handleFieldChange('telefono', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none font-mono font-normal" />
+               ) : <span className="block pb-0 leading-none font-mono font-normal">{formData.telefono}</span>}
              </div>
           </div>
 
           {/* La suma total */}
           <div className="flex flex-row items-end pr-[32%]">
-             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">La suma total:</div>
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono font-normal">La suma total:</div>
              <div className="flex-grow border-b-[1.5px] border-black text-right pr-4 pb-0 leading-none">
                 {isEditing ? (
-                 <input type="text" value={formData.sumaTotal} onChange={(e) => handleFieldChange('sumaTotal', e.target.value)} className="w-full text-right pr-4 bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
-               ) : <span className="block pb-0 leading-none font-mono font-bold pr-4">{formData.sumaTotal}</span>}
+                 <input type="text" value={formData.sumaTotal} onChange={(e) => handleFieldChange('sumaTotal', e.target.value)} className="w-full text-right pr-4 bg-amber-50 outline-none pb-0 leading-none font-mono font-normal" />
+               ) : <span className="block pb-0 leading-none font-mono font-normal pr-4">{formData.sumaTotal}</span>}
              </div>
           </div>
 
           {/* Valor en letras (Toma todo el ancho disponible) */}
           <div className="flex flex-row items-end mt-1.5 w-full">
-             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">(Valor en letras)</div>
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono font-normal">(Valor en letras)</div>
              <div className="flex-grow border-b-[1.5px] border-black text-center uppercase pb-0 leading-none flex flex-col justify-end">
                 {isEditing ? (
-                  <textarea rows={2} value={formData.valorLetras} onChange={(e) => handleFieldChange('valorLetras', e.target.value)} className="w-full text-center bg-amber-50 outline-none resize-none overflow-hidden uppercase pb-0 leading-tight font-mono font-bold" />
+                  <textarea rows={2} value={formData.valorLetras} onChange={(e) => handleFieldChange('valorLetras', e.target.value)} className="w-full text-center bg-amber-50 outline-none resize-none overflow-hidden uppercase pb-0 leading-tight font-mono font-normal" />
                 ) : (
-                  <span className="block w-full leading-tight pb-0.5 uppercase font-mono font-bold text-[11px] sm:text-[11.5px]">{formData.valorLetras}</span>
+                  <span className="block w-full leading-tight pb-0.5 uppercase font-mono font-normal text-[11px] sm:text-[11.5px]">{formData.valorLetras}</span>
                 )}
              </div>
           </div>
         </div>
 
         {/* Texto Legal */}
-        <div className="text-[8px] text-center leading-tight mb-3 text-black w-full px-2 mt-5 font-mono">
+        <div className="text-[8px] text-center leading-tight mb-3 text-black w-full px-2 mt-5 font-mono font-normal">
           Tener en cuenta que para el caso de las adquisición de bienes o servicios del Regimen Comun debe generarse Factura de Venta con el<br />cumplimiento de los requisitos establecidos en el Art. 617 del Estatuto Tributario Y si esta obligado a facturar electronicamente con las<br />condiciones del D..U.R 358 DE 2020.
         </div>
 
@@ -678,13 +678,13 @@ export default function SoporteFiduciariaDoc({
           </thead>
           <tbody>
             <tr className="text-black h-[180px]">
-              <td className="border-[1.5px] border-t-0 border-black p-3 text-center align-middle font-bold">
+              <td className="border-[1.5px] border-t-0 border-black p-3 text-center align-middle font-normal">
                 {isEditing ? (
                   <input
                     type="text"
                     value={formData.cantidad}
                     onChange={(e) => handleFieldChange('cantidad', e.target.value)}
-                    className="w-full text-center bg-amber-50 outline-none font-bold"
+                    className="w-full text-center bg-amber-50 outline-none font-normal"
                   />
                 ) : (
                   formData.cantidad
@@ -696,33 +696,33 @@ export default function SoporteFiduciariaDoc({
                     value={formData.descripcionBienServicio}
                     onChange={(e) => handleFieldChange('descripcionBienServicio', e.target.value)}
                     rows={5}
-                    className="w-full h-[140px] bg-amber-50 text-center outline-none resize-none overflow-hidden uppercase font-mono font-bold text-[11px]"
+                    className="w-full h-[140px] bg-amber-50 text-center outline-none resize-none overflow-hidden uppercase font-mono font-normal text-[11px]"
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full max-w-[440px] mx-auto">
-                    <span className="inline-block align-middle font-bold text-[11px] leading-relaxed">{formData.descripcionBienServicio}</span>
+                    <span className="inline-block align-middle font-normal text-[11px] leading-relaxed">{formData.descripcionBienServicio}</span>
                   </div>
                 )}
               </td>
-              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center align-middle font-bold">
+              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center align-middle font-normal">
                 {isEditing ? (
                   <input
                     type="text"
                     value={formData.subTotal}
                     onChange={(e) => handleFieldChange('subTotal', e.target.value)}
-                    className="w-full text-center bg-amber-50 outline-none font-bold"
+                    className="w-full text-center bg-amber-50 outline-none font-normal"
                   />
                 ) : (
                   formData.subTotal
                 )}
               </td>
-              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center align-middle font-bold">
+              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center align-middle font-normal">
                 {isEditing ? (
                   <input
                     type="text"
                     value={formData.total}
                     onChange={(e) => handleFieldChange('total', e.target.value)}
-                    className="w-full text-center bg-amber-50 outline-none font-bold"
+                    className="w-full text-center bg-amber-50 outline-none font-normal"
                   />
                 ) : (
                   formData.total
@@ -730,23 +730,23 @@ export default function SoporteFiduciariaDoc({
               </td>
             </tr>
             {/* Fila de Totales */}
-            <tr className="font-bold text-black h-[28px]">
+            <tr className="font-normal text-black h-[28px]">
               <td colSpan={2} className="border-0 bg-transparent"></td>
-              <td className="border-[1.5px] border-t-0 border-black bg-[#d9d9d9] p-1.5 text-center uppercase text-[11px]">
+              <td className="border-[1.5px] border-t-0 border-black bg-[#d9d9d9] p-1.5 text-center uppercase text-[11px] font-bold">
                 TOTAL GENERAL
               </td>
               <td className="border-[1.5px] border-t-0 border-l-0 border-black bg-[#d9d9d9] p-0">
                 <div className="flex w-full h-full min-h-[28px] items-stretch">
-                  <div className="w-[18%] p-1.5 flex items-center justify-center font-bold text-[11px]">
+                  <div className="w-[18%] p-1.5 flex items-center justify-center font-normal text-[11px]">
                     $
                   </div>
-                  <div className="w-[82%] p-1.5 pr-3 flex items-center justify-end font-bold text-[11px]">
+                  <div className="w-[82%] p-1.5 pr-3 flex items-center justify-end font-normal text-[11px]">
                     {isEditing ? (
                       <input
                         type="text"
                         value={formData.totalGeneral}
                         onChange={(e) => handleFieldChange('totalGeneral', e.target.value)}
-                        className="w-full text-right bg-[#d9d9d9] outline-none font-bold"
+                        className="w-full text-right bg-[#d9d9d9] outline-none font-normal"
                       />
                     ) : (
                       formData.totalGeneral
@@ -760,7 +760,7 @@ export default function SoporteFiduciariaDoc({
 
         {/* Nota RUT adjunto */}
         <div className="flex items-center justify-between text-[11px] text-black font-mono">
-          <div className="italic underline underline-offset-2 font-bold">
+          <div className="italic underline underline-offset-2 font-normal">
             {isEditing ? (
               <div className="flex items-center gap-1">
                 <span>Nota:</span>

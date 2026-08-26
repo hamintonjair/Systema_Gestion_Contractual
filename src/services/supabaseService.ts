@@ -25,21 +25,27 @@ const getStoredReportData = (_docKey?: string, _informeNro?: string): Partial<Re
 // Helper para asociar hasta 5 fotos por obligación de forma consistente
 const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[], storedObs?: Obligacion[]): { obsWithFotos: Obligacion[]; allAnexos: Anexo[] } => {
   const allAnexos = [...anexos];
+  const assignedAnexosIds = new Set<string>();
+
   const obsWithFotos = obligaciones.map((obs, idx) => {
     const stored = storedObs?.find(so => so.id === obs.id || so.descripcion === obs.descripcion);
     if (stored?.fotos && stored.fotos.length > 0) {
+      stored.fotos.forEach(f => assignedAnexosIds.add(f.id));
       return { ...obs, fotos: stored.fotos.slice(0, 5) };
     }
 
     const matched = allAnexos.filter(a => {
+      if (assignedAnexosIds.has(a.id)) return false;
       if (a.obligacionId && a.obligacionId === obs.id) return true;
       if (a.obligacionIndex !== undefined && a.obligacionIndex === (idx + 1)) return true;
       const t = (a.titulo || '').toLowerCase();
-      if (t.includes(`obligación #${idx + 1}`) || t.includes(`obligacion #${idx + 1}`) || t.startsWith(`[obligación ${idx + 1}]`) || t.startsWith(`[obligacion ${idx + 1}]`)) {
+      if (t.includes(`obligación #${idx + 1}`) || t.includes(`obligacion #${idx + 1}`) || t.includes(`[obligación ${idx + 1}]`) || t.includes(`[obligacion ${idx + 1}]`)) {
         return true;
       }
       return false;
     });
+
+    matched.forEach(a => assignedAnexosIds.add(a.id));
 
     const finalFotos = matched.slice(0, 5).map((f, fIdx) => ({
       ...f,
@@ -52,6 +58,24 @@ const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[
       ...obs,
       fotos: finalFotos
     };
+  });
+
+  // Fallback: si alguna obligación quedó sin fotos, asignar secuencialmente de los anexos no asignados
+  obsWithFotos.forEach((obs, idx) => {
+    if ((obs.fotos?.length || 0) === 0) {
+      const unassigned = allAnexos.filter(a => !assignedAnexosIds.has(a.id));
+      if (unassigned.length > 0) {
+        const takeCount = Math.min(5, unassigned.length);
+        const taken = unassigned.slice(0, takeCount);
+        taken.forEach(a => assignedAnexosIds.add(a.id));
+        obs.fotos = taken.map((f, fIdx) => ({
+          ...f,
+          obligacionId: obs.id,
+          obligacionIndex: idx + 1,
+          titulo: f.titulo || `Evidencia fotográfica ${fIdx + 1} - Obligación #${idx + 1}`
+        }));
+      }
+    }
   });
 
   const flatAnexos: Anexo[] = [];
