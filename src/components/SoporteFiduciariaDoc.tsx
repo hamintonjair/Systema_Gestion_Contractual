@@ -156,7 +156,7 @@ export default function SoporteFiduciariaDoc({
       const val = inputEl.value || '';
       const div = document.createElement('div');
       div.textContent = val;
-      div.className = inputEl.className.replace(/bg-amber-50/g, '');
+      div.className = inputEl.className.replace(/bg-amber-50/g, '').replace(/bg-\[#d9d9d9\]/g, '');
       const isRight = inputEl.classList.contains('text-right');
       const isCenter = inputEl.classList.contains('text-center');
       div.style.cssText = `
@@ -171,6 +171,7 @@ export default function SoporteFiduciariaDoc({
         box-shadow: none;
         color: #000000;
         font-weight: bold;
+        font-family: "Courier New", Courier, monospace;
         padding: 0 2px 2px 2px;
         margin: 0;
         box-sizing: border-box;
@@ -184,7 +185,12 @@ export default function SoporteFiduciariaDoc({
       const div = document.createElement('div');
       div.textContent = val;
       div.className = taEl.className.replace(/bg-amber-50/g, '');
+      const isCenter = taEl.classList.contains('text-center');
       div.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: ${isCenter ? 'center' : 'flex-start'};
+        text-align: ${isCenter ? 'center' : 'left'};
         width: 100%;
         height: 100%;
         background: transparent;
@@ -193,10 +199,11 @@ export default function SoporteFiduciariaDoc({
         box-shadow: none;
         color: #000000;
         font-weight: bold;
+        font-family: "Courier New", Courier, monospace;
         padding: 2px;
         margin: 0;
         box-sizing: border-box;
-        line-height: 1.2;
+        line-height: 1.3;
       `;
       textarea.parentNode?.replaceChild(div, textarea);
     });
@@ -242,8 +249,8 @@ export default function SoporteFiduciariaDoc({
             ${styles}
             <style>
               @page {
-                size: letter;
-                margin: 0;
+                size: letter portrait;
+                margin: 8mm;
               }
               * {
                 -webkit-print-color-adjust: exact !important;
@@ -252,19 +259,27 @@ export default function SoporteFiduciariaDoc({
               }
               html, body {
                 margin: 0 !important;
-                padding: 10mm !important;
+                padding: 0 !important;
                 background: #ffffff !important;
                 color: #000000 !important;
-                font-family: Arial, Helvetica, sans-serif !important;
-                width: 195mm !important;
+                font-family: "Courier New", Courier, monospace !important;
+                width: 100% !important;
               }
               .print-container {
-                width: 195mm !important;
+                width: 100% !important;
+                max-width: 200mm !important;
+                margin: 0 auto !important;
                 background: white !important;
                 border: none !important;
                 box-shadow: none !important;
                 padding: 0 !important;
-                margin: 0 !important;
+              }
+              #soporte-fiduciaria-document {
+                box-shadow: none !important;
+                border: 1.5px solid #000000 !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                padding: 25px !important;
               }
             </style>
           </head>
@@ -278,7 +293,7 @@ export default function SoporteFiduciariaDoc({
                 setTimeout(() => {
                   window.frameElement?.remove();
                 }, 500);
-              }, 500);
+              }, 400);
             </script>
           </body>
         </html>
@@ -501,60 +516,60 @@ export default function SoporteFiduciariaDoc({
       <div className="w-full max-w-full overflow-x-auto pb-4 flex justify-start sm:justify-center">
         <div
           id="soporte-fiduciaria-document"
-          className="min-w-[760px] max-w-[850px] w-full bg-white border-[1.5px] border-black shadow-md p-4 sm:p-10 text-black leading-normal select-text relative shrink-0"
+          className="min-w-[760px] max-w-[850px] w-full bg-white border-[1.5px] border-black shadow-md p-6 sm:p-10 text-black leading-normal select-text relative shrink-0"
           style={{
             fontFamily: '"Courier New", Courier, monospace',
             boxSizing: 'border-box',
           }}
         >
         {/* Cabecera / Header */}
-        <div className="relative mb-6 pt-2 h-[120px]">
+        <div className="relative mb-6 pt-1 min-h-[110px]">
           {/* Logo Fiduprevisora */}
           <div 
-            className="absolute left-0 top-1 w-[140px] h-[40px] flex items-center justify-center"
+            className="absolute left-0 top-0 w-[140px] h-[40px] flex items-center justify-center"
             style={{
               background: 'linear-gradient(135deg, #cc6b29 0%, #a42c3b 40%, #6e1531 100%)'
             }}
           >
-             <div className="text-[15px] text-white font-bold tracking-wider" style={{ fontFamily: 'Georgia, serif' }}>
+             <div className="text-[14px] text-white font-bold tracking-wider" style={{ fontFamily: 'Georgia, serif' }}>
               {'{fiduprevisora}'}
             </div>
           </div>
 
           {/* Información Central */}
-          <div className="absolute top-0 w-full text-center pointer-events-none" style={{ fontFamily: 'Calibri, "Helvetica Neue", sans-serif' }}>
-            <div className="pl-[140px] pr-4 pointer-events-auto">
-              <h1 className="text-[12px] font-bold tracking-wide text-black mb-5 text-center">
+          <div className="w-full text-center">
+            <div className="pl-[145px] pr-[135px]">
+              <h1 className="text-[11.5px] font-bold tracking-tight text-black mb-3 text-center uppercase font-mono">
                 DOCUMENTO SOPORTE EN ADQUISICIONES EFECTUADAS A NO OBLIGADOS A FACTURAR.
               </h1>
             </div>
-            <div className="text-[16px] font-bold text-black mb-1">
+            <div className="text-[15px] font-bold text-black mb-0.5 font-mono tracking-wide">
               E.F. MUNICIPIO DE QUIBDÓ
             </div>
-            <div className="text-[16px] font-bold text-black mb-5">
+            <div className="text-[15px] font-bold text-black mb-4 font-mono tracking-wide">
               FIDUCIARIA LA PREVISORA S.A.
             </div>
-            <div className="text-[13px] font-bold text-black">
+            <div className="text-[13px] font-bold text-black font-mono">
               NIT. 860.525.148
             </div>
           </div>
 
           {/* Caja N° Doc soporte */}
-          <div className="absolute right-0 bottom-[-24px] w-[140px] flex flex-col items-center">
-            <div className="text-[11px] font-bold text-black mb-0.5 w-[120px] text-left pl-1" style={{ fontFamily: 'Calibri, "Helvetica Neue", sans-serif' }}>
+          <div className="absolute right-0 top-12 w-[130px] flex flex-col items-center">
+            <div className="text-[11px] font-bold text-black mb-0.5 w-[115px] text-left pl-0.5 font-mono">
               N° Doc soporte
             </div>
-            <div className="w-[120px] border-[1.5px] border-black h-6 flex items-center justify-center bg-white">
+            <div className="w-[115px] border-[1.5px] border-black h-7 flex items-center justify-center bg-white">
               {isEditing ? (
                 <input
                   type="text"
                   value={formData.docSoporteNro || ''}
                   placeholder=""
                   onChange={(e) => handleFieldChange('docSoporteNro', e.target.value)}
-                  className="w-full h-full text-center font-bold text-[12px] bg-amber-50 text-amber-950 rounded-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-full h-full text-center font-bold text-[12px] bg-amber-50 text-amber-950 rounded-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
                 />
               ) : (
-                <span className="font-bold text-[12px] text-black">
+                <span className="font-bold text-[12px] text-black font-mono">
                   {formData.docSoporteNro || ''}
                 </span>
               )}
@@ -566,148 +581,148 @@ export default function SoporteFiduciariaDoc({
         <div className="flex flex-col gap-1 text-[12px] leading-tight font-mono mb-4 w-full relative">
           
           {/* Ciudad y Fecha */}
-          <div className="flex flex-row items-end pr-[35%]">
-             <div className="whitespace-nowrap text-left pb-1 pr-2">Ciudad y Fecha:</div>
+          <div className="flex flex-row items-end pr-[32%]">
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">Ciudad y Fecha:</div>
              <div className="flex-grow border-b-[1.5px] border-black flex flex-row items-end pb-0 leading-none">
-               <div className="w-[45%] text-center">
+               <div className="w-[45%] text-center font-mono">
                  {isEditing ? (
-                   <input type="text" value={formData.ciudad} onChange={(e) => handleFieldChange('ciudad', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none" />
-                 ) : <span className="block pb-0 leading-none">{formData.ciudad}</span>}
+                   <input type="text" value={formData.ciudad} onChange={(e) => handleFieldChange('ciudad', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
+                 ) : <span className="block pb-0 leading-none font-mono font-bold">{formData.ciudad}</span>}
                </div>
-               <div className="w-[10%] text-center text-black">|</div>
-               <div className="w-[45%] text-center">
+               <div className="w-[10%] text-center text-black font-bold font-mono">|</div>
+               <div className="w-[45%] text-center font-mono">
                  {isEditing ? (
-                   <input type="text" value={formData.fecha} onChange={(e) => handleFieldChange('fecha', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none" />
-                 ) : <span className="block pb-0 leading-none">{formData.fecha}</span>}
+                   <input type="text" value={formData.fecha} onChange={(e) => handleFieldChange('fecha', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
+                 ) : <span className="block pb-0 leading-none font-mono font-bold">{formData.fecha}</span>}
                </div>
              </div>
           </div>
 
           {/* Nombres y Apellidos */}
-          <div className="flex flex-row items-end pr-[35%]">
-             <div className="whitespace-nowrap text-left pb-1 pr-2">Nombres y Apellidos:</div>
+          <div className="flex flex-row items-end pr-[32%]">
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">Nombres y Apellidos:</div>
              <div className="flex-grow border-b-[1.5px] border-black text-center pb-0 leading-none">
                 {isEditing ? (
-                  <input type="text" value={formData.nombresApellidos} onChange={(e) => handleFieldChange('nombresApellidos', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none" />
-                ) : <span className="block pb-0 leading-none">{formData.nombresApellidos}</span>}
+                  <input type="text" value={formData.nombresApellidos} onChange={(e) => handleFieldChange('nombresApellidos', e.target.value)} className="w-full text-center uppercase bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
+                ) : <span className="block pb-0 leading-none uppercase font-mono font-bold">{formData.nombresApellidos}</span>}
              </div>
           </div>
 
           {/* Cédula */}
-          <div className="flex flex-row items-end pr-[35%]">
-             <div className="whitespace-nowrap text-left pb-1 pr-2">N° Cédula de Ciudadanía:</div>
+          <div className="flex flex-row items-end pr-[32%]">
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">N° Cédula de Ciudadanía:</div>
              <div className="flex-grow border-b-[1.5px] border-black text-right pr-4 pb-0 leading-none">
                 {isEditing ? (
-                  <input type="text" value={formData.cedula} onChange={(e) => handleFieldChange('cedula', e.target.value)} className="w-full text-right pr-4 bg-amber-50 outline-none pb-0 leading-none" />
-                ) : <span className="block pb-0 leading-none">{formData.cedula}</span>}
+                  <input type="text" value={formData.cedula} onChange={(e) => handleFieldChange('cedula', e.target.value)} className="w-full text-right pr-4 bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
+                ) : <span className="block pb-0 leading-none font-mono font-bold pr-4">{formData.cedula}</span>}
              </div>
           </div>
 
           {/* Dirección */}
-          <div className="flex flex-row items-end pr-[35%]">
-             <div className="whitespace-nowrap text-left pb-1 pr-2">Dirección:</div>
+          <div className="flex flex-row items-end pr-[32%]">
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">Dirección:</div>
              <div className="flex-grow border-b-[1.5px] border-black text-center uppercase pb-0 leading-none">
                 {isEditing ? (
-                  <input type="text" value={formData.direccion} onChange={(e) => handleFieldChange('direccion', e.target.value)} className="w-full text-center uppercase bg-amber-50 outline-none pb-0 leading-none" />
-                ) : <span className="block pb-0 leading-none">{formData.direccion}</span>}
+                  <input type="text" value={formData.direccion} onChange={(e) => handleFieldChange('direccion', e.target.value)} className="w-full text-center uppercase bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
+                ) : <span className="block pb-0 leading-none uppercase font-mono font-bold">{formData.direccion}</span>}
              </div>
           </div>
 
           {/* Teléfono */}
-          <div className="flex flex-row items-end pr-[35%]">
-             <div className="whitespace-nowrap text-left pb-1 pr-2">Teléfono:</div>
-             <div className="w-[250px] border-b-[1.5px] border-black text-center pb-0 leading-none">
+          <div className="flex flex-row items-end pr-[32%]">
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">Teléfono:</div>
+             <div className="flex-grow border-b-[1.5px] border-black text-center pb-0 leading-none">
                 {isEditing ? (
-                 <input type="text" value={formData.telefono} onChange={(e) => handleFieldChange('telefono', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none" />
-               ) : <span className="block pb-0 leading-none">{formData.telefono}</span>}
+                 <input type="text" value={formData.telefono} onChange={(e) => handleFieldChange('telefono', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
+               ) : <span className="block pb-0 leading-none font-mono font-bold">{formData.telefono}</span>}
              </div>
           </div>
 
           {/* La suma total */}
-          <div className="flex flex-row items-end pr-[35%]">
-             <div className="whitespace-nowrap text-left pb-1 pr-2">La suma total:</div>
+          <div className="flex flex-row items-end pr-[32%]">
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">La suma total:</div>
              <div className="flex-grow border-b-[1.5px] border-black text-right pr-4 pb-0 leading-none">
                 {isEditing ? (
-                 <input type="text" value={formData.sumaTotal} onChange={(e) => handleFieldChange('sumaTotal', e.target.value)} className="w-full text-right pr-4 bg-amber-50 outline-none pb-0 leading-none" />
-               ) : <span className="block pb-0 leading-none">{formData.sumaTotal}</span>}
+                 <input type="text" value={formData.sumaTotal} onChange={(e) => handleFieldChange('sumaTotal', e.target.value)} className="w-full text-right pr-4 bg-amber-50 outline-none pb-0 leading-none font-mono font-bold" />
+               ) : <span className="block pb-0 leading-none font-mono font-bold pr-4">{formData.sumaTotal}</span>}
              </div>
           </div>
 
           {/* Valor en letras (Toma todo el ancho disponible) */}
-          <div className="flex flex-row items-end mt-1">
-             <div className="whitespace-nowrap text-left pb-1 pr-2">(Valor en letras)</div>
+          <div className="flex flex-row items-end mt-1.5 w-full">
+             <div className="whitespace-nowrap text-left pb-0.5 pr-2 font-mono">(Valor en letras)</div>
              <div className="flex-grow border-b-[1.5px] border-black text-center uppercase pb-0 leading-none flex flex-col justify-end">
                 {isEditing ? (
-                  <textarea rows={2} value={formData.valorLetras} onChange={(e) => handleFieldChange('valorLetras', e.target.value)} className="w-full text-center bg-amber-50 outline-none resize-none overflow-hidden uppercase pb-0 leading-tight" />
+                  <textarea rows={2} value={formData.valorLetras} onChange={(e) => handleFieldChange('valorLetras', e.target.value)} className="w-full text-center bg-amber-50 outline-none resize-none overflow-hidden uppercase pb-0 leading-tight font-mono font-bold" />
                 ) : (
-                  <span className="block w-full leading-none pb-0.5">{formData.valorLetras}</span>
+                  <span className="block w-full leading-tight pb-0.5 uppercase font-mono font-bold text-[11px] sm:text-[11.5px]">{formData.valorLetras}</span>
                 )}
              </div>
           </div>
         </div>
 
         {/* Texto Legal */}
-        <div className="text-[7.5px] text-center leading-tight mb-2 text-black w-full px-2 mt-6">
+        <div className="text-[8px] text-center leading-tight mb-3 text-black w-full px-2 mt-5 font-mono">
           Tener en cuenta que para el caso de las adquisición de bienes o servicios del Regimen Comun debe generarse Factura de Venta con el<br />cumplimiento de los requisitos establecidos en el Art. 617 del Estatuto Tributario Y si esta obligado a facturar electronicamente con las<br />condiciones del D..U.R 358 DE 2020.
         </div>
 
         {/* Tabla */}
-        <table className="w-full border-collapse text-[11px] mb-4 text-center">
+        <table className="w-full border-collapse text-[11px] mb-3 text-center font-mono">
           <thead>
-            <tr className="bg-[#cccccc] font-bold uppercase text-black">
-              <th className="border-[1.5px] border-black p-1.5 w-[14%] text-center align-middle">CANTIDAD</th>
-              <th className="border-[1.5px] border-l-0 border-black p-1.5 text-center align-middle">DESCRIPCION DEL BIEN O SERVICIO</th>
-              <th className="border-[1.5px] border-l-0 border-black p-1.5 w-[18%] align-middle text-center">SUB TOTAL</th>
-              <th className="border-[1.5px] border-l-0 border-black p-1.5 w-[18%] align-middle text-center">TOTAL</th>
+            <tr className="bg-[#d9d9d9] font-bold uppercase text-black">
+              <th className="border-[1.5px] border-black p-2 w-[14%] text-center align-middle">CANTIDAD</th>
+              <th className="border-[1.5px] border-l-0 border-black p-2 text-center align-middle">DESCRIPCION DEL BIEN O SERVICIO</th>
+              <th className="border-[1.5px] border-l-0 border-black p-2 w-[18%] align-middle text-center">SUB TOTAL</th>
+              <th className="border-[1.5px] border-l-0 border-black p-2 w-[18%] align-middle text-center">TOTAL</th>
             </tr>
           </thead>
           <tbody>
             <tr className="text-black h-[180px]">
-              <td className="border-[1.5px] border-t-0 border-black p-3 text-center align-middle">
+              <td className="border-[1.5px] border-t-0 border-black p-3 text-center align-middle font-bold">
                 {isEditing ? (
                   <input
                     type="text"
                     value={formData.cantidad}
                     onChange={(e) => handleFieldChange('cantidad', e.target.value)}
-                    className="w-full text-center bg-amber-50 outline-none"
+                    className="w-full text-center bg-amber-50 outline-none font-bold"
                   />
                 ) : (
                   formData.cantidad
                 )}
               </td>
-              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center uppercase leading-normal align-middle">
+              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-4 text-center uppercase leading-normal align-middle">
                 {isEditing ? (
                   <textarea
                     value={formData.descripcionBienServicio}
                     onChange={(e) => handleFieldChange('descripcionBienServicio', e.target.value)}
-                    rows={4}
-                    className="w-full h-[140px] bg-amber-50 text-center outline-none resize-none overflow-hidden"
+                    rows={5}
+                    className="w-full h-[140px] bg-amber-50 text-center outline-none resize-none overflow-hidden uppercase font-mono font-bold text-[11px]"
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <span className="inline-block align-middle">{formData.descripcionBienServicio}</span>
+                  <div className="flex items-center justify-center h-full max-w-[440px] mx-auto">
+                    <span className="inline-block align-middle font-bold text-[11px] leading-relaxed">{formData.descripcionBienServicio}</span>
                   </div>
                 )}
               </td>
-              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center align-middle">
+              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center align-middle font-bold">
                 {isEditing ? (
                   <input
                     type="text"
                     value={formData.subTotal}
                     onChange={(e) => handleFieldChange('subTotal', e.target.value)}
-                    className="w-full text-center bg-amber-50 outline-none"
+                    className="w-full text-center bg-amber-50 outline-none font-bold"
                   />
                 ) : (
                   formData.subTotal
                 )}
               </td>
-              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center align-middle">
+              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center align-middle font-bold">
                 {isEditing ? (
                   <input
                     type="text"
                     value={formData.total}
                     onChange={(e) => handleFieldChange('total', e.target.value)}
-                    className="w-full text-center bg-amber-50 outline-none"
+                    className="w-full text-center bg-amber-50 outline-none font-bold"
                   />
                 ) : (
                   formData.total
@@ -717,21 +732,21 @@ export default function SoporteFiduciariaDoc({
             {/* Fila de Totales */}
             <tr className="font-bold text-black h-[28px]">
               <td colSpan={2} className="border-0 bg-transparent"></td>
-              <td className="border-[1.5px] border-t-0 border-black bg-[#cccccc] p-1.5 text-center uppercase">
+              <td className="border-[1.5px] border-t-0 border-black bg-[#d9d9d9] p-1.5 text-center uppercase text-[11px]">
                 TOTAL GENERAL
               </td>
-              <td className="border-[1.5px] border-t-0 border-l-0 border-black bg-[#cccccc] p-0">
+              <td className="border-[1.5px] border-t-0 border-l-0 border-black bg-[#d9d9d9] p-0">
                 <div className="flex w-full h-full min-h-[28px] items-stretch">
-                  <div className="w-[15%] p-1.5 flex items-center justify-center">
+                  <div className="w-[18%] p-1.5 flex items-center justify-center font-bold text-[11px]">
                     $
                   </div>
-                  <div className="w-[85%] p-1.5 pr-4 flex items-center justify-end">
+                  <div className="w-[82%] p-1.5 pr-3 flex items-center justify-end font-bold text-[11px]">
                     {isEditing ? (
                       <input
                         type="text"
                         value={formData.totalGeneral}
                         onChange={(e) => handleFieldChange('totalGeneral', e.target.value)}
-                        className="w-full text-right bg-[#cccccc] outline-none font-bold"
+                        className="w-full text-right bg-[#d9d9d9] outline-none font-bold"
                       />
                     ) : (
                       formData.totalGeneral
@@ -744,7 +759,7 @@ export default function SoporteFiduciariaDoc({
         </table>
 
         {/* Nota RUT adjunto */}
-        <div className="flex items-center justify-between text-[11px] text-black">
+        <div className="flex items-center justify-between text-[11px] text-black font-mono">
           <div className="italic underline underline-offset-2 font-bold">
             {isEditing ? (
               <div className="flex items-center gap-1">
