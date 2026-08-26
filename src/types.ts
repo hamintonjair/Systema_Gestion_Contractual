@@ -323,6 +323,24 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
   const valorTotalAPagarCalculado = quitarDecimales(autoLiq?.valorTotalAPagar || valorNumStr);
   const saldoPorPagarCalculado = quitarDecimales(autoLiq?.saldoPorPagar || '18.249.373');
 
+  let mesCalculado = 'julio';
+  if (rep.fechaAplicacion) {
+    const parts = rep.fechaAplicacion.trim().split(' ');
+    if (parts.length > 0) {
+      mesCalculado = parts[0].toLowerCase();
+    }
+  }
+
+  let diaCalculado = '21';
+  let anoCalculado = '2026';
+  if (periodoHastaCalculado) {
+    const pParts = periodoHastaCalculado.split('/');
+    if (pParts.length >= 3) {
+      diaCalculado = pParts[0];
+      anoCalculado = pParts[2];
+    }
+  }
+
   return {
     reportId: rep.id,
     informeNro: rep.informeNro || '1',
@@ -406,9 +424,9 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
     observacionesLiquidacion: '',
 
     valorAvalado: `$ ${valorTotalAPagarCalculado}`,
-    expedicionDia: '21',
-    expedicionMes: 'julio',
-    expedicionAno: '2026',
+    expedicionDia: diaCalculado,
+    expedicionMes: mesCalculado,
+    expedicionAno: anoCalculado,
     supervisorFirma: '',
   };
 };
@@ -546,11 +564,31 @@ export const createDefaultFiduciariaData = (report?: ReportData): SoporteFiducia
   const rep = report || initialMockData;
   const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(rep.valorPagar);
 
+  let fiduDia = '28';
+  if (rep.periodoHasta) {
+    const pParts = rep.periodoHasta.split('/');
+    if (pParts.length >= 3) {
+      fiduDia = pParts[0];
+    }
+  }
+
+  let fiduMes = 'febrero';
+  let fiduAno = '2026';
+  if (rep.fechaAplicacion) {
+    const parts = rep.fechaAplicacion.trim().split(' ');
+    if (parts.length > 0) {
+      fiduMes = parts[0].toLowerCase();
+      fiduAno = parts[parts.length - 1];
+    }
+  }
+
+  const fechaFiduciaria = `${fiduDia} de ${fiduMes} ${fiduAno}`;
+
   return {
     reportId: rep.id,
     docSoporteNro: '',
     ciudad: 'Quibdó',
-    fecha: rep.fechaPresentacion || '15 de julio de 2026',
+    fecha: fechaFiduciaria,
     nombresApellidos: rep.contratistaNombre || 'Haminton Mena Mena',
     cedula: rep.contratistaDocumento || '80.772.379',
     direccion: 'Barrio buenos aires',

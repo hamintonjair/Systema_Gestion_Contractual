@@ -60,7 +60,7 @@ export default function SoporteFiduciariaDoc({
         totalGeneral: valorNumeroFormateado,
         descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
         docSoporteNro: baseData.docSoporteNro || '',
-        fecha: reportData.fechaPresentacion || baseData.fecha,
+        fecha: createDefaultFiduciariaData(reportData).fecha,
       };
     }
     return baseData;
@@ -114,7 +114,7 @@ export default function SoporteFiduciariaDoc({
           totalGeneral: valorNumeroFormateado,
           descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
           docSoporteNro: baseData.docSoporteNro || '',
-          fecha: reportData.fechaPresentacion || baseData.fecha,
+          fecha: createDefaultFiduciariaData(reportData).fecha,
         });
       } else if (baseData) {
         setFormData(baseData);
@@ -651,18 +651,18 @@ export default function SoporteFiduciariaDoc({
         </div>
 
         {/* Tabla */}
-        <table className="w-full border-collapse border-[1.5px] border-black text-[11px] mb-4 text-center">
+        <table className="w-full border-collapse text-[11px] mb-4 text-center">
           <thead>
-            <tr className="bg-[#cccccc] border-b-[1.5px] border-black font-bold uppercase text-black">
-              <th className="border-r-[1.5px] border-black p-1.5 w-[14%] text-center align-middle">CANTIDAD</th>
-              <th className="border-r-[1.5px] border-black p-1.5 text-center align-middle">DESCRIPCION DEL BIEN O SERVICIO</th>
-              <th className="border-r-[1.5px] border-black p-1.5 w-[18%] align-middle text-center">SUB TOTAL</th>
-              <th className="p-1.5 w-[18%] align-middle text-center">TOTAL</th>
+            <tr className="bg-[#cccccc] font-bold uppercase text-black">
+              <th className="border-[1.5px] border-black p-1.5 w-[14%] text-center align-middle">CANTIDAD</th>
+              <th className="border-[1.5px] border-l-0 border-black p-1.5 text-center align-middle">DESCRIPCION DEL BIEN O SERVICIO</th>
+              <th className="border-[1.5px] border-l-0 border-black p-1.5 w-[18%] align-middle text-center">SUB TOTAL</th>
+              <th className="border-[1.5px] border-l-0 border-black p-1.5 w-[18%] align-middle text-center">TOTAL</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b-[1.5px] border-black text-black h-[180px]">
-              <td className="border-r-[1.5px] border-black p-3 text-center align-middle">
+            <tr className="text-black h-[180px]">
+              <td className="border-[1.5px] border-t-0 border-black p-3 text-center align-middle">
                 {isEditing ? (
                   <input
                     type="text"
@@ -674,7 +674,7 @@ export default function SoporteFiduciariaDoc({
                   formData.cantidad
                 )}
               </td>
-              <td className="border-r-[1.5px] border-black p-3 text-center uppercase leading-normal align-middle">
+              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center uppercase leading-normal align-middle">
                 {isEditing ? (
                   <textarea
                     value={formData.descripcionBienServicio}
@@ -688,7 +688,7 @@ export default function SoporteFiduciariaDoc({
                   </div>
                 )}
               </td>
-              <td className="border-r-[1.5px] border-black p-3 text-center align-middle">
+              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center align-middle">
                 {isEditing ? (
                   <input
                     type="text"
@@ -700,7 +700,7 @@ export default function SoporteFiduciariaDoc({
                   formData.subTotal
                 )}
               </td>
-              <td className="p-3 text-center align-middle">
+              <td className="border-[1.5px] border-t-0 border-l-0 border-black p-3 text-center align-middle">
                 {isEditing ? (
                   <input
                     type="text"
@@ -714,24 +714,29 @@ export default function SoporteFiduciariaDoc({
               </td>
             </tr>
             {/* Fila de Totales */}
-            <tr className="font-bold bg-[#cccccc]">
-              <td colSpan={2} className="border-r-[1.5px] border-black p-1.5 text-center uppercase text-black">
+            <tr className="font-bold text-black h-[28px]">
+              <td colSpan={2} className="border-0 bg-transparent"></td>
+              <td className="border-[1.5px] border-t-0 border-black bg-[#cccccc] p-1.5 text-center uppercase">
                 TOTAL GENERAL
               </td>
-              <td className="border-r-[1.5px] border-black p-1.5 text-left font-bold">
-                $
-              </td>
-              <td className="p-1.5 text-right font-bold pr-4">
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={formData.totalGeneral}
-                    onChange={(e) => handleFieldChange('totalGeneral', e.target.value)}
-                    className="w-full text-right bg-amber-50 outline-none"
-                  />
-                ) : (
-                  formData.totalGeneral
-                )}
+              <td className="border-[1.5px] border-t-0 border-l-0 border-black bg-[#cccccc] p-0">
+                <div className="flex w-full h-full min-h-[28px] items-stretch">
+                  <div className="w-[15%] p-1.5 flex items-center justify-center">
+                    $
+                  </div>
+                  <div className="w-[85%] p-1.5 pr-4 flex items-center justify-end">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.totalGeneral}
+                        onChange={(e) => handleFieldChange('totalGeneral', e.target.value)}
+                        className="w-full text-right bg-[#cccccc] outline-none font-bold"
+                      />
+                    ) : (
+                      formData.totalGeneral
+                    )}
+                  </div>
+                </div>
               </td>
             </tr>
           </tbody>

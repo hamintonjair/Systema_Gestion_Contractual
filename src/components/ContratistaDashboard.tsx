@@ -118,11 +118,34 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
         const userDoc = user.documentoIdentidad || '';
         const userDocKey = userDoc ? `_${userDoc}` : '';
         const merged = dbReports.map(dbRep => {
-          const local = localStorage.getItem(`informe_data${userDocKey}_${dbRep.informeNro}`) || 
-                        localStorage.getItem(`informe_data_${userDoc}_${dbRep.informeNro}`) ||
-                        localStorage.getItem(`informe_data_${dbRep.informeNro}`);
-          const localComments = localStorage.getItem(`informe_comentarios_${userDoc}_${dbRep.informeNro}`) ||
-                                localStorage.getItem(`informe_comentarios_${dbRep.informeNro}`);
+          let local = localStorage.getItem(`informe_data${userDocKey}_${dbRep.informeNro}`) || 
+                        localStorage.getItem(`informe_data_${userDoc}_${dbRep.informeNro}`);
+          
+          if (!local) {
+             const generic = localStorage.getItem(`informe_data_${dbRep.informeNro}`);
+             if (generic) {
+               try {
+                 const parsed = JSON.parse(generic);
+                 if (parsed.contratistaDocumento === user.documentoIdentidad) {
+                    local = generic;
+                 }
+               } catch(e) {}
+             }
+          }
+
+          let localComments = localStorage.getItem(`informe_comentarios_${userDoc}_${dbRep.informeNro}`);
+          
+          if (!localComments && local) {
+             const genComm = localStorage.getItem(`informe_comentarios_${dbRep.informeNro}`);
+             if (genComm) {
+               try {
+                  const p = JSON.parse(local);
+                  if (p.contratistaDocumento === user.documentoIdentidad) {
+                     localComments = genComm;
+                  }
+               } catch(e) {}
+             }
+          }
 
           let rep: ReportData = { ...dbRep };
 
@@ -194,11 +217,34 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
     const localList: ReportData[] = [];
     for (let i = 1; i <= 12; i++) {
-      const saved = localStorage.getItem(`informe_data${userDocKey}_${i}`) || 
-                    localStorage.getItem(`informe_data_${userDoc}_${i}`) ||
-                    localStorage.getItem(`informe_data_${i}`);
-      const storedComm = localStorage.getItem(`informe_comentarios_${userDoc}_${i}`) ||
-                        localStorage.getItem(`informe_comentarios_${i}`);
+      let saved = localStorage.getItem(`informe_data${userDocKey}_${i}`) || 
+                    localStorage.getItem(`informe_data_${userDoc}_${i}`);
+      
+      if (!saved) {
+         const generic = localStorage.getItem(`informe_data_${i}`);
+         if (generic) {
+           try {
+             const parsed = JSON.parse(generic);
+             if (parsed.contratistaDocumento === user.documentoIdentidad) {
+                saved = generic;
+             }
+           } catch(e) {}
+         }
+      }
+
+      let storedComm = localStorage.getItem(`informe_comentarios_${userDoc}_${i}`);
+      if (!storedComm && saved) {
+         const genComm = localStorage.getItem(`informe_comentarios_${i}`);
+         if (genComm) {
+           try {
+              const p = JSON.parse(saved);
+              if (p.contratistaDocumento === user.documentoIdentidad) {
+                 storedComm = genComm;
+              }
+           } catch(e) {}
+         }
+      }
+
       if (saved) {
         try {
           const parsed = JSON.parse(saved);

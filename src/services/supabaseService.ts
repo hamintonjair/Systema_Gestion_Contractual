@@ -1761,10 +1761,6 @@ export const supabaseService = {
             localStorage.setItem(`informe_comentarios_${docKey}_${report.informeNro}`, JSON.stringify(report.comentariosCampos));
           }
         }
-        localStorage.setItem(`informe_data_${report.informeNro}`, JSON.stringify(updatedReportWithDb));
-        if (report.comentariosCampos) {
-          localStorage.setItem(`informe_comentarios_${report.informeNro}`, JSON.stringify(report.comentariosCampos));
-        }
       }
 
       return { success: true, id: informeId || `local-${Date.now()}` };
@@ -1775,7 +1771,6 @@ export const supabaseService = {
         if (docKey) {
           localStorage.setItem(`informe_data_${docKey}_${report.informeNro}`, JSON.stringify(report));
         }
-        localStorage.setItem(`informe_data_${report.informeNro}`, JSON.stringify(report));
       }
       return { success: true, id: `local-${Date.now()}` };
     }
