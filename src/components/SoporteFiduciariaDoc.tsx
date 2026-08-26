@@ -1,0 +1,764 @@
+import React, { useState, useEffect } from 'react';
+import { SoporteFiduciariaData, ReportData, createDefaultFiduciariaData } from '../types';
+import { extraerLetrasYNumeroDeValorPagar } from '../utils/numberToWords';
+import { supabaseService } from '../services/supabaseService';
+import { Printer, Download, Edit3, Check, Save, RotateCcw, Image as ImageIcon, Sparkles } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+
+interface Props {
+  data?: SoporteFiduciariaData;
+  reportData?: ReportData;
+  onChange?: (updated: SoporteFiduciariaData) => void;
+  onSave?: (saved: SoporteFiduciariaData) => void;
+  isEditable?: boolean;
+  onPrint?: () => void;
+  storageKey?: string;
+}
+
+export default function SoporteFiduciariaDoc({
+  data,
+  reportData,
+  onChange,
+  onSave,
+  isEditable = true,
+  onPrint,
+  storageKey,
+}: Props) {
+  const getInitialData = (): SoporteFiduciariaData => {
+    let baseData: SoporteFiduciariaData;
+    const key = storageKey || (reportData ? `fid_data_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}` : 'fid_data_global');
+    
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          baseData = JSON.parse(saved);
+        } catch (e) {
+          baseData = data || createDefaultFiduciariaData(reportData);
+        }
+      } else {
+        baseData = data || createDefaultFiduciariaData(reportData);
+      }
+    } else {
+      baseData = data || createDefaultFiduciariaData(reportData);
+    }
+
+    if (reportData) {
+      const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
+
+      return {
+        ...baseData,
+        reportId: reportData.id || baseData.reportId,
+        nombresApellidos: reportData.contratistaNombre || baseData.nombresApellidos,
+        cedula: reportData.contratistaDocumento || baseData.cedula,
+        telefono: reportData.contratistaTelefono || baseData.telefono,
+        sumaTotal: `${valorNumeroFormateado},00`,
+        valorLetras: valorLetras,
+        subTotal: valorNumeroFormateado,
+        total: valorNumeroFormateado,
+        totalGeneral: valorNumeroFormateado,
+        descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
+        docSoporteNro: baseData.docSoporteNro || '',
+        fecha: reportData.fechaPresentacion || baseData.fecha,
+      };
+    }
+    return baseData;
+  };
+
+  const [formData, setFormData] = useState<SoporteFiduciariaData>(getInitialData);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [isExportingImage, setIsExportingImage] = useState<boolean>(false);
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+
+  useEffect(() => {
+    const loadData = async () => {
+      let baseData: SoporteFiduciariaData | null = null;
+      if (data) {
+        baseData = data;
+      } else if (reportData) {
+        const savedDB = await supabaseService.getSoporteFiduciaria(
+          reportData.id,
+          reportData.contratistaDocumento,
+          reportData.informeNro?.toString()
+        );
+        if (savedDB) {
+          baseData = savedDB as SoporteFiduciariaData;
+        } else {
+          const key = storageKey || `fid_data_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}`;
+          const saved = localStorage.getItem(key);
+          if (saved) {
+            try { baseData = JSON.parse(saved); } catch (e) { baseData = createDefaultFiduciariaData(reportData); }
+          } else {
+            baseData = createDefaultFiduciariaData(reportData);
+          }
+        }
+      } else {
+        return;
+      }
+
+      if (reportData) {
+        const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
+
+        setFormData({
+          ...baseData,
+          reportId: reportData.id || baseData.reportId,
+          nombresApellidos: reportData.contratistaNombre || baseData.nombresApellidos,
+          cedula: reportData.contratistaDocumento || baseData.cedula,
+          telefono: reportData.contratistaTelefono || baseData.telefono,
+          sumaTotal: `${valorNumeroFormateado},00`,
+          valorLetras: valorLetras,
+          subTotal: valorNumeroFormateado,
+          total: valorNumeroFormateado,
+          totalGeneral: valorNumeroFormateado,
+          descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
+          docSoporteNro: baseData.docSoporteNro || '',
+          fecha: reportData.fechaPresentacion || baseData.fecha,
+        });
+      } else if (baseData) {
+        setFormData(baseData);
+      }
+    };
+    loadData();
+  }, [data, reportData, storageKey]);
+
+  const handleFieldChange = (field: keyof SoporteFiduciariaData, value: string) => {
+    const updated = { ...formData, [field]: value };
+    setFormData(updated);
+    if (onChange) {
+      onChange(updated);
+    }
+  };
+
+  const handleSave = async () => {
+    const key = storageKey || (reportData ? `fid_data_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}` : 'fid_data_global');
+    localStorage.setItem(key, JSON.stringify(formData));
+    
+    // Guardar y sincronizar en Supabase
+    await supabaseService.saveSoporteFiduciaria(
+      reportData?.id || '',
+      formData,
+      formData.cedula,
+      reportData?.informeNro?.toString() || '1'
+    );
+
+    if (onSave) {
+      onSave(formData);
+    }
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  const processCloneInputsAndTextareas = (cloneEl: HTMLElement) => {
+    cloneEl.querySelectorAll('input').forEach(input => {
+      const inputEl = input as HTMLInputElement;
+      const val = inputEl.value || '';
+      const div = document.createElement('div');
+      div.textContent = val;
+      div.className = inputEl.className.replace(/bg-amber-50/g, '');
+      const isRight = inputEl.classList.contains('text-right');
+      const isCenter = inputEl.classList.contains('text-center');
+      div.style.cssText = `
+        display: flex;
+        align-items: flex-end;
+        justify-content: ${isRight ? 'flex-end' : isCenter ? 'center' : 'flex-start'};
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        box-shadow: none;
+        color: #000000;
+        font-weight: bold;
+        padding: 0 2px 2px 2px;
+        margin: 0;
+        box-sizing: border-box;
+        line-height: 1.1;
+      `;
+      input.parentNode?.replaceChild(div, input);
+    });
+    cloneEl.querySelectorAll('textarea').forEach(textarea => {
+      const taEl = textarea as HTMLTextAreaElement;
+      const val = taEl.value || '';
+      const div = document.createElement('div');
+      div.textContent = val;
+      div.className = taEl.className.replace(/bg-amber-50/g, '');
+      div.style.cssText = `
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        box-shadow: none;
+        color: #000000;
+        font-weight: bold;
+        padding: 2px;
+        margin: 0;
+        box-sizing: border-box;
+        line-height: 1.2;
+      `;
+      textarea.parentNode?.replaceChild(div, textarea);
+    });
+  };
+
+  const handleDirectPrint = () => {
+    const element = document.getElementById('soporte-fiduciaria-document');
+    if (!element) {
+      window.print();
+      return;
+    }
+
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document;
+      if (!doc) {
+        window.print();
+        return;
+      }
+
+      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+        .map(el => el.outerHTML)
+        .join('\n');
+
+      const clone = element.cloneNode(true) as HTMLElement;
+      processCloneInputsAndTextareas(clone);
+
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+          <head>
+            <meta charset="utf-8">
+            <title>Documento Soporte Fiduciaria - Alcaldía de Quibdó</title>
+            ${styles}
+            <style>
+              @page {
+                size: letter;
+                margin: 0;
+              }
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                box-sizing: border-box;
+              }
+              html, body {
+                margin: 0 !important;
+                padding: 10mm !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-family: Arial, Helvetica, sans-serif !important;
+                width: 195mm !important;
+              }
+              .print-container {
+                width: 195mm !important;
+                background: white !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="print-container">
+              ${clone.outerHTML}
+            </div>
+            <script>
+              setTimeout(() => {
+                window.print();
+                setTimeout(() => {
+                  window.frameElement?.remove();
+                }, 500);
+              }, 500);
+            </script>
+          </body>
+        </html>
+      `);
+      doc.close();
+
+      if (onPrint) onPrint();
+    } catch (err) {
+      window.print();
+    }
+  };
+
+  const exportToPDF = async () => {
+    setIsExporting(true);
+    const element = document.getElementById('soporte-fiduciaria-document');
+    if (!element) {
+      setIsExporting(false);
+      return;
+    }
+
+    try {
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '794px';
+      document.body.appendChild(container);
+
+      const clone = element.cloneNode(true) as HTMLElement;
+      processCloneInputsAndTextareas(clone);
+      clone.style.width = '794px';
+      clone.style.background = '#ffffff';
+      clone.style.boxShadow = 'none';
+      clone.style.border = '1px solid #000';
+      clone.style.padding = '25px';
+
+      container.appendChild(clone);
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      document.body.removeChild(container);
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF('p', 'mm', 'letter');
+      const imgWidth = 215.9;
+      const pageHeight = 279.4;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const docSuffix = formData.docSoporteNro ? `_Doc_${formData.docSoporteNro}` : '';
+      pdf.save(`Documento_Soporte_Fiduciaria_${formData.nombresApellidos.replace(/\s+/g, '_')}${docSuffix}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const exportToImage = async () => {
+    setIsExportingImage(true);
+    const element = document.getElementById('soporte-fiduciaria-document');
+    if (!element) {
+      setIsExportingImage(false);
+      return;
+    }
+
+    try {
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '850px';
+      document.body.appendChild(container);
+
+      const clone = element.cloneNode(true) as HTMLElement;
+      processCloneInputsAndTextareas(clone);
+      clone.style.width = '850px';
+      clone.style.background = '#ffffff';
+      clone.style.boxShadow = 'none';
+      clone.style.border = '1px solid #000';
+      clone.style.padding = '30px';
+
+      container.appendChild(clone);
+
+      const canvas = await html2canvas(clone, {
+        scale: 2.5,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      document.body.removeChild(container);
+
+      const imgData = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = imgData;
+      const docSuffix = formData.docSoporteNro ? `_Doc_${formData.docSoporteNro}` : '';
+      link.download = `Documento_Soporte_Fiduciaria_${formData.nombresApellidos.replace(/\s+/g, '_')}${docSuffix}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error generating Image:', error);
+    } finally {
+      setIsExportingImage(false);
+    }
+  };
+
+  const handleReset = () => {
+    if (window.confirm('¿Está seguro de restaurar los datos fiduciarios por defecto con la información del informe?')) {
+      const def = createDefaultFiduciariaData(reportData);
+      setFormData(def);
+      if (onChange) onChange(def);
+    }
+  };
+
+  return (
+    <div className="w-full max-w-[21.59cm] flex flex-col gap-3 text-xs font-sans text-black">
+      {/* PANEL DE ACCIONES */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-xs print:hidden">
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-[#006b33]"></span>
+          <span className="text-xs font-bold text-slate-800 uppercase tracking-wide font-sans">
+            Soporte Fiduciaria y Adquisiciones
+          </span>
+          <span className="text-[11px] font-mono bg-emerald-100 text-[#006b33] font-bold px-2 py-0.5 rounded border border-emerald-300">
+            {formData.docSoporteNro ? `Documento #${formData.docSoporteNro}` : 'N° Doc Soporte: En Blanco'}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {isEditable && (
+            <>
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  isEditing 
+                    ? 'bg-amber-400 text-gray-950 hover:bg-amber-300 shadow-xs' 
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'
+                }`}
+              >
+                {isEditing ? <Check size={14} /> : <Edit3 size={14} />}
+                <span>{isEditing ? 'Modo Visualización' : 'Llenar / Editar Campos'}</span>
+              </button>
+              
+              <button
+                onClick={handleSave}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  saveSuccess ? 'bg-emerald-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                }`}
+              >
+                {saveSuccess ? <Check size={14} /> : <Save size={14} />}
+                <span>{saveSuccess ? '¡Guardado con Éxito!' : 'Guardar Datos'}</span>
+              </button>
+            </>
+          )}
+
+          <button
+            onClick={handleDirectPrint}
+            className="p-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl transition-all font-bold flex items-center gap-1.5 text-xs shadow-xs"
+            title="Imprimir Copia Oficial"
+          >
+            <Printer size={15} />
+            <span className="hidden sm:inline">Imprimir</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Guía Paso a Paso para Edición de Campos (Oculta al imprimir) */}
+      <div className="w-full bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50/60 border border-emerald-200 rounded-xl p-3 text-slate-700 shadow-xs print:hidden">
+        <div className="flex items-start gap-2.5">
+          <div className="bg-[#006b33] text-white p-1 rounded-md mt-0.5 shrink-0 shadow-xs">
+            <Sparkles size={14} />
+          </div>
+          <div className="space-y-1.5 flex-1">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-xs text-emerald-950">
+                Guía para Diligenciar y Editar el Soporte Fiduciario:
+              </span>
+              <span className="text-[10.5px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                {isEditing ? 'Modo Edición Activado' : 'Modo Lectura'}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] leading-snug">
+              <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                <span className="font-bold text-emerald-900 block mb-0.5">1. Habilitar Edición:</span>
+                Haga clic en <strong className="text-amber-900 bg-amber-100 px-1 py-0.5 rounded">«Llenar / Editar Campos»</strong> para desbloquear las casillas editables resaltadas.
+              </div>
+              <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                <span className="font-bold text-emerald-900 block mb-0.5">2. Modificar Datos:</span>
+                Edite la información de beneficiario, cuenta bancaria, retenciones, aportes PILA y fechas directamente sobre el formulario.
+              </div>
+              <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar e Imprimir:</span>
+                Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Datos»</strong> para registrar los cambios y <strong className="text-slate-900 bg-slate-200 px-1 py-0.5 rounded">«Imprimir»</strong> para generar el documento.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* DOCUMENTO SOPORTE IMPRESO */}
+      <div
+        id="soporte-fiduciaria-document"
+        className="w-full bg-white border-[1.5px] border-black shadow-md p-6 sm:p-10 text-black leading-normal select-text relative"
+        style={{
+          fontFamily: '"Courier New", Courier, monospace',
+          boxSizing: 'border-box',
+        }}
+      >
+        {/* Cabecera / Header */}
+        <div className="relative mb-6 pt-2 h-[120px]">
+          {/* Logo Fiduprevisora */}
+          <div 
+            className="absolute left-0 top-1 w-[140px] h-[40px] flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(135deg, #cc6b29 0%, #a42c3b 40%, #6e1531 100%)'
+            }}
+          >
+             <div className="text-[15px] text-white font-bold tracking-wider" style={{ fontFamily: 'Georgia, serif' }}>
+              {'{fiduprevisora}'}
+            </div>
+          </div>
+
+          {/* Información Central */}
+          <div className="absolute top-0 w-full text-center pointer-events-none" style={{ fontFamily: 'Calibri, "Helvetica Neue", sans-serif' }}>
+            <div className="pl-[140px] pr-4 pointer-events-auto">
+              <h1 className="text-[12px] font-bold tracking-wide text-black mb-5 text-center">
+                DOCUMENTO SOPORTE EN ADQUISICIONES EFECTUADAS A NO OBLIGADOS A FACTURAR.
+              </h1>
+            </div>
+            <div className="text-[16px] font-bold text-black mb-1">
+              E.F. MUNICIPIO DE QUIBDÓ
+            </div>
+            <div className="text-[16px] font-bold text-black mb-5">
+              FIDUCIARIA LA PREVISORA S.A.
+            </div>
+            <div className="text-[13px] font-bold text-black">
+              NIT. 860.525.148
+            </div>
+          </div>
+
+          {/* Caja N° Doc soporte */}
+          <div className="absolute right-0 bottom-[-24px] w-[140px] flex flex-col items-center">
+            <div className="text-[11px] font-bold text-black mb-0.5 w-[120px] text-left pl-1" style={{ fontFamily: 'Calibri, "Helvetica Neue", sans-serif' }}>
+              N° Doc soporte
+            </div>
+            <div className="w-[120px] border-[1.5px] border-black h-6 flex items-center justify-center bg-white">
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={formData.docSoporteNro || ''}
+                  placeholder=""
+                  onChange={(e) => handleFieldChange('docSoporteNro', e.target.value)}
+                  className="w-full h-full text-center font-bold text-[12px] bg-amber-50 text-amber-950 rounded-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              ) : (
+                <span className="font-bold text-[12px] text-black">
+                  {formData.docSoporteNro || ''}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Datos Generales con lineas */}
+        <div className="flex flex-col gap-1 text-[12px] leading-tight font-mono mb-4 w-full relative">
+          
+          {/* Ciudad y Fecha */}
+          <div className="flex flex-row items-end pr-[35%]">
+             <div className="whitespace-nowrap text-left pb-1 pr-2">Ciudad y Fecha:</div>
+             <div className="flex-grow border-b-[1.5px] border-black flex flex-row items-end pb-0 leading-none">
+               <div className="w-[45%] text-center">
+                 {isEditing ? (
+                   <input type="text" value={formData.ciudad} onChange={(e) => handleFieldChange('ciudad', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none" />
+                 ) : <span className="block pb-0 leading-none">{formData.ciudad}</span>}
+               </div>
+               <div className="w-[10%] text-center text-black">|</div>
+               <div className="w-[45%] text-center">
+                 {isEditing ? (
+                   <input type="text" value={formData.fecha} onChange={(e) => handleFieldChange('fecha', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none" />
+                 ) : <span className="block pb-0 leading-none">{formData.fecha}</span>}
+               </div>
+             </div>
+          </div>
+
+          {/* Nombres y Apellidos */}
+          <div className="flex flex-row items-end pr-[35%]">
+             <div className="whitespace-nowrap text-left pb-1 pr-2">Nombres y Apellidos:</div>
+             <div className="flex-grow border-b-[1.5px] border-black text-center pb-0 leading-none">
+                {isEditing ? (
+                  <input type="text" value={formData.nombresApellidos} onChange={(e) => handleFieldChange('nombresApellidos', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none" />
+                ) : <span className="block pb-0 leading-none">{formData.nombresApellidos}</span>}
+             </div>
+          </div>
+
+          {/* Cédula */}
+          <div className="flex flex-row items-end pr-[35%]">
+             <div className="whitespace-nowrap text-left pb-1 pr-2">N° Cédula de Ciudadanía:</div>
+             <div className="flex-grow border-b-[1.5px] border-black text-right pr-4 pb-0 leading-none">
+                {isEditing ? (
+                  <input type="text" value={formData.cedula} onChange={(e) => handleFieldChange('cedula', e.target.value)} className="w-full text-right pr-4 bg-amber-50 outline-none pb-0 leading-none" />
+                ) : <span className="block pb-0 leading-none">{formData.cedula}</span>}
+             </div>
+          </div>
+
+          {/* Dirección */}
+          <div className="flex flex-row items-end pr-[35%]">
+             <div className="whitespace-nowrap text-left pb-1 pr-2">Dirección:</div>
+             <div className="flex-grow border-b-[1.5px] border-black text-center uppercase pb-0 leading-none">
+                {isEditing ? (
+                  <input type="text" value={formData.direccion} onChange={(e) => handleFieldChange('direccion', e.target.value)} className="w-full text-center uppercase bg-amber-50 outline-none pb-0 leading-none" />
+                ) : <span className="block pb-0 leading-none">{formData.direccion}</span>}
+             </div>
+          </div>
+
+          {/* Teléfono */}
+          <div className="flex flex-row items-end pr-[35%]">
+             <div className="whitespace-nowrap text-left pb-1 pr-2">Teléfono:</div>
+             <div className="w-[250px] border-b-[1.5px] border-black text-center pb-0 leading-none">
+                {isEditing ? (
+                 <input type="text" value={formData.telefono} onChange={(e) => handleFieldChange('telefono', e.target.value)} className="w-full text-center bg-amber-50 outline-none pb-0 leading-none" />
+               ) : <span className="block pb-0 leading-none">{formData.telefono}</span>}
+             </div>
+          </div>
+
+          {/* La suma total */}
+          <div className="flex flex-row items-end pr-[35%]">
+             <div className="whitespace-nowrap text-left pb-1 pr-2">La suma total:</div>
+             <div className="flex-grow border-b-[1.5px] border-black text-right pr-4 pb-0 leading-none">
+                {isEditing ? (
+                 <input type="text" value={formData.sumaTotal} onChange={(e) => handleFieldChange('sumaTotal', e.target.value)} className="w-full text-right pr-4 bg-amber-50 outline-none pb-0 leading-none" />
+               ) : <span className="block pb-0 leading-none">{formData.sumaTotal}</span>}
+             </div>
+          </div>
+
+          {/* Valor en letras (Toma todo el ancho disponible) */}
+          <div className="flex flex-row items-end mt-1">
+             <div className="whitespace-nowrap text-left pb-1 pr-2">(Valor en letras)</div>
+             <div className="flex-grow border-b-[1.5px] border-black text-center uppercase pb-0 leading-none flex flex-col justify-end">
+                {isEditing ? (
+                  <textarea rows={2} value={formData.valorLetras} onChange={(e) => handleFieldChange('valorLetras', e.target.value)} className="w-full text-center bg-amber-50 outline-none resize-none overflow-hidden uppercase pb-0 leading-tight" />
+                ) : (
+                  <span className="block w-full leading-none pb-0.5">{formData.valorLetras}</span>
+                )}
+             </div>
+          </div>
+        </div>
+
+        {/* Texto Legal */}
+        <div className="text-[7.5px] text-center leading-tight mb-2 text-black w-full px-2 mt-6">
+          Tener en cuenta que para el caso de las adquisición de bienes o servicios del Regimen Comun debe generarse Factura de Venta con el<br />cumplimiento de los requisitos establecidos en el Art. 617 del Estatuto Tributario Y si esta obligado a facturar electronicamente con las<br />condiciones del D..U.R 358 DE 2020.
+        </div>
+
+        {/* Tabla */}
+        <table className="w-full border-collapse border-[1.5px] border-black text-[11px] mb-4 text-center">
+          <thead>
+            <tr className="bg-[#cccccc] border-b-[1.5px] border-black font-bold uppercase text-black">
+              <th className="border-r-[1.5px] border-black p-1.5 w-[14%] text-center align-middle">CANTIDAD</th>
+              <th className="border-r-[1.5px] border-black p-1.5 text-center align-middle">DESCRIPCION DEL BIEN O SERVICIO</th>
+              <th className="border-r-[1.5px] border-black p-1.5 w-[18%] align-middle text-center">SUB TOTAL</th>
+              <th className="p-1.5 w-[18%] align-middle text-center">TOTAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b-[1.5px] border-black text-black h-[180px]">
+              <td className="border-r-[1.5px] border-black p-3 text-center align-middle">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.cantidad}
+                    onChange={(e) => handleFieldChange('cantidad', e.target.value)}
+                    className="w-full text-center bg-amber-50 outline-none"
+                  />
+                ) : (
+                  formData.cantidad
+                )}
+              </td>
+              <td className="border-r-[1.5px] border-black p-3 text-center uppercase leading-normal align-middle">
+                {isEditing ? (
+                  <textarea
+                    value={formData.descripcionBienServicio}
+                    onChange={(e) => handleFieldChange('descripcionBienServicio', e.target.value)}
+                    rows={4}
+                    className="w-full h-[140px] bg-amber-50 text-center outline-none resize-none overflow-hidden"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <span className="inline-block align-middle">{formData.descripcionBienServicio}</span>
+                  </div>
+                )}
+              </td>
+              <td className="border-r-[1.5px] border-black p-3 text-center align-middle">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.subTotal}
+                    onChange={(e) => handleFieldChange('subTotal', e.target.value)}
+                    className="w-full text-center bg-amber-50 outline-none"
+                  />
+                ) : (
+                  formData.subTotal
+                )}
+              </td>
+              <td className="p-3 text-center align-middle">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.total}
+                    onChange={(e) => handleFieldChange('total', e.target.value)}
+                    className="w-full text-center bg-amber-50 outline-none"
+                  />
+                ) : (
+                  formData.total
+                )}
+              </td>
+            </tr>
+            {/* Fila de Totales */}
+            <tr className="font-bold bg-[#cccccc]">
+              <td colSpan={2} className="border-r-[1.5px] border-black p-1.5 text-center uppercase text-black">
+                TOTAL GENERAL
+              </td>
+              <td className="border-r-[1.5px] border-black p-1.5 text-left font-bold">
+                $
+              </td>
+              <td className="p-1.5 text-right font-bold pr-4">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.totalGeneral}
+                    onChange={(e) => handleFieldChange('totalGeneral', e.target.value)}
+                    className="w-full text-right bg-amber-50 outline-none"
+                  />
+                ) : (
+                  formData.totalGeneral
+                )}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Nota RUT adjunto */}
+        <div className="flex items-center justify-between text-[11px] text-black">
+          <div className="italic underline underline-offset-2 font-bold">
+            {isEditing ? (
+              <div className="flex items-center gap-1">
+                <span>Nota:</span>
+                <input
+                  type="text"
+                  value={formData.nota}
+                  onChange={(e) => handleFieldChange('nota', e.target.value)}
+                  className="bg-amber-50 outline-none font-normal"
+                />
+              </div>
+            ) : (
+              <span>Nota: {formData.nota}</span>
+            )}
+          </div>
+          <div></div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+

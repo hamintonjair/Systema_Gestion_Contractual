@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+/* Tipografía Oficial: Todo el informe debe usar Calibri */
+#informe-printable-document,
+#informe-printable-document * {
+  font-family: 'Calibri', 'Segoe UI', Candara, Arial, sans-serif !important;
+}
+
+/* Tipografía Oficial: Documento Equivalente a la Factura / Desembolso debe usar Times New Roman */
+#desembolso-document,
+#desembolso-document *:not(.font-arial-narrow):not(.font-arial-narrow *) {
+  font-family: "Times New Roman", Times, serif !important;
+}
+
+.font-arial-narrow,
+.font-arial-narrow * {
+  font-family: 'Arial Narrow', 'Nimbus Sans Narrow', Arial, sans-serif !important;
+}
+
+/* Reglas de visualización y texto de alto contraste para el Certificado de Supervisión */
+#certificado-supervision-document {
+  color: #000000 !important;
+}
+
+#certificado-supervision-document input,
+#certificado-supervision-document textarea,
+#certificado-supervision-document select {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  caret-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+#certificado-supervision-document input::placeholder,
+#certificado-supervision-document textarea::placeholder {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280 !important;
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  @page {
+    margin: 3mm 4mm;
+    size: letter portrait;
+  }
+  
+  html, body, #root, #root > div {
+    background-color: transparent !important;
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  /* Ocultar elementos no imprimibles */
+  header, 
+  nav, 
+  aside,
+  button, 
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Si se está imprimiendo el Certificado dentro de un modal */
+  .fixed:has(#certificado-supervision-document),
+  .fixed:has(#informe-printable-document) {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    width: 100% !important;
+    display: block !important;
+  }
+
+  /* Reglas para el contenedor del Certificado de Supervisión - 1 SOLA HOJA EXACTA */
+  #certificado-supervision-document {
+    display: block !important;
+    visibility: visible !important;
+    width: 216mm !important;
+    min-height: 279.4mm !important;
+    max-width: 216mm !important;
+    margin: 0 auto !important;
+    padding: 10mm 12mm !important;
+    box-shadow: none !important;
+    border: 2px solid #000000 !important;
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #certificado-supervision-document * {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+  }
+
+  #certificado-supervision-document th,
+  #certificado-supervision-document .bg-\[\#d1d5db\] {
+    background-color: #d1d5db !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Reglas para el contenedor del informe */
+  #informe-printable-document {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 10mm !important;
+    box-shadow: none !important;
+    border: none !important;
+    font-family: 'Calibri', 'Segoe UI', Candara, Arial, sans-serif !important;
+  }
+
+  /* Control estricto de saltos de página */
+  .break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Repetir thead en cada página */
+  thead.table-header-group {
+    display: table-header-group !important;
+  }
+}
+

@@ -1,0 +1,455 @@
+import React, { useState, useEffect } from 'react';
+import { DeclaracionRentaData, ReportData, createDefaultDeclaracionRentaData } from '../types';
+import { supabaseService } from '../services/supabaseService';
+import { Printer, Save, Check, Edit3, Sparkles } from 'lucide-react';
+
+interface DeclaracionRentaDocProps {
+  data?: DeclaracionRentaData;
+  reportData?: ReportData;
+  onChange?: (updated: DeclaracionRentaData) => void;
+  onSave?: (saved: DeclaracionRentaData) => void;
+  storageKey?: string;
+  isEditable?: boolean;
+}
+
+export default function DeclaracionRentaDoc({
+  data,
+  reportData,
+  onChange,
+  onSave,
+  storageKey,
+  isEditable = true
+}: DeclaracionRentaDocProps) {
+  const [formData, setFormData] = useState<DeclaracionRentaData>(createDefaultDeclaracionRentaData());
+    const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+
+  useEffect(() => {
+    const loadData = async () => {
+      let baseData: DeclaracionRentaData | null = null;
+      if (data) {
+        baseData = data;
+      } else if (reportData) {
+        const savedDB = await supabaseService.getDeclaracionRenta(
+          reportData.id,
+          reportData.contratistaDocumento,
+          reportData.informeNro?.toString()
+        );
+        if (savedDB) {
+          baseData = savedDB as DeclaracionRentaData;
+        } else {
+          const key = storageKey || `dec_renta_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}`;
+          const saved = localStorage.getItem(key);
+          if (saved) {
+            try { baseData = JSON.parse(saved); } catch (e) { baseData = createDefaultDeclaracionRentaData(reportData); }
+          } else {
+            baseData = createDefaultDeclaracionRentaData(reportData);
+          }
+        }
+      } else {
+        return;
+      }
+
+      setFormData({
+        ...baseData,
+        reportId: reportData?.id || baseData.reportId,
+      });
+    };
+    loadData();
+  }, [data, reportData, storageKey]);
+
+  const handleFieldChange = (field: keyof DeclaracionRentaData, value: string | boolean) => {
+    const updated = { ...formData, [field]: value };
+    setFormData(updated);
+    if (onChange) {
+      onChange(updated);
+    }
+  };
+
+  const handleSave = async () => {
+    const key = storageKey || (reportData ? `dec_renta_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}` : 'dec_renta_global');
+    localStorage.setItem(key, JSON.stringify(formData));
+    
+    await supabaseService.saveDeclaracionRenta(
+      reportData?.id || '',
+      formData,
+      formData.cedula,
+      reportData?.informeNro?.toString() || '1'
+    );
+
+    if (onSave) {
+      onSave(formData);
+    }
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  const processCloneInputsAndTextareas = (cloneEl: HTMLElement) => {
+    cloneEl.querySelectorAll('input, textarea').forEach(el => {
+      const inputEl = el as HTMLInputElement | HTMLTextAreaElement;
+      const val = inputEl.value || '';
+      
+      if (inputEl.type === 'radio' || inputEl.type === 'checkbox') {
+         // handled separately or let it be if it renders okay, but checkboxes might not render.
+         // Actually, let's just leave it if it's text, otherwise replace.
+         if (inputEl.type === 'checkbox' || inputEl.type === 'radio') return;
+      }
+      
+      const div = document.createElement('div');
+      div.textContent = val;
+      div.className = el.className.replace(/bg-amber-50/g, '');
+      div.style.cssText = `
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        box-shadow: none;
+        color: #000000;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: ${window.getComputedStyle(el).fontSize};
+        font-weight: ${window.getComputedStyle(el).fontWeight};
+        padding: 0;
+        margin: 0;
+        line-height: 1.2;
+        text-align: ${window.getComputedStyle(el).textAlign};
+      `;
+      if (el.tagName.toLowerCase() === 'textarea') {
+         div.style.whiteSpace = 'pre-wrap';
+      }
+      el.parentNode?.replaceChild(div, el);
+    });
+  };
+
+  const handleDirectPrint = () => {
+    const element = document.getElementById('declaracion-renta-document');
+    if (!element) {
+      window.print();
+      return;
+    }
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+      const doc = iframe.contentWindow?.document;
+      if (!doc) {
+        window.print();
+        return;
+      }
+      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+        .map(el => el.outerHTML)
+        .join('\n');
+      const clone = element.cloneNode(true) as HTMLElement;
+      processCloneInputsAndTextareas(clone);
+      clone.style.width = '21.59cm';
+      clone.style.minHeight = 'auto';
+      clone.style.transform = 'none';
+      clone.style.boxShadow = 'none';
+      clone.style.border = 'none';
+      clone.classList.remove('scale-[0.85]', 'sm:scale-100');
+      
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+          <head>
+            <meta charset="utf-8">
+            <title>Declaración de Renta</title>
+            ${styles}
+            <style>
+              @page {
+                size: letter;
+                margin: 0;
+              }
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                box-sizing: border-box;
+              }
+              html, body {
+                margin: 0 !important;
+                padding: 10mm !important;
+                font-family: Arial, sans-serif;
+              }
+              .bg-amber-50 {
+                background-color: transparent !important;
+              }
+              .border-b {
+                border-bottom: 1px solid transparent !important;
+              }
+              input, textarea {
+                border: none !important;
+                background: transparent !important;
+              }
+            </style>
+          </head>
+          <body>
+            ${clone.outerHTML}
+            <script>
+              window.onload = () => {
+                setTimeout(() => {
+                  window.print();
+                  setTimeout(() => {
+                    window.parent.document.body.removeChild(window.frameElement);
+                  }, 500);
+                }, 200);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      doc.close();
+    } catch (e) {
+      console.error("Error al imprimir", e);
+      window.print();
+    }
+  };
+
+  
+  return (
+    <div className="flex flex-col items-center w-full pb-10">
+      {isEditable && (
+        <div className="w-full max-w-[21.59cm] flex flex-col gap-3 mb-6 print:hidden">
+          <div className="flex justify-between items-center bg-slate-900 text-white p-3 rounded-xl shadow-md border border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="bg-slate-800 p-2 rounded-lg text-emerald-400">
+                <Printer size={18} />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm">Declaración de Renta y Retención en la Fuente</h3>
+                <p className="text-xs text-slate-300 hidden sm:block">Ley 1819 de 2016 - Rentas de Trabajo</p>
+              </div>
+            </div>
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  isEditing 
+                    ? 'bg-amber-400 text-gray-950 hover:bg-amber-300 shadow-xs' 
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'
+                }`}
+              >
+                {isEditing ? <Check size={14} /> : <Edit3 size={14} />}
+                <span className="hidden sm:inline">{isEditing ? 'Modo Visualización' : 'Llenar / Editar Campos'}</span>
+              </button>
+              <button
+                onClick={handleSave}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  saveSuccess ? 'bg-emerald-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                }`}
+              >
+                {saveSuccess ? <Check size={14} /> : <Save size={14} />}
+                <span className="hidden sm:inline">{saveSuccess ? '¡Guardado con Éxito!' : 'Guardar Datos'}</span>
+              </button>
+              <button
+                onClick={handleDirectPrint}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition-colors"
+                title="Imprimir Copia Oficial"
+              >
+                <Printer size={14} />
+                <span className="hidden sm:inline">Imprimir</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Guía Paso a Paso para Edición de Campos */}
+          <div className="w-full bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50/60 border border-emerald-200 rounded-xl p-3 text-slate-700 shadow-xs">
+            <div className="flex items-start gap-2.5">
+              <div className="bg-[#006b33] text-white p-1 rounded-md mt-0.5 shrink-0 shadow-xs">
+                <Sparkles size={14} />
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs text-emerald-950">
+                    Guía para Diligenciar y Editar la Declaración Bajo Juramento:
+                  </span>
+                  <span className="text-[10.5px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    {isEditing ? 'Modo Edición Activado' : 'Modo Lectura'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] leading-snug">
+                  <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                    <span className="font-bold text-emerald-900 block mb-0.5">1. Habilitar Edición:</span>
+                    Haga clic en <strong className="text-amber-900 bg-amber-100 px-1 py-0.5 rounded">«Llenar / Editar Campos»</strong> para desbloquear las opciones y firmas.
+                  </div>
+                  <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                    <span className="font-bold text-emerald-900 block mb-0.5">2. Seleccionar Opciones:</span>
+                    Marque las casillas SI/NO de vinculación de trabajadores, deducción de dependientes o medicina prepagada.
+                  </div>
+                  <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                    <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar e Imprimir:</span>
+                    Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Datos»</strong> para guardar su selección y luego <strong className="text-slate-900 bg-slate-200 px-1 py-0.5 rounded">«Imprimir»</strong>.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DOCUMENT PAGE */}
+      <div 
+        id="declaracion-renta-document"
+        className="bg-white shadow-xl origin-top transition-transform duration-300 scale-[0.85] sm:scale-100"
+        style={{
+          width: '21.59cm',
+          minHeight: '27.94cm', // Letter size
+          padding: '2.54cm', // 1 inch margins approx
+          fontFamily: 'Arial, sans-serif',
+          color: '#000000',
+          position: 'relative'
+        }}
+      >
+        <div className="text-[14px] leading-relaxed relative">
+          
+          <div className="mb-6">
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.fecha}
+                onChange={(e) => handleFieldChange('fecha', e.target.value)}
+                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 w-2/3"
+                placeholder="Quibdó, 14 de julio de 2026"
+              />
+            ) : (
+              <div>{formData.fecha}</div>
+            )}
+          </div>
+
+          <div className="mb-6">
+            {isEditing ? (
+              <textarea
+                value={formData.senores}
+                onChange={(e) => handleFieldChange('senores', e.target.value)}
+                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 w-1/2 resize-none"
+                rows={3}
+                placeholder="Señores&#10;ALCALDIA&#10;Ciudad."
+              />
+            ) : (
+              <div className="whitespace-pre-wrap">
+                {formData.senores.split('\n').map((line, idx) => (
+                  <div key={idx} className={line.toUpperCase().includes('ALCALD') ? 'font-bold' : ''}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mb-6 font-bold uppercase">
+            REF: CERTIFICACIÓN PARA EFECTOS DE RETENCIÓN EN LA FUENTE LEY 1819 DE 2016- RENTAS DE TRABAJO.
+          </div>
+
+          <div className="mb-6 font-bold uppercase text-center">
+            CERTIFICACIÓN BAJO LA GRAVEDAD DE JURAMENTO
+          </div>
+
+          <div className="mb-6 text-justify">
+            Yo, {isEditing ? (
+              <input
+                type="text"
+                value={formData.nombresApellidos}
+                onChange={(e) => handleFieldChange('nombresApellidos', e.target.value)}
+                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold uppercase w-64 inline-block text-center"
+              />
+            ) : (
+              <strong className="uppercase">{formData.nombresApellidos}</strong>
+            )}, identificada con cedula de ciudadanía No. {isEditing ? (
+              <input
+                type="text"
+                value={formData.cedula}
+                onChange={(e) => handleFieldChange('cedula', e.target.value)}
+                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold w-24 inline-block text-center"
+              />
+            ) : (
+              <strong>{formData.cedula}</strong>
+            )} expedida en {isEditing ? (
+              <input
+                type="text"
+                value={formData.expedicionCedula}
+                onChange={(e) => handleFieldChange('expedicionCedula', e.target.value)}
+                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold w-32 inline-block text-center"
+              />
+            ) : (
+              <strong>{formData.expedicionCedula}</strong>
+            )}, con el fin de dar cumplimiento a las disposiciones establecidas en la ley 1819 de 2016 
+            y del parágrafo 2 del artículo 383 del Estatuto Tributario, manifiesto bajo gravedad de juramento 
+            que:
+          </div>
+
+          <div className="mb-6 text-justify">
+            Para efectos de la aplicación de la tabla de retención en la fuente establecida en el artículo 383 del 
+            Estatuto tributario, la cual se le aplica a los pagos o abonos en cuenta por concepto de Ingresos por 
+            honorarios y por compensación por servicios personales. . <strong>(Parágrafo 2 ART 383 E.T)</strong>.
+          </div>
+
+          <div className="flex flex-row justify-between mb-6 pl-12 pr-48 font-bold">
+            <div className="flex items-center cursor-pointer" onClick={() => isEditing && handleFieldChange('aplicaRetencion', true)}>
+              <span>SI ( </span>
+              <span className="w-4 text-center inline-block">{formData.aplicaRetencion ? 'X' : '\u00A0'}</span>
+              <span> )</span>
+            </div>
+            <div className="flex items-center cursor-pointer" onClick={() => isEditing && handleFieldChange('aplicaRetencion', false)}>
+              <span>NO ( </span>
+              <span className="w-4 text-center inline-block">{!formData.aplicaRetencion ? 'X' : '\u00A0'}</span>
+              <span> )</span>
+            </div>
+          </div>
+
+          <div className="mb-6 text-justify">
+            De la misma manera, en el momento en que contrate o vincule más de un trabajador asociado a 
+            mi actividad económica, me comprometo a informar.
+          </div>
+
+          <div className="mb-6">
+            Cordialmente,
+          </div>
+
+          <div className="mt-12 print:break-inside-avoid">
+            {/* Firma */}
+            <div className="w-[300px]">
+              <div className="border-b-[1px] border-black mb-1 w-full h-10"></div>
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    value={formData.firmaNombre}
+                    onChange={(e) => handleFieldChange('firmaNombre', e.target.value)}
+                    className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold uppercase w-full block mb-1"
+                  />
+                  <div className="flex flex-row items-center whitespace-nowrap">
+                    <span>C.C. </span>
+                    <input
+                      type="text"
+                      value={formData.firmaCedula}
+                      onChange={(e) => handleFieldChange('firmaCedula', e.target.value)}
+                      className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold w-24 mx-1 text-center"
+                    />
+                    <span> de </span>
+                    <input
+                      type="text"
+                      value={formData.firmaExpedicion}
+                      onChange={(e) => handleFieldChange('firmaExpedicion', e.target.value)}
+                      className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 w-32 ml-1"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="font-bold uppercase mb-1">{formData.firmaNombre}</div>
+                  <div>C.C. {formData.firmaCedula} de {formData.firmaExpedicion}</div>
+                </>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
