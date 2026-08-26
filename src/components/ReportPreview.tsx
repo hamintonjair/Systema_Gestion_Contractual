@@ -516,7 +516,7 @@ export default function ReportPreview({
                     <td colSpan={2} className="border border-black px-2 py-1 font-bold text-[10px]">Fecha Acta de Aprobación Póliza:</td>
                     {renderReviewedTd(
                       'fechaPoliza',
-                      'Fecha Aprobación Póliza',
+                      'Fecha Acta de Aprobación Póliza:',
                       data.fechaPoliza,
                       data.fechaPoliza,
                       ''

@@ -708,10 +708,11 @@ export default function AutorizacionDesembolsoDoc({
                     type="text" 
                     value={formData.valorNumeros} 
                     onChange={(e) => handleFieldChange('valorNumeros', e.target.value)} 
-                    className="bg-amber-50 outline-none font-bold text-[12px] px-1" 
+                    className="bg-amber-50 outline-none font-bold text-[12px] px-1 italic font-serif" 
+                    style={{ fontStyle: 'italic' }}
                   />
                 ) : (
-                  <span className="text-[12px] font-bold">{formData.valorNumeros}</span>
+                  <span className="text-[12px] font-bold italic font-serif">{formData.valorNumeros}</span>
                 )}
               </div>
             </div>
@@ -729,10 +730,11 @@ export default function AutorizacionDesembolsoDoc({
                       type="text" 
                       value={formData.subtotal} 
                       onChange={(e) => handleFieldChange('subtotal', e.target.value)} 
-                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[11.5px]" 
+                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[11.5px] italic font-serif" 
+                      style={{ fontStyle: 'italic' }}
                     />
                   ) : (
-                    <span>{formData.subtotal}</span>
+                    <span className="italic font-serif">{formData.subtotal}</span>
                   )}
                 </div>
               </div>
@@ -748,10 +750,11 @@ export default function AutorizacionDesembolsoDoc({
                       type="text" 
                       value={formData.ivaAsumido} 
                       onChange={(e) => handleFieldChange('ivaAsumido', e.target.value)} 
-                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[11.5px]" 
+                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[11.5px] italic font-serif" 
+                      style={{ fontStyle: 'italic' }}
                     />
                   ) : (
-                    <span>{formData.ivaAsumido}</span>
+                    <span className="italic font-serif">{formData.ivaAsumido}</span>
                   )}
                 </div>
               </div>
@@ -767,10 +770,11 @@ export default function AutorizacionDesembolsoDoc({
                       type="text" 
                       value={formData.total} 
                       onChange={(e) => handleFieldChange('total', e.target.value)} 
-                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[11.5px]" 
+                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[11.5px] italic font-serif" 
+                      style={{ fontStyle: 'italic' }}
                     />
                   ) : (
-                    <span>{formData.total}</span>
+                    <span className="italic font-serif">{formData.total}</span>
                   )}
                 </div>
               </div>
@@ -785,16 +789,17 @@ export default function AutorizacionDesembolsoDoc({
             <div className="w-[20%] bg-[#e5e7eb] px-2 py-1.5 font-bold text-[11px] border-r-2 border-black uppercase flex items-center">
               VALOR EN LETRAS:
             </div>
-            <div className="w-[80%] bg-white px-3 py-1.5 font-bold text-center text-[10.5px] uppercase flex items-center justify-center font-serif">
+            <div className="w-[80%] bg-white px-3 py-1.5 font-bold text-center text-[10.5px] uppercase flex items-center justify-center font-serif italic">
               {isEditing ? (
                 <input 
                   type="text" 
                   value={formData.valorLetras} 
                   onChange={(e) => handleFieldChange('valorLetras', e.target.value)} 
-                  className="w-full text-center bg-amber-50 outline-none uppercase font-serif text-[10.5px] font-bold" 
+                  className="w-full text-center bg-amber-50 outline-none uppercase font-serif text-[10.5px] font-bold italic" 
+                  style={{ fontStyle: 'italic' }}
                 />
               ) : (
-                <span className="font-bold tracking-tight">{formData.valorLetras}</span>
+                <span className="font-bold tracking-tight italic font-serif">{formData.valorLetras}</span>
               )}
             </div>
           </div>

@@ -6,6 +6,8 @@ import CertificadoSupervisionDoc from './CertificadoSupervisionDoc';
 import SoporteFiduciariaDoc from './SoporteFiduciariaDoc';
 import DeclaracionRentaDoc from './DeclaracionRentaDoc';
 import AutorizacionDesembolsoDoc from './AutorizacionDesembolsoDoc';
+import ValidationAlertModal from './ValidationAlertModal';
+import { validateReportForRadicacion, RadicacionValidationError } from '../utils/validationUtils';
 import { 
   FileText, 
   Plus, 
@@ -64,44 +66,84 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   const [isCreatingReport, setIsCreatingReport] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<ReportData | null>(null);
   const [newInformeNro, setNewInformeNro] = useState('1');
-  const [newPeriodoDesde, setNewPeriodoDesde] = useState('2026-07-01');
-  const [newPeriodoHasta, setNewPeriodoHasta] = useState('2026-07-31');
+  const [newPeriodoDesde, setNewPeriodoDesde] = useState('');
+  const [newPeriodoHasta, setNewPeriodoHasta] = useState('');
   const [newTipoInforme, setNewTipoInforme] = useState<'Mensual' | 'Final'>('Mensual');
   const [newValorMensual, setNewValorMensual] = useState('');
 
-  // Estado para Notificaciones de Aprobación
-  const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [approvedReportsToNotify, setApprovedReportsToNotify] = useState<ReportData[]>([]);
-  const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
+  // Helper para convertir DD/MM/YYYY a YYYY-MM-DD (para inputs tipo date)
+  const convertDDMMYYYYtoYYYYMMDD = (dateStr?: string) => {
+    if (!dateStr) return '';
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        const [dd, mm, yyyy] = parts;
+        return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+      }
+    }
+    return dateStr;
+  };
+
+  // Campos base del contrato para el INFORME (Auto-completados con la información contractual existente)
+  const [newContratoNro, setNewContratoNro] = useState(user.contratoNro || '015');
+  const [newObjeto, setNewObjeto] = useState(user.objetoContrato || 'Prestación de servicios profesionales y de apoyo a la gestión en la Secretaría de Inclusión y Cohesión Social del Municipio de Quibdó.');
+  const [newValorContrato, setNewValorContrato] = useState(user.valorContrato || '$ 20.029.800');
+  const [newCdpNro, setNewCdpNro] = useState(user.cdpNro || '356');
+  const [newCrpNro, setNewCrpNro] = useState(user.crpNro || '123');
+  const [newPlazo, setNewPlazo] = useState(user.plazo || '6 MESES');
+  const [newFechaInicio, setNewFechaInicio] = useState(convertDDMMYYYYtoYYYYMMDD(user.fechaInicio || '14/01/2026'));
+  const [newFechaTerminacion, setNewFechaTerminacion] = useState(convertDDMMYYYYtoYYYYMMDD(user.fechaTerminacion || '14/07/2026'));
+  const [newSupervisorNombre, setNewSupervisorNombre] = useState(user.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA');
+  const [newSecretariaNombre, setNewSecretariaNombre] = useState(user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social');
+  const [newSecretariaCodigo, setNewSecretariaCodigo] = useState(user.secretariaCodigo || '170');
+  const [newPolizaNro, setNewPolizaNro] = useState(user.polizaNro || 'N/A');
+  const [newFechaPoliza, setNewFechaPoliza] = useState(user.fechaPoliza || 'N/A');
+
+  const handleOpenCreateModal = () => {
+    const lastReport = reportsList[0];
+    setNewInformeNro(reportsList.length > 0 ? String(reportsList.length + 1) : '1');
+    setNewPeriodoDesde('');
+    setNewPeriodoHasta('');
+    setNewTipoInforme('Mensual');
+    setNewValorMensual(lastReport?.valorMensual || existingValorMensual || '$ 3.338.300');
+    setNewContratoNro(lastReport?.contratoNro || user.contratoNro || '015');
+    setNewObjeto(lastReport?.objeto || user.objetoContrato || 'Prestación de servicios profesionales y de apoyo a la gestión en la Secretaría de Inclusión y Cohesión Social del Municipio de Quibdó.');
+    setNewValorContrato(lastReport?.valorContrato || user.valorContrato || '$ 20.029.800');
+    setNewCdpNro(lastReport?.cdpNro || user.cdpNro || '356');
+    setNewCrpNro(lastReport?.crpNro || user.crpNro || '123');
+    setNewPlazo(lastReport?.plazo || user.plazo || '6 MESES');
+    setNewFechaInicio(convertDDMMYYYYtoYYYYMMDD(lastReport?.fechaInicio || user.fechaInicio || '14/01/2026'));
+    setNewFechaTerminacion(convertDDMMYYYYtoYYYYMMDD(lastReport?.fechaTerminacion || user.fechaTerminacion || '14/07/2026'));
+    setNewSupervisorNombre(lastReport?.supervisorNombre || user.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA');
+    setNewSecretariaNombre(lastReport?.secretariaNombre || user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social');
+    setNewSecretariaCodigo(lastReport?.secretariaCodigo || user.secretariaCodigo || '170');
+    setNewPolizaNro(lastReport?.polizaNro || user.polizaNro || 'N/A');
+    setNewFechaPoliza(lastReport?.fechaPoliza || user.fechaPoliza || 'N/A');
+
+    setShowCreateModal(true);
+  };
+
+  // Modal de Validación de Radicación
+  const [validationModal, setValidationModal] = useState<{
+    isOpen: boolean;
+    errors: RadicacionValidationError[];
+    reportNro?: string;
+  } | null>(null);
+
   const [lastActionTimestamp, setLastActionTimestamp] = useState<number>(0);
+  const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
 
   const handleDismissAllApproved = () => {
-    const doc = user.documentoIdentidad || '';
-    if (doc) {
-      reportsList.forEach(r => {
-        if (r.estado === 'Aprobado') {
-          sessionStorage.setItem(`notified_approved_${doc}_${r.informeNro}`, 'seen');
-        }
-      });
-      setLastActionTimestamp(Date.now());
-    }
+    setLastActionTimestamp(Date.now());
   };
 
   const handleInterceptOpenReport = (report: ReportData) => {
-    const doc = user.documentoIdentidad || '';
-    if (doc && report.estado === 'Aprobado') {
-      sessionStorage.setItem(`notified_approved_${doc}_${report.informeNro}`, 'seen');
-      setLastActionTimestamp(Date.now());
-    }
+    setLastActionTimestamp(Date.now());
     onOpenReportEditor(report);
   };
 
   const handleInterceptDirectPrint = (report: ReportData) => {
-    const doc = user.documentoIdentidad || '';
-    if (doc && report.estado === 'Aprobado') {
-      sessionStorage.setItem(`notified_approved_${doc}_${report.informeNro}`, 'seen');
-      setLastActionTimestamp(Date.now());
-    }
+    setLastActionTimestamp(Date.now());
     onDirectPrint(report);
   };
 
@@ -109,159 +151,35 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
-  // Cargar datos reales desde Supabase y almacenamiento local
+  // Cargar datos reales desde Supabase (ESTRICTAMENTE FILTRADO POR USER DE SUPABASE)
   const loadContractorData = async () => {
     setLoadingDb(true);
-    let dbReports: ReportData[] | null = null;
+    let finalReports: ReportData[] = [];
     
     try {
-      dbReports = await supabaseService.getContractorReports(user.documentoIdentidad, user.id);
+      const dbReports = await supabaseService.getContractorReports(user.documentoIdentidad, user.id);
+      if (dbReports) {
+        finalReports = dbReports.map(rep => {
+          if (rep.estado === 'Borrador') {
+            rep.comentariosCampos = {};
+          } else if (rep.comentariosCampos && Object.keys(rep.comentariosCampos).length > 0 && rep.estado !== 'Aprobado') {
+            rep.estado = 'Devuelto';
+          }
+          return rep;
+        });
+      }
     } catch (e) {
       console.warn('Error loading reports from Supabase:', e);
     }
 
-    const userDoc = user.documentoIdentidad || '';
-    const userDocKey = userDoc ? `_${userDoc}` : '';
-    let finalReports: ReportData[] = [];
-
-    // Si dbReports no es null, usamos la base de datos como fuente de verdad
-    if (dbReports !== null) {
-      const merged = dbReports.map(dbRep => {
-        let local = localStorage.getItem(`informe_data${userDocKey}_${dbRep.informeNro}`) || 
-                      localStorage.getItem(`informe_data_${userDoc}_${dbRep.informeNro}`);
-        
-        let localComments = localStorage.getItem(`informe_comentarios_${userDoc}_${dbRep.informeNro}`);
-        
-        let rep: ReportData = { ...dbRep };
-        if (localComments) {
-          try {
-            const parsedComm = JSON.parse(localComments);
-            if (parsedComm && Object.keys(parsedComm).length > 0) {
-              rep.comentariosCampos = { ...(rep.comentariosCampos || {}), ...parsedComm };
-            }
-          } catch (e) {}
-        }
-        if (local) {
-          try {
-            const parsed = JSON.parse(local);
-            if (parsed.anexos && parsed.anexos.length > (rep.anexos?.length || 0)) {
-              rep.anexos = parsed.anexos;
-            }
-            if (parsed.estado) {
-              if (parsed.estado === 'Devuelto' && rep.estado !== 'Aprobado') {
-                rep.estado = 'Devuelto';
-              }
-            }
-          } catch (e) {}
-        }
-        if (rep.estado === 'Borrador') {
-          rep.comentariosCampos = {};
-        } else if (rep.comentariosCampos && Object.keys(rep.comentariosCampos).length > 0 && rep.estado !== 'Aprobado') {
-          rep.estado = 'Devuelto';
-        }
-        return rep;
-      });
-
-      finalReports = [...merged];
-
-      // Añadir borradores locales que NUNCA han sido sincronizados a DB
-      for (let i = 1; i <= 12; i++) {
-        const saved = localStorage.getItem(`informe_data${userDocKey}_${i}`) || localStorage.getItem(`informe_data_${userDoc}_${i}`);
-        const isDeleted = localStorage.getItem(`deleted_report_${userDoc}_${i}`) === 'true';
-        if (saved && !isDeleted) {
-          try {
-            const parsed = JSON.parse(saved);
-            // Si el borrador local NO existe en DB, y tiene syncedToDb = false o un ID de borrador, lo mantenemos
-            if (!merged.some(r => r.informeNro === parsed.informeNro) && (!parsed.syncedToDb || parsed.id.startsWith('draft-'))) {
-               finalReports.push(parsed);
-            }
-          } catch(e) {}
-        }
-      }
-    } else {
-      // FALLBACK 100% OFFLINE (dbReports es null por error de red)
-      const wasExplicitlyDeleted = localStorage.getItem(`deleted_report_${userDoc}_1`) === 'true';
-      for (let i = 1; i <= 12; i++) {
-        let saved = localStorage.getItem(`informe_data${userDocKey}_${i}`) || 
-                      localStorage.getItem(`informe_data_${userDoc}_${i}`);
-        
-        let storedComm = localStorage.getItem(`informe_comentarios_${userDoc}_${i}`);
-        const isDeleted = localStorage.getItem(`deleted_report_${userDoc}_${i}`) === 'true' || localStorage.getItem(`deleted_report_${i}`) === 'true';
-        
-        if (saved && !isDeleted) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (storedComm) {
-              try {
-                const parsedComm = JSON.parse(storedComm);
-                parsed.comentariosCampos = { ...(parsed.comentariosCampos || {}), ...parsedComm };
-              } catch (e) {}
-            }
-            if (parsed.comentariosCampos && Object.keys(parsed.comentariosCampos).length > 0 && parsed.estado !== 'Aprobado') {
-              parsed.estado = 'Devuelto';
-            }
-            if (!finalReports.some(r => r.informeNro === parsed.informeNro)) {
-              finalReports.push(parsed);
-            }
-          } catch (e) {}
-        }
-      }
-
-      // Generar plantilla inicial si está vacio
-      if (finalReports.length === 0 && !wasExplicitlyDeleted) {
-        const defaultInitial: ReportData = {
-          ...initialMockData,
-          id: `draft-${Date.now()}`,
-          informeNro: '1',
-          tipoInforme: 'Mensual',
-          fechaPresentacion: new Date().toLocaleDateString('es-CO'),
-          periodoDesde: '01/07/2026',
-          periodoHasta: '31/07/2026',
-          fechaAplicacion: formatFechaAplicacion('31/07/2026', '01/07/2026'),
-          estado: 'Borrador',
-          contratistaNombre: user.nombreCompleto || 'CONTRATISTA REGISTRADO',
-          contratistaDocumento: user.documentoIdentidad || '',
-          contratistaCorreo: user.email || '',
-          contratistaTelefono: user.telefono || '3104567890',
-          secretariaNombre: user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social',
-          secretariaCodigo: user.secretariaCodigo || '170',
-          contratoNro: user.contratoNro || '015',
-          valorContrato: user.valorContrato || '$ 20.029.800',
-          supervisorNombre: user.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA',
-          syncedToDb: false,
-        };
-        finalReports.push(defaultInitial);
-        localStorage.setItem(`informe_data_${user.documentoIdentidad}_1`, JSON.stringify(defaultInitial));
-      }
-    }
-
-    // Sort valid reports and cleanup
-    finalReports.sort((a, b) => parseInt(b.informeNro || '0') - parseInt(a.informeNro || '0'));
+    // Ordenar y limpiar informes expirados
+    finalReports.sort((a, b) => parseInt(b.informeNro || '0', 10) - parseInt(a.informeNro || '0', 10));
     const { validReports } = await supabaseService.cleanupExpiredReports(finalReports, user.documentoIdentidad);
 
     setReportsList(validReports);
-    setNewInformeNro((Math.max(...validReports.map(r => parseInt(r.informeNro || '0')), 0) + 1).toString());
-
-    const approved = validReports.filter(r => r.estado === 'Aprobado');
-    if (approved.length > 0) {
-      const unnotified = approved.filter(r => {
-        const key = `notified_approved_${user.documentoIdentidad}_${r.informeNro}`;
-        return sessionStorage.getItem(key) !== 'seen';
-      });
-      if (unnotified.length > 0) {
-        setApprovedReportsToNotify(unnotified);
-        setShowApprovalModal(true);
-      }
-    }
-
+    const maxNro = Math.max(...validReports.map(r => parseInt(r.informeNro || '0', 10)), 0);
+    setNewInformeNro((maxNro + 1).toString());
     setLoadingDb(false);
-  };
-
-  const handleDismissApprovalModal = () => {
-    approvedReportsToNotify.forEach(r => {
-      sessionStorage.setItem(`notified_approved_${user.documentoIdentidad}_${r.informeNro}`, 'seen');
-    });
-    setShowApprovalModal(false);
   };
 
   useEffect(() => {
@@ -306,53 +224,111 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     return dateStr;
   };
 
-  const existingValorMensual = reportsList.find(r => r.valorMensual)?.valorMensual || 
-    user.valorMensual || 
-    (user.documentoIdentidad ? localStorage.getItem(`contrato_valor_mensual_${user.documentoIdentidad}`) : null);
+  const existingValorMensual = reportsList.find(r => r.valorMensual)?.valorMensual || user.valorMensual;
 
-  // Crear nuevo informe
+  // Crear nuevo informe con lógica de Precarga Inteligente (Primer Informe vs. Siguientes)
   const handleCreateNewReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isCreatingReport) return;
     setIsCreatingReport(true);
 
     try {
-      // 1. Obtener obligaciones base del informe que tenga la MAYOR cantidad de obligaciones
-      // Para evitar heredar de un informe incompleto o que tenga menos obligaciones
-      const baseReport = [...reportsList].reduce((max, r) => ((r.obligaciones?.length || 0) > (max?.obligaciones?.length || 0) ? r : max), reportsList[0]);
-      const baseObligations = (baseReport?.obligaciones && baseReport.obligaciones.length > 0)
-        ? baseReport.obligaciones
-        : initialMockData.obligaciones;
+      // 1. Consultar el último informe guardado por este usuario en Supabase
+      const lastSavedReport = await supabaseService.getLastSavedReport(user.documentoIdentidad, user.id) 
+        || (reportsList.length > 0 ? reportsList[0] : null);
 
-      const templateObligaciones: Obligacion[] = baseObligations.map((o, idx) => ({
-        id: `obs-${Date.now()}-${idx}`,
-        descripcion: o.descripcion,
-        actividades: '',
-        soportes: o.soportes || 'Anexo fotográfico',
-      }));
+      const isFirstReport = !lastSavedReport;
+
+      let templateObligaciones: Obligacion[] = [];
+      let baseGeneralData: Partial<ReportData> = {};
+
+      if (isFirstReport) {
+        // CASO 1: PRIMER INFORME (0 registros previos en Supabase)
+        // Inicializar estrictamente UNA (1) SOLA OBLIGACIÓN COMPLETAMENTE VACÍA
+        templateObligaciones = [
+          {
+            id: `obs-${Date.now()}-1`,
+            num: 1,
+            descripcion: '', // Completamente vacio
+            actividades: '', // Completamente vacio
+            fotos: [],       // Array de fotos vacio
+            soportes: 'Anexo fotográfico',
+            isClonedStructure: false,
+            isUpdated: false,
+            isTouched: true  // Resaltado "Campo a actualizar"
+          }
+        ];
+
+        baseGeneralData = {
+          objeto: newObjeto || user.objetoContrato || '',
+          contratoNro: newContratoNro || user.contratoNro || '',
+          valorContrato: newValorContrato ? formatColombianCurrency(newValorContrato) : (user.valorContrato || ''),
+          valorMensual: newValorMensual ? formatColombianCurrency(newValorMensual) : (existingValorMensual || ''),
+          cdpNro: newCdpNro || user.cdpNro || '',
+          crpNro: newCrpNro || user.crpNro || '',
+          polizaNro: newPolizaNro || user.polizaNro || '',
+          fechaPoliza: formatDateToDDMMYYYY(newFechaPoliza) || newFechaPoliza || '',
+          plazo: newPlazo || user.plazo || '',
+          fechaInicio: formatDateToDDMMYYYY(newFechaInicio) || user.fechaInicio || '',
+          fechaTerminacion: formatDateToDDMMYYYY(newFechaTerminacion) || user.fechaTerminacion || '',
+          supervisorNombre: newSupervisorNombre || user.supervisorNombre || '',
+          supervisorDocumento: user.supervisorDocumento || '',
+          apoyoSupervisionNombre: user.apoyoSupervisionNombre || '',
+          apoyoSupervisionDocumento: user.apoyoSupervisionDocumento || '',
+          secretariaNombre: newSecretariaNombre || user.secretariaNombre || '',
+          secretariaCodigo: newSecretariaCodigo || user.secretariaCodigo || '',
+          secretariaNit: '891.680.029-7',
+          isClonedFromPrevious: false
+        };
+      } else {
+        // CASO 2: SEGUNDO INFORME EN ADELANTE (Hereda datos del último informe)
+        baseGeneralData = {
+          objeto: lastSavedReport.objeto || user.objetoContrato || '',
+          contratoNro: lastSavedReport.contratoNro || user.contratoNro || '',
+          valorContrato: lastSavedReport.valorContrato || user.valorContrato || '',
+          valorMensual: lastSavedReport.valorMensual || existingValorMensual || '',
+          cdpNro: lastSavedReport.cdpNro || '',
+          crpNro: lastSavedReport.crpNro || '',
+          polizaNro: lastSavedReport.polizaNro || '',
+          fechaPoliza: lastSavedReport.fechaPoliza || '',
+          plazo: lastSavedReport.plazo || user.plazo || '',
+          fechaInicio: lastSavedReport.fechaInicio || user.fechaInicio || '',
+          fechaTerminacion: lastSavedReport.fechaTerminacion || user.fechaTerminacion || '',
+          supervisorNombre: lastSavedReport.supervisorNombre || user.supervisorNombre || '',
+          supervisorDocumento: lastSavedReport.supervisorDocumento || user.supervisorDocumento || '',
+          apoyoSupervisionNombre: lastSavedReport.apoyoSupervisionNombre || user.apoyoSupervisionNombre || '',
+          apoyoSupervisionDocumento: lastSavedReport.apoyoSupervisionDocumento || user.apoyoSupervisionDocumento || '',
+          secretariaNombre: lastSavedReport.secretariaNombre || user.secretariaNombre || '',
+          secretariaCodigo: lastSavedReport.secretariaCodigo || user.secretariaCodigo || '',
+          secretariaNit: lastSavedReport.secretariaNit || '891.680.029-7',
+          valorPagar: lastSavedReport.valorPagar,
+          isClonedFromPrevious: true
+        };
+
+        // Clonar la lista de obligaciones contractuales conservando la descripción
+        // OBLIGATORIO: LIMPIAR las actividades realizadas y los anexos fotográficos
+        const sourceObligations = (lastSavedReport.obligaciones && lastSavedReport.obligaciones.length > 0)
+          ? lastSavedReport.obligaciones
+          : [];
+
+        templateObligaciones = sourceObligations.map((o, idx) => ({
+          id: `obs-${Date.now()}-${idx + 1}`,
+          num: idx + 1,
+          descripcion: o.descripcion,
+          actividades: '', // Limpio para el nuevo periodo
+          fotos: [],       // Limpio para el nuevo periodo
+          soportes: o.soportes || 'Anexo fotográfico',
+          isClonedStructure: true,
+          isUpdated: false,
+          isTouched: true  // Resaltado de campo a actualizar
+        }));
+      }
 
       const formattedDesde = formatDateToDDMMYYYY(newPeriodoDesde);
       const formattedHasta = formatDateToDDMMYYYY(newPeriodoHasta);
 
-      const finalValorMensual = existingValorMensual || (newValorMensual ? formatColombianCurrency(newValorMensual) : undefined);
-      if (finalValorMensual && user.documentoIdentidad) {
-        localStorage.setItem(`contrato_valor_mensual_${user.documentoIdentidad}`, finalValorMensual);
-      }
-
-      const docKey = user.documentoIdentidad || '';
-      
-      // 2. Limpiar completamente cualquier rastro previo de este informe para evitar la herencia de fotos o datos incorrectos
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem(`informe_comentarios_${docKey}_${newInformeNro}`);
-        localStorage.removeItem(`informe_comentarios_${newInformeNro}`);
-        localStorage.removeItem(`informe_data_${docKey}_${newInformeNro}`);
-        localStorage.removeItem(`informe_data_${newInformeNro}`);
-        localStorage.removeItem(`cert_data_${docKey}_${newInformeNro}`);
-        localStorage.removeItem(`cert_data_${newInformeNro}`);
-      }
-      
-      // Eliminar de Supabase cualquier informe existente con este mismo número para empezar 100% desde cero
-      const existingReportWithSameNro = reportsList.find(r => parseInt(r.informeNro || '0') === parseInt(newInformeNro || '0'));
+      // Eliminar de Supabase cualquier borrador duplicado con este mismo número
+      const existingReportWithSameNro = reportsList.find(r => parseInt(r.informeNro || '0', 10) === parseInt(newInformeNro || '0', 10));
       if (existingReportWithSameNro && existingReportWithSameNro.id && existingReportWithSameNro.id.includes('-')) {
         await supabaseService.deleteFullInforme(
           existingReportWithSameNro.id,
@@ -364,6 +340,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
       const newReport: ReportData = {
         ...initialMockData,
+        ...baseGeneralData,
         id: `inf-${Date.now()}`,
         informeNro: newInformeNro,
         tipoInforme: newTipoInforme,
@@ -375,21 +352,16 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
         comentariosCampos: {},
         observaciones: '',
         obligaciones: templateObligaciones,
-        anexos: [],
+        anexos: [], // Fotos limpias para el nuevo periodo
         contratistaNombre: user.nombreCompleto,
         contratistaDocumento: user.documentoIdentidad,
         contratistaCorreo: user.email,
         contratistaTelefono: user.telefono || '3104567890',
-        secretariaNombre: user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social',
-        secretariaCodigo: user.secretariaCodigo || '170',
-        contratoNro: user.contratoNro || '015',
-        valorContrato: user.valorContrato || '$ 20.029.800',
-        valorMensual: finalValorMensual || '$ 3.338.300',
-        supervisorNombre: user.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA',
+        valorMensual: baseGeneralData.valorMensual || '$ 3.338.300',
         syncedToDb: false,
       };
 
-      // Guardar en Supabase y localmente
+      // Guardar en Supabase
       await supabaseService.saveFullInforme(newReport, user);
       await loadContractorData();
       setShowCreateModal(false);
@@ -404,12 +376,32 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   };
 
   const handleSendToReview = async (report: ReportData) => {
+    // Validaciones estrictas antes de radicar
+    const validation = validateReportForRadicacion(report);
+    if (!validation.isValid) {
+      setValidationModal({
+        isOpen: true,
+        errors: validation.errors,
+        reportNro: report.informeNro
+      });
+      return;
+    }
+
     const updated: ReportData = { ...report, estado: 'Enviado' };
     setReportsList(prev => prev.map(r => r.informeNro === report.informeNro ? updated : r));
     await supabaseService.saveFullInforme(updated, user);
-    await loadContractorData();
-    // Notificar inmediatamente al panel del administrador mediante evento en tiempo real
+    await supabaseService.crearNotificacion({
+      user_id: user.supervisorDocumento || 'supervisor',
+      titulo: `Nuevo Informe Radicado #${report.informeNro}`,
+      mensaje: `El contratista ${user.nombreCompleto} ha radicado el Informe #${report.informeNro} correspondiente al período ${report.periodoDesde} - ${report.periodoHasta}.`,
+      tipo: 'radicado',
+      leida: false,
+      informe_nro: report.informeNro,
+      report_id: report.id
+    }).catch(e => console.warn('Error creating notification:', e));
+
     window.dispatchEvent(new CustomEvent('informe_radicado_event'));
+    await loadContractorData();
   };
 
   const handleDeleteReport = (report: ReportData) => {
@@ -418,17 +410,31 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
   const confirmDeleteReport = async () => {
     if (!reportToDelete) return;
-    // Eliminar completamente registros de la BD, local storage y todas las imágenes del Storage
-    await supabaseService.deleteFullInforme(
-      reportToDelete.id, 
-      reportToDelete.informeNro, 
-      user.documentoIdentidad, 
-      reportToDelete.anexos
-    );
-    setReportsList(prev => prev.filter(r => r.informeNro !== reportToDelete.informeNro));
-    setReportToDelete(null);
-    // Notificar actualización al panel administrador si aplicara
-    window.dispatchEvent(new CustomEvent('informe_radicado_event'));
+    setLoadingDb(true);
+    try {
+      // 1. Eliminar completamente el informe de Supabase, tablas vinculadas (obligaciones, anexos, certificaciones, notificaciones) y archivos de Storage
+      await supabaseService.deleteFullInforme(
+        reportToDelete.id, 
+        reportToDelete.informeNro, 
+        user.documentoIdentidad, 
+        reportToDelete.anexos
+      );
+
+      // 2. Ejecutar la rutina depuradora de tareas/informes vencidos (mayores a 7 meses / 210 días)
+      const remainingReports = reportsList.filter(r => r.informeNro !== reportToDelete.informeNro);
+      await supabaseService.cleanupExpiredReports(remainingReports, user.documentoIdentidad);
+
+      setReportsList(remainingReports);
+      setReportToDelete(null);
+
+      // 3. Recargar datos del contratista y notificar actualización al sistema
+      window.dispatchEvent(new CustomEvent('informe_radicado_event'));
+      await loadContractorData();
+    } catch (e) {
+      console.warn('Error al eliminar informe:', e);
+    } finally {
+      setLoadingDb(false);
+    }
   };
 
   const totalAprobados = reportsList.filter(r => r.estado === 'Aprobado').length;
@@ -631,7 +637,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
               <RefreshCw size={18} className={loadingDb ? 'animate-spin text-emerald-400' : ''} />
             </button>
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={handleOpenCreateModal}
               className="bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-gray-950 font-black px-5 py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
             >
               <Plus size={18} className="stroke-[3]" />
@@ -938,7 +944,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 )}
 
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={handleOpenCreateModal}
                   className="px-3.5 py-2 bg-[#006b33] hover:bg-[#005729] text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-colors shadow-xs self-start sm:self-auto"
                 >
                   <Plus size={15} />
@@ -955,7 +961,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                   Haz clic en «Crear Nuevo Informe» para comenzar a diligenciar tu primer informe mensual y guardarlo en la base de datos de la Alcaldía de Quibdó.
                 </p>
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={handleOpenCreateModal}
                   className="mt-2 px-4 py-2 bg-[#006b33] hover:bg-[#005729] text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-sm"
                 >
                   <Plus size={15} />
@@ -1580,15 +1586,18 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
       {/* Modal para Crear Nuevo Informe */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white text-slate-900 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 animate-in fade-in">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className={`bg-white rounded-2xl shadow-2xl ${reportsList.length === 0 ? 'max-w-3xl' : 'max-w-md'} w-full p-6 border border-slate-200 animate-in fade-in zoom-in-95 my-8`}>
             
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2 text-[#006b33]">
-                <FileText size={22} />
-                <h3 className="text-lg font-bold">Nuevo Informe Contractual</h3>
+                <Plus size={20} />
+                <h3 className="font-bold text-slate-900 text-base">
+                  {reportsList.length === 0 ? 'Crear Primer Informe de Ejecución' : 'Crear Nuevo Informe'}
+                </h3>
               </div>
               <button 
+                type="button"
                 onClick={() => setShowCreateModal(false)}
                 className="text-slate-400 hover:text-slate-600 font-bold text-lg"
               >
@@ -1598,92 +1607,274 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
             <form onSubmit={handleCreateNewReport} className="mt-4 space-y-4 text-xs">
               
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                <p className="font-bold text-emerald-950">Generación con Base en Contrato #{activeContractNro}:</p>
-                <p className="text-emerald-800 text-[11px] mt-0.5">
-                  El nuevo informe vinculará automáticamente tus datos contractuales y obligaciones en la base de datos de PostgreSQL (Supabase).
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Número de Informe</label>
-                  <input
-                    type="text"
-                    required
-                    value={newInformeNro}
-                    onChange={(e) => setNewInformeNro(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl p-2.5 font-bold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
+              {reportsList.length === 0 ? (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                  <p className="font-bold text-amber-950 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-amber-600 shrink-0" />
+                    <span>Configuración Inicial (Primer Informe de Ejecución)</span>
+                  </p>
+                  <p className="text-amber-900 text-[11px]">
+                    Al ser tu <strong>primer informe</strong> en el sistema, es obligatorio diligenciar los datos contractuales base y del período. Los informes subsecuentes heredarán automáticamente esta información.
+                  </p>
                 </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Tipo de Informe</label>
-                  <select
-                    value={newTipoInforme}
-                    onChange={(e) => setNewTipoInforme(e.target.value as any)}
-                    className="w-full border border-slate-300 rounded-xl p-2.5 text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  >
-                    <option value="Mensual">Mensual</option>
-                    <option value="Final">Final</option>
-                  </select>
+              ) : (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <p className="font-bold text-emerald-950">Generación con Base en Contrato #{user.contratoNro || '015'}:</p>
+                  <p className="text-emerald-800 text-[11px] mt-0.5">
+                    El nuevo informe heredará automáticamente los datos contractuales de tu último informe guardado en Supabase.
+                  </p>
                 </div>
+              )}
 
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5 text-xs">
-                    <Calendar size={13} className="text-[#006b33]" />
-                    <span>Período Desde</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={newPeriodoDesde}
-                    onChange={(e) => setNewPeriodoDesde(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white text-slate-800 cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5 text-xs">
-                    <Calendar size={13} className="text-[#006b33]" />
-                    <span>Período Hasta</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={newPeriodoHasta}
-                    onChange={(e) => setNewPeriodoHasta(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white text-slate-800 cursor-pointer"
-                  />
-                </div>
-
-                {/* Si aún no se ha configurado el valor mensual, se solicita una única vez */}
-                {!existingValorMensual && (
-                  <div className="col-span-2 p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1">
-                    <label className="block font-bold text-slate-800 flex items-center justify-between text-xs">
-                      <span>Valor Mensual del Contrato</span>
-                      <span className="text-[10px] bg-emerald-200 text-emerald-900 font-bold px-1.5 py-0.5 rounded">
-                        Se solicita una única vez
-                      </span>
-                    </label>
+              {/* SECCIÓN 1: PERÍODO E IDENTIFICACIÓN */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-1 flex items-center gap-1 text-[#006b33]">
+                  <Calendar size={13} />
+                  <span>Datos del Período de Ejecución</span>
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Número de Informe *</label>
                     <input
                       type="text"
-                      value={newValorMensual}
-                      onChange={(e) => setNewValorMensual(e.target.value)}
-                      onBlur={() => {
-                        if (newValorMensual) {
-                          setNewValorMensual(formatColombianCurrency(newValorMensual));
-                        }
-                      }}
-                      placeholder="Ej. $ 2.300.250"
-                      className="w-full border border-slate-300 rounded-lg p-2 font-bold text-emerald-800 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
+                      required
+                      value={newInformeNro}
+                      onChange={(e) => setNewInformeNro(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 font-bold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-slate-50"
                     />
-                    <p className="text-[10px] text-slate-600">
-                      Honorario mensual pactado. Se toma como base fija para liquidar pagos y porcentajes. No aparecerá en el informe mensual.
-                    </p>
                   </div>
-                )}
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Tipo de Informe *</label>
+                    <select
+                      value={newTipoInforme}
+                      onChange={(e) => setNewTipoInforme(e.target.value as any)}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium"
+                    >
+                      <option value="Mensual">Mensual</option>
+                      <option value="Final font-medium">Final</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5 text-xs">
+                      <Calendar size={13} className="text-[#006b33]" />
+                      <span>Período Desde *</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={newPeriodoDesde}
+                      onChange={(e) => setNewPeriodoDesde(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white text-slate-800 cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5 text-xs">
+                      <Calendar size={13} className="text-[#006b33]" />
+                      <span>Período Hasta *</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={newPeriodoHasta}
+                      onChange={(e) => setNewPeriodoHasta(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white text-slate-800 cursor-pointer"
+                    />
+                  </div>
+                </div>
               </div>
+
+              {/* SECCIÓN 2: DATOS BASE DEL CONTRATO (SOLO SI ES EL PRIMER INFORME) */}
+              {reportsList.length === 0 && (
+                <div className="space-y-3 pt-2">
+                  <h4 className="font-bold text-slate-900 text-xs border-b border-slate-100 pb-1 flex items-center gap-1 text-[#006b33]">
+                    <FileText size={13} />
+                    <span>Datos Base del Contrato (Obligatorio para el Primer Informe)</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Número de Contrato *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newContratoNro}
+                        onChange={(e) => setNewContratoNro(e.target.value)}
+                        placeholder="Ej. 015 de 2026"
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Valor Total Contrato *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newValorContrato}
+                        onChange={(e) => setNewValorContrato(e.target.value)}
+                        onBlur={() => {
+                          if (newValorContrato) setNewValorContrato(formatColombianCurrency(newValorContrato));
+                        }}
+                        placeholder="Ej. $ 20.029.800"
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Honorario Mensual *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newValorMensual}
+                        onChange={(e) => setNewValorMensual(e.target.value)}
+                        onBlur={() => {
+                          if (newValorMensual) setNewValorMensual(formatColombianCurrency(newValorMensual));
+                        }}
+                        placeholder="Ej. $ 3.338.300"
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none text-emerald-800 font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Objeto del Contrato *</label>
+                    <textarea
+                      required
+                      rows={2}
+                      value={newObjeto}
+                      onChange={(e) => setNewObjeto(e.target.value)}
+                      placeholder="Ingrese el objeto exacto del contrato..."
+                      className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">CDP Nro *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newCdpNro}
+                        onChange={(e) => setNewCdpNro(e.target.value)}
+                        placeholder="Ej. 356"
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">CRP Nro *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newCrpNro}
+                        onChange={(e) => setNewCrpNro(e.target.value)}
+                        placeholder="Ej. 123"
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Plazo Contrato *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newPlazo}
+                        onChange={(e) => setNewPlazo(e.target.value)}
+                        placeholder="Ej. 6 MESES"
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Póliza Nro *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newPolizaNro}
+                        onChange={(e) => setNewPolizaNro(e.target.value)}
+                        placeholder="Ej. N/A"
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Fecha Inicio Contrato *</label>
+                      <input
+                        type="date"
+                        required
+                        value={newFechaInicio}
+                        onChange={(e) => setNewFechaInicio(e.target.value)}
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white text-slate-800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Fecha Terminación *</label>
+                      <input
+                        type="date"
+                        required
+                        value={newFechaTerminacion}
+                        onChange={(e) => setNewFechaTerminacion(e.target.value)}
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white text-slate-800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Fecha Acta de Aprobación Póliza: *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newFechaPoliza}
+                        onChange={(e) => setNewFechaPoliza(e.target.value)}
+                        placeholder="Ej. N/A o 14/01/2026"
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Nombre Supervisor *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newSupervisorNombre}
+                      onChange={(e) => setNewSupervisorNombre(e.target.value)}
+                      placeholder="Ej. DIANA ANDREA MOSQUERA GARCIA"
+                      className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block font-bold text-slate-700 mb-1">Secretaría u Ordenador *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newSecretariaNombre}
+                        onChange={(e) => setNewSecretariaNombre(e.target.value)}
+                        placeholder="Ej. Secretaría de Inclusión y Cohesión Social"
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Código Secretaría *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newSecretariaCodigo}
+                        onChange={(e) => setNewSecretariaCodigo(e.target.value)}
+                        placeholder="Ej. 170"
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="mt-6 flex justify-end gap-2 pt-3 border-t border-slate-200">
                 <button
@@ -1704,7 +1895,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                       <span>Creando...</span>
                     </>
                   ) : (
-                    <span>Crear y Diligenciar</span>
+                    <span>Crear e Iniciar Diligenciamiento</span>
                   )}
                 </button>
               </div>
@@ -1715,110 +1906,14 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
         </div>
       )}
 
-      {/* MODAL DE NOTIFICACIÓN DE INFORME APROBADO */}
-      {showApprovalModal && approvedReportsToNotify.length > 0 && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white text-slate-900 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-emerald-300 animate-in zoom-in-95 duration-200">
-            {/* Cabecera festiva verde con franja tricolor */}
-            <div className="relative bg-gradient-to-br from-[#00381a] via-[#005226] to-[#012612] text-white p-6 sm:p-7">
-              <div className="absolute top-0 left-0 right-0 h-1.5 flex">
-                <div className="w-1/2 bg-[#006b33]"></div>
-                <div className="w-1/3 bg-[#c8102e]"></div>
-                <div className="w-1/6 bg-[#f59e0b]"></div>
-              </div>
-
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-400 text-gray-950 flex items-center justify-center shadow-lg shrink-0">
-                    <Award size={28} className="animate-pulse" />
-                  </div>
-                  <div>
-                    <span className="bg-emerald-800 text-emerald-200 font-bold text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full">
-                      ¡Notificación de Supervisión!
-                    </span>
-                    <h3 className="text-xl font-black text-white mt-1 leading-tight">
-                      ¡Tu Informe ha sido Aprobado!
-                    </h3>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleDismissApprovalModal}
-                  className="text-emerald-300 hover:text-white p-1 rounded-lg hover:bg-emerald-800/60 transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Contenido del modal */}
-            <div className="p-6 space-y-4 text-xs">
-              <p className="text-slate-600 text-sm leading-relaxed">
-                Estimado(a) <strong>{user.nombreCompleto}</strong>, te informamos que la supervisión de tu contrato ha revisado y <strong className="text-emerald-700">APROBADO formalmente</strong> tu(s) informe(s) mensual(es):
-              </p>
-
-              <div className="space-y-2.5">
-                {approvedReportsToNotify.map(rep => (
-                  <div key={rep.id || rep.informeNro} className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-black text-slate-900 text-sm">
-                        Informe Mensual Nro. {rep.informeNro} ({rep.tipoInforme})
-                      </span>
-                      <span className="bg-emerald-100 text-emerald-800 font-black px-2.5 py-0.5 rounded-full text-[10px] border border-emerald-300">
-                        ✓ APROBADO
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-slate-600 text-[11px]">
-                      <div>
-                        <strong>Período:</strong> {rep.periodoDesde} al {rep.periodoHasta}
-                      </div>
-                      <div>
-                        <strong>Supervisor(a):</strong> {rep.supervisorNombre || activeSupervisor}
-                      </div>
-                    </div>
-
-                    <div className="pt-2 flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          handleDismissApprovalModal();
-                          handleInterceptDirectPrint(rep);
-                        }}
-                        className="flex-1 py-2 px-3 bg-[#006b33] hover:bg-[#005729] text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors"
-                      >
-                        <Printer size={14} />
-                        <span>Descargar PDF Oficial</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleDismissApprovalModal();
-                          handleInterceptOpenReport(rep);
-                        }}
-                        className="py-2 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl font-bold text-xs transition-colors"
-                      >
-                        Ver Detalles
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] leading-relaxed">
-                💡 <strong>Recordatorio:</strong> Descarga la copia oficial en PDF debidamente avalada para anexarla a tu cuenta de cobro y radicación de pago ante la Alcaldía de Quibdó.
-              </div>
-            </div>
-
-            {/* Pie del modal */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end">
-              <button
-                onClick={handleDismissApprovalModal}
-                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-xs transition-colors"
-              >
-                Entendido / Aceptar
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* MODAL DE VALIDACIÓN ESTRICTA DE RADICACIÓN */}
+      {validationModal && (
+        <ValidationAlertModal
+          isOpen={validationModal.isOpen}
+          onClose={() => setValidationModal(null)}
+          errors={validationModal.errors}
+          reportNro={validationModal.reportNro}
+        />
       )}
 
       {/* MODAL DE CONFIRMACIÓN PARA ELIMINAR INFORME */}

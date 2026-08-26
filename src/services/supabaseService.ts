@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, Obligacion } from '../types';
+import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, Obligacion, Notificacion } from '../types';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
 
 const STORAGE_USERS_KEY = 'alcaldia_quibdo_registered_users';
@@ -13,34 +13,12 @@ const isUuid = (val?: string): boolean => {
 };
 
 // Helper para obtener comentarios por campo almacenados
-const getStoredComments = (docKey?: string, informeNro?: string): Record<string, FieldComment> => {
-  if (typeof localStorage === 'undefined' || !informeNro) return {};
-  if (docKey) {
-    const stored = localStorage.getItem(`informe_comentarios_${docKey}_${informeNro}`);
-    if (stored) {
-      try { return JSON.parse(stored); } catch {}
-    }
-  }
-  const globalStored = localStorage.getItem(`informe_comentarios_${informeNro}`);
-  if (globalStored) {
-    try { return JSON.parse(globalStored); } catch {}
-  }
+const getStoredComments = (_docKey?: string, _informeNro?: string): Record<string, FieldComment> => {
   return {};
 };
 
-// Helper para obtener informe completo almacenado en localStorage
-const getStoredReportData = (docKey?: string, informeNro?: string): Partial<ReportData> | null => {
-  if (typeof localStorage === 'undefined' || !informeNro) return null;
-  if (docKey) {
-    const stored = localStorage.getItem(`informe_data_${docKey}_${informeNro}`);
-    if (stored) {
-      try { return JSON.parse(stored); } catch {}
-    }
-  }
-  const globalStored = localStorage.getItem(`informe_data_${informeNro}`);
-  if (globalStored) {
-    try { return JSON.parse(globalStored); } catch {}
-  }
+// Helper para obtener informe completo almacenado
+const getStoredReportData = (_docKey?: string, _informeNro?: string): Partial<ReportData> | null => {
   return null;
 };
 
@@ -1754,26 +1732,10 @@ export const supabaseService = {
         syncedToDb: true,
       };
 
-      const docKey = report.contratistaDocumento || user?.documentoIdentidad;
-      if (typeof localStorage !== 'undefined') {
-        if (docKey) {
-          localStorage.setItem(`informe_data_${docKey}_${report.informeNro}`, JSON.stringify(updatedReportWithDb));
-          if (report.comentariosCampos) {
-            localStorage.setItem(`informe_comentarios_${docKey}_${report.informeNro}`, JSON.stringify(report.comentariosCampos));
-          }
-        }
-      }
-
       return { success: true, id: informeId || `local-${Date.now()}` };
     } catch (err: any) {
       console.error('Error saving to Supabase:', err);
-      const docKey = report.contratistaDocumento || user?.documentoIdentidad;
-      if (typeof localStorage !== 'undefined') {
-        if (docKey) {
-          localStorage.setItem(`informe_data_${docKey}_${report.informeNro}`, JSON.stringify(report));
-        }
-      }
-      return { success: true, id: `local-${Date.now()}` };
+      return { success: false, error: err?.message || 'Error de conexión' };
     }
   },
 
@@ -1808,32 +1770,24 @@ export const supabaseService = {
       console.warn('Error saving comments to Supabase:', e);
     }
 
-    // Persistir en LocalStorage
-    if (typeof localStorage !== 'undefined') {
-      if (contractorDoc) {
-        localStorage.setItem(`informe_comentarios_${contractorDoc}_${informeNro}`, JSON.stringify(comments));
-      }
-      localStorage.setItem(`informe_comentarios_${informeNro}`, JSON.stringify(comments));
-
-      const key1 = `informe_data_${contractorDoc}_${informeNro}`;
-      const key2 = `informe_data_${informeNro}`;
-      [key1, key2].forEach(k => {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            parsed.comentariosCampos = comments;
-            parsed.estado = newStatus;
-            localStorage.setItem(k, JSON.stringify(parsed));
-          } catch {}
-        }
-      });
+    // Disparar notificación automática si el informe fue devuelto con observaciones
+    if (contractorDoc && newStatus === 'Devuelto') {
+      const obsCount = Object.keys(comments).length;
+      this.crearNotificacion({
+        user_id: contractorDoc,
+        titulo: `Informe #${informeNro} Devuelto para Corrección`,
+        mensaje: `La supervisión ha devuelto el Informe #${informeNro} con ${obsCount} observación(es) por subsanar.`,
+        tipo: 'devolucion',
+        leida: false,
+        informe_nro: informeNro,
+        report_id: isUuid(reportId) ? reportId : undefined
+      }).catch(err => console.warn('Error creating notification:', err));
     }
 
     return true;
   },
 
-  // 10. Eliminar Informe Completo (En Supabase, Almacenamiento de Fotos y Almacenamiento Local)
+  // 10. Eliminar Informe Completo (En Supabase, Almacenamiento de Fotos, Certificaciones, Documentos Asociados y Ejecutar Depuración de 7 Meses)
   async deleteFullInforme(
     reportId?: string, 
     informeNro?: string, 
@@ -1850,13 +1804,13 @@ export const supabaseService = {
         }
       }
 
-      // 2. Eliminar de Supabase por reportId UUID
-      if (reportId && isUuid(reportId)) {
+      // Helper para limpiar tablas asociadas a un ID de informe
+      const purgeInformeTables = async (id: string) => {
         // Consultar fotos asociadas en la tabla informe_anexos y borrarlas del Storage
         const { data: dbAnexos } = await supabase
           .from('informe_anexos')
           .select('imagen_url')
-          .eq('informe_id', reportId);
+          .eq('informe_id', id);
 
         if (dbAnexos && dbAnexos.length > 0) {
           for (const anx of dbAnexos) {
@@ -1866,58 +1820,54 @@ export const supabaseService = {
           }
         }
 
-        await supabase.from('informe_obligaciones').delete().eq('informe_id', reportId);
-        await supabase.from('informe_anexos').delete().eq('informe_id', reportId);
-        await supabase.from('informes_mensuales').delete().eq('id', reportId);
+        // Eliminar registros hijos y vinculados
+        await supabase.from('informe_obligaciones').delete().eq('informe_id', id);
+        await supabase.from('informe_anexos').delete().eq('informe_id', id);
+        await supabase.from('certificaciones_supervision').delete().eq('informe_id', id);
+        await supabase.from('soportes_fiduciaria').delete().eq('informe_id', id);
+        await supabase.from('declaraciones_renta').delete().eq('informe_id', id);
+        await supabase.from('autorizaciones_desembolso').delete().eq('informe_id', id);
+        await supabase.from('notificaciones').delete().eq('report_id', id);
+        await supabase.from('informes_mensuales').delete().eq('id', id);
+      };
+
+      // 2. Eliminar de Supabase por reportId UUID
+      if (reportId && isUuid(reportId)) {
+        await purgeInformeTables(reportId);
       }
 
-      // 3. Si existen registros duplicados con el mismo número de informe en Supabase, eliminarlos también
+      // 3. Eliminar por número de informe y documento del contratista
       if (informeNro) {
-        const { data: duplicates } = await supabase
-          .from('informes_mensuales')
-          .select('id')
-          .eq('informe_nro', parseInt(informeNro, 10) || 1);
+        let query = supabase.from('informes_mensuales').select('id, contratista_documento').eq('informe_nro', parseInt(informeNro, 10) || 1);
+        if (contractorDoc) {
+          query = query.eq('contratista_documento', contractorDoc);
+        }
+        const { data: duplicates } = await query;
 
         if (duplicates && duplicates.length > 0) {
           for (const dup of duplicates) {
-            const { data: dupAnexos } = await supabase
-              .from('informe_anexos')
-              .select('imagen_url')
-              .eq('informe_id', dup.id);
-
-            if (dupAnexos && dupAnexos.length > 0) {
-              for (const anx of dupAnexos) {
-                if (anx.imagen_url) {
-                  await this.deleteImageFromStorage(anx.imagen_url);
-                }
-              }
-            }
-
-            await supabase.from('informe_obligaciones').delete().eq('informe_id', dup.id);
-            await supabase.from('informe_anexos').delete().eq('informe_id', dup.id);
-            await supabase.from('informes_mensuales').delete().eq('id', dup.id);
+            await purgeInformeTables(dup.id);
           }
+        }
+
+        // Limpiar registros sueltos o vinculados por documento y número de pago/informe
+        if (contractorDoc) {
+          await supabase.from('certificaciones_supervision').delete().eq('contratista_documento', contractorDoc).eq('informe_nro', informeNro);
+          await supabase.from('soportes_fiduciaria').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
+          await supabase.from('declaraciones_renta').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
+          await supabase.from('autorizaciones_desembolso').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
+          await supabase.from('notificaciones').delete().eq('user_id', contractorDoc).eq('informe_nro', informeNro);
         }
       }
     } catch (err) {
       console.warn('Error deleting report from Supabase:', err);
     }
 
-    // 4. Limpiar LocalStorage
-    if (informeNro) {
-      localStorage.removeItem(`informe_data_${informeNro}`);
-      localStorage.removeItem(`informe_comentarios_${informeNro}`);
-      if (contractorDoc) {
-        localStorage.removeItem(`informe_data_${contractorDoc}_${informeNro}`);
-        localStorage.removeItem(`informe_comentarios_${contractorDoc}_${informeNro}`);
-        localStorage.setItem(`deleted_report_${contractorDoc}_${informeNro}`, 'true');
-      }
-    }
     return true;
   },
 
   // 11. Actualizar Estado de Informe
-  async updateEstado(id: string, nuevoEstado: EstadoInforme): Promise<boolean> {
+  async updateEstado(id: string, nuevoEstado: EstadoInforme, contractorDoc?: string, informeNro?: string): Promise<boolean> {
     try {
       if (isUuid(id)) {
         const { error } = await supabase
@@ -1925,6 +1875,19 @@ export const supabaseService = {
           .update({ estado: mapStatusToDb(nuevoEstado) })
           .eq('id', id);
         if (error) throw error;
+      }
+
+      if (contractorDoc && nuevoEstado === 'Aprobado') {
+        const nro = informeNro || '1';
+        this.crearNotificacion({
+          user_id: contractorDoc,
+          titulo: `¡Informe #${nro} Aprobado!`,
+          mensaje: `Tu Informe Contractual #${nro} ha sido revisado y APROBADO formalmente por la supervisión. Ya puedes descargar el PDF oficial.`,
+          tipo: 'aprobacion',
+          leida: false,
+          informe_nro: nro,
+          report_id: isUuid(id) ? id : undefined
+        }).catch(err => console.warn('Error creating approval notification:', err));
       }
       return true;
     } catch (err) {
@@ -2373,5 +2336,209 @@ export const supabaseService = {
       }
     }
     return null;
+  },
+
+  // 21. Obtener el último informe guardado por un usuario (Para precarga inteligente)
+  async getLastSavedReport(contractorDocument: string, contractorId?: string): Promise<ReportData | null> {
+    try {
+      const reports = await this.getContractorReports(contractorDocument, contractorId);
+      if (reports && reports.length > 0) {
+        // Ordenar por número de informe descendente
+        const sorted = [...reports].sort((a, b) => parseInt(b.informeNro || '0', 10) - parseInt(a.informeNro || '0', 10));
+        return sorted[0];
+      }
+    } catch (e) {
+      console.warn('Error fetching last saved report from Supabase:', e);
+    }
+
+    // Fallback a LocalStorage aislado del contratista
+    if (typeof localStorage !== 'undefined' && contractorDocument) {
+      for (let i = 12; i >= 1; i--) {
+        const saved = localStorage.getItem(`informe_data_${contractorDocument}_${i}`);
+        if (saved) {
+          try {
+            return JSON.parse(saved) as ReportData;
+          } catch (e) {}
+        }
+      }
+    }
+    return null;
+  },
+
+  // 22. Obtener Notificaciones Institucionales (Filtrado estricto por usuario)
+  async getNotificaciones(userId?: string, userDoc?: string): Promise<Notificacion[]> {
+    const targetIds = [userId, userDoc].filter(Boolean) as string[];
+    if (targetIds.length === 0) return [];
+
+    let dbNotifs: Notificacion[] = [];
+    try {
+      const { data, error } = await supabase
+        .from('notificaciones')
+        .select('*')
+        .in('user_id', targetIds)
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (!error && data) {
+        dbNotifs = data.map((d: any) => ({
+          id: d.id,
+          user_id: d.user_id,
+          mensaje: d.mensaje,
+          tipo: d.tipo || 'info',
+          leida: Boolean(d.leida),
+          created_at: d.created_at,
+          informe_nro: d.informe_nro,
+          report_id: d.report_id,
+          titulo: d.titulo || (d.tipo === 'aprobacion' ? 'Informe Aprobado' : d.tipo === 'devolucion' ? 'Informe Devuelto' : 'Notificación')
+        }));
+      }
+    } catch (e) {
+      console.warn('Error fetching notifications from Supabase:', e);
+    }
+
+    // Unir con almacenamiento local aislado por usuario
+    const primaryKey = userDoc || userId || 'default';
+    let localNotifs: Notificacion[] = [];
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem(`notificaciones_${primaryKey}`);
+      if (saved) {
+        try {
+          localNotifs = JSON.parse(saved);
+        } catch (e) {}
+      }
+    }
+
+    // Combinar y deduplicar por id
+    const combinedMap = new Map<string, Notificacion>();
+    dbNotifs.forEach(n => combinedMap.set(n.id, n));
+    localNotifs.forEach(n => {
+      if (!combinedMap.has(n.id)) {
+        combinedMap.set(n.id, n);
+      }
+    });
+
+    const result = Array.from(combinedMap.values()).sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    return result;
+  },
+
+  // 23. Crear Notificación Institucional
+  async crearNotificacion(notif: Omit<Notificacion, 'id' | 'created_at'>): Promise<Notificacion | null> {
+    const id = `notif-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    const newNotif: Notificacion = {
+      ...notif,
+      id,
+      created_at: new Date().toISOString(),
+      leida: false,
+    };
+
+    // 1. Guardar en Supabase
+    try {
+      const { data, error } = await supabase
+        .from('notificaciones')
+        .insert([{
+          user_id: notif.user_id,
+          mensaje: notif.mensaje,
+          tipo: notif.tipo || 'info',
+          leida: false,
+          informe_nro: notif.informe_nro || null,
+          report_id: (notif.report_id && isUuid(notif.report_id)) ? notif.report_id : null
+        }])
+        .select('*')
+        .maybeSingle();
+
+      if (!error && data?.id) {
+        newNotif.id = data.id;
+      }
+    } catch (e) {
+      console.warn('Error saving notification to Supabase:', e);
+    }
+
+    // 2. Guardar en LocalStorage aislado del usuario
+    if (typeof localStorage !== 'undefined') {
+      const key = `notificaciones_${notif.user_id}`;
+      const saved = localStorage.getItem(key);
+      let list: Notificacion[] = [];
+      if (saved) {
+        try { list = JSON.parse(saved); } catch (e) {}
+      }
+      list.unshift(newNotif);
+      localStorage.setItem(key, JSON.stringify(list.slice(0, 50)));
+    }
+
+    // 3. Emitir evento para actualización instantánea en la interfaz
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('notificaciones_actualizadas', { detail: newNotif }));
+    }
+
+    return newNotif;
+  },
+
+  // 24. Marcar Notificación como Leída
+  async marcarNotificacionLeida(notifId: string, userDoc?: string): Promise<boolean> {
+    try {
+      if (isUuid(notifId)) {
+        await supabase
+          .from('notificaciones')
+          .update({ leida: true })
+          .eq('id', notifId);
+      }
+    } catch (e) {
+      console.warn('Error marking notification as read in Supabase:', e);
+    }
+
+    if (typeof localStorage !== 'undefined' && userDoc) {
+      const key = `notificaciones_${userDoc}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          const list: Notificacion[] = JSON.parse(saved);
+          const updated = list.map(n => n.id === notifId ? { ...n, leida: true } : n);
+          localStorage.setItem(key, JSON.stringify(updated));
+        } catch (e) {}
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('notificaciones_actualizadas'));
+    }
+    return true;
+  },
+
+  // 25. Marcar Todas las Notificaciones como Leídas
+  async marcarTodasNotificacionesLeidas(userId?: string, userDoc?: string): Promise<boolean> {
+    const targetIds = [userId, userDoc].filter(Boolean) as string[];
+    if (targetIds.length === 0) return false;
+
+    try {
+      await supabase
+        .from('notificaciones')
+        .update({ leida: true })
+        .in('user_id', targetIds);
+    } catch (e) {
+      console.warn('Error marking all notifications as read in Supabase:', e);
+    }
+
+    const primaryKey = userDoc || userId;
+    if (typeof localStorage !== 'undefined' && primaryKey) {
+      const key = `notificaciones_${primaryKey}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          const list: Notificacion[] = JSON.parse(saved);
+          const updated = list.map(n => ({ ...n, leida: true }));
+          localStorage.setItem(key, JSON.stringify(updated));
+        } catch (e) {}
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('notificaciones_actualizadas'));
+    }
+    return true;
   }
 };

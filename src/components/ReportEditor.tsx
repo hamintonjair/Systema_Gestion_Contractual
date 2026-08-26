@@ -117,7 +117,17 @@ export default function ReportEditor({
     }
 
     const updatedComms = markCommentCorrected(field as string);
-    let nextData: ReportData = { ...data, [field]: finalValue };
+    const updatedTouched = { ...(data.touchedFields || {}), [field]: true };
+    const updatedUpdated = { ...(data.updatedFields || {}), [field]: true };
+
+    let nextData: ReportData = { 
+      ...data, 
+      [field]: finalValue,
+      isUpdated: true,
+      isTouched: true,
+      touchedFields: updatedTouched,
+      updatedFields: updatedUpdated
+    };
     
     if (updatedComms) {
       nextData.comentariosCampos = updatedComms;
@@ -137,7 +147,12 @@ export default function ReportEditor({
     const obsIdx = data.obligaciones.findIndex(o => o.id === id);
     const updated = data.obligaciones.map((obs) => {
       if (obs.id === id) {
-        return { ...obs, [field]: value };
+        return { 
+          ...obs, 
+          [field]: value,
+          isUpdated: true,
+          isTouched: true
+        };
       }
       return obs;
     });
@@ -164,6 +179,8 @@ export default function ReportEditor({
         if (modified) {
           onChange({
             ...data,
+            isUpdated: true,
+            isTouched: true,
             obligaciones: updated,
             comentariosCampos: commsMap
           });
@@ -385,7 +402,9 @@ export default function ReportEditor({
       k === 'tipoinforme_final' ||
       k === 'fechapresentacion' ||
       k === 'valorpagar' ||
-      k.includes('actividades')
+      k.includes('actividades') ||
+      k.includes('descripcion') ||
+      k.includes('descrip')
     );
   };
 
@@ -1050,17 +1069,11 @@ export default function ReportEditor({
                       value={data.valorMensual || ''}
                       onChange={(e) => {
                         handleChange('valorMensual', e.target.value);
-                        if (data.contratistaDocumento) {
-                          localStorage.setItem(`contrato_valor_mensual_${data.contratistaDocumento}`, e.target.value);
-                        }
                       }}
                       onBlur={() => {
                         if (data.valorMensual) {
                           const formatted = formatColombianCurrency(data.valorMensual);
                           handleChange('valorMensual', formatted);
-                          if (data.contratistaDocumento) {
-                            localStorage.setItem(`contrato_valor_mensual_${data.contratistaDocumento}`, formatted);
-                          }
                         }
                       }}
                       placeholder="ej. $ 2.300.250"
@@ -1084,9 +1097,6 @@ export default function ReportEditor({
                         if (nuevo !== null) {
                           const formatted = nuevo.trim() ? formatColombianCurrency(nuevo) : '';
                           handleChange('valorMensual', formatted);
-                          if (data.contratistaDocumento) {
-                            localStorage.setItem(`contrato_valor_mensual_${data.contratistaDocumento}`, formatted);
-                          }
                         }
                       }}
                       className="text-[10px] text-emerald-800 hover:text-emerald-950 font-bold underline"
@@ -1143,13 +1153,14 @@ export default function ReportEditor({
                 <div>
                   <label className="block font-medium text-gray-700 mb-1 flex items-center gap-1">
                     <Calendar size={13} className="text-emerald-700" />
-                    <span>Fecha Aprobación Póliza</span>
+                    <span>Fecha Acta de Aprobación Póliza:</span>
                   </label>
-                  <DatePickerInput
-                    value={data.fechaPoliza || 'N/A'}
-                    onChange={(val) => handleChange('fechaPoliza', val || 'N/A')}
-                    placeholder="DD/MM/AAAA o N/A"
-                    className={`border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 text-xs ${getFieldHighlightClass('fechaPoliza')}`}
+                  <input
+                    type="text"
+                    value={data.fechaPoliza || ''}
+                    onChange={(e) => handleChange('fechaPoliza', e.target.value)}
+                    placeholder="Ej. 01/07/2026 o N/A"
+                    className={`w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 text-xs ${getFieldHighlightClass('fechaPoliza')}`}
                   />
                   {renderCommentAlert('fechaPoliza')}
                 </div>
@@ -1281,10 +1292,26 @@ export default function ReportEditor({
                     }`}
                   >
                     <div className="flex items-center justify-between pb-1.5 border-b border-gray-100">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-xs text-emerald-800">
                           Obligación #{idx + 1}
                         </span>
+                        {obs.isClonedStructure && (!obs.actividades || obs.actividades.trim() === '') && (
+                          <span className="bg-sky-100 text-sky-900 text-[10px] font-bold px-2 py-0.5 rounded border border-sky-300 flex items-center gap-1">
+                            <span>📋 Estructura Clonada</span>
+                          </span>
+                        )}
+                        {obs.actividades && obs.actividades.trim().length > 0 && (
+                          <span className="bg-emerald-100 text-emerald-900 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-300 flex items-center gap-1">
+                            <CheckCircle2 size={10} className="text-emerald-700" />
+                            <span>Actividades Registradas</span>
+                          </span>
+                        )}
+                        {obs.isUpdated && (
+                          <span className="bg-blue-50 text-blue-800 text-[10px] font-semibold px-1.5 py-0.2 rounded border border-blue-200">
+                            ✏️ Editado
+                          </span>
+                        )}
                         {hasAnyComment && (
                           <span className="bg-amber-200 text-amber-950 text-[10px] font-black px-2.5 py-0.5 rounded-md border border-amber-400 flex items-center gap-1 animate-pulse">
                             <AlertTriangle size={11} className="text-amber-800" />
@@ -1323,15 +1350,18 @@ export default function ReportEditor({
                     )}
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-gray-700 mb-1">
-                        Descripción de la Obligación Contractual:
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-semibold text-gray-700">
+                          Descripción de la Obligación Contractual:
+                        </label>
+                        {renderNewReportBadge(`obligacion_${obs.id}_descripcion`)}
+                      </div>
                       <textarea
                         rows={2}
                         value={obs.descripcion}
                         onChange={(e) => handleObligacionChange(obs.id, 'descripcion', e.target.value)}
                         placeholder="Redacte la obligación..."
-                        className={`w-full border border-gray-300 rounded p-2 text-xs leading-relaxed focus:ring-1 focus:ring-emerald-500 min-h-[60px] ${getFieldHighlightClass(`obligacion_${obs.id}_descripcion`, descComment || undefined)}`}
+                        className={`w-full border border-gray-300 rounded p-2 text-xs leading-relaxed focus:ring-1 focus:ring-emerald-500 min-h-[60px] ${getFieldHighlightClass(`obligacion_${obs.id}_descripcion`, descComment || undefined) || 'bg-slate-50/70 border-emerald-200/80 font-medium'}`}
                       />
                       {renderCommentAlert(`obligacion_${obs.id}_descripcion`, descComment || undefined)}
                     </div>

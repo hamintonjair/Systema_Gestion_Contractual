@@ -10,10 +10,12 @@ import { AuthUser, DEMO_USERS, ReportData, InformeSummary, initialMockData } fro
 import { supabaseService } from './services/supabaseService';
 import { exportInformeToPDF } from './utils/pdfGenerator';
 import { formatFechaAplicacion, formatDateSlash } from './utils/formatters';
+import { validateReportForRadicacion, RadicacionValidationError } from './utils/validationUtils';
+import ValidationAlertModal from './components/ValidationAlertModal';
 import { CheckCircle2, AlertCircle, AlertTriangle, Save, LogOut, ArrowLeft, X } from 'lucide-react';
 
 export default function App() {
-  // Estado del usuario autenticado (con persistencia local)
+  // Estado del usuario autenticado
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     const savedUser = localStorage.getItem('alcaldia_quibdo_user');
     if (savedUser) {
@@ -30,17 +32,12 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'editor' | 'admin' | 'superadmin'>('dashboard');
 
   // Informe activo para edición o impresión
-  const [activeReportData, setActiveReportData] = useState<ReportData>(() => {
-    const saved = localStorage.getItem('informe_data_6');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return initialMockData;
-      }
-    }
-    return initialMockData;
-  });
+  const [activeReportData, setActiveReportData] = useState<ReportData>(initialMockData);
+  const [validationModal, setValidationModal] = useState<{
+    isOpen: boolean;
+    errors: RadicacionValidationError[];
+    reportNro?: string;
+  } | null>(null);
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedExitModal, setShowUnsavedExitModal] = useState(false);
@@ -130,61 +127,12 @@ export default function App() {
   };
 
   const handleOpenReportEditor = (report: ReportData) => {
-    // Si hay datos en caché local con fotos pendientes, solo conservar anexos no sincronizados sin sobreescribir datos de BD
-    const userDocKey = currentUser?.documentoIdentidad ? `_${currentUser.documentoIdentidad}` : '';
-    const cachedLocal = localStorage.getItem(`informe_data${userDocKey}_${report.informeNro}`) || 
-                        localStorage.getItem(`informe_data_${currentUser?.documentoIdentidad}_${report.informeNro}`) ||
-                        localStorage.getItem(`informe_data_${report.informeNro}`);
-    
     let reportToLoad: ReportData = { ...report };
-    if (cachedLocal) {
-      try {
-        const parsed = JSON.parse(cachedLocal);
-        if (parsed && Array.isArray(parsed.anexos) && parsed.anexos.length > (report.anexos?.length || 0)) {
-          reportToLoad.anexos = parsed.anexos;
-        }
-        // Solo tomar comentarios locales si el informe NO es un Borrador nuevo y no proviene de la BD
-        if (!reportToLoad.syncedToDb && reportToLoad.estado !== 'Borrador') {
-          if (!reportToLoad.comentariosCampos || Object.keys(reportToLoad.comentariosCampos).length === 0) {
-            if (parsed.comentariosCampos && Object.keys(parsed.comentariosCampos).length > 0) {
-              reportToLoad.comentariosCampos = parsed.comentariosCampos;
-            }
-          } else if (parsed.comentariosCampos && Object.keys(parsed.comentariosCampos).length > 0) {
-            reportToLoad.comentariosCampos = { ...parsed.comentariosCampos, ...reportToLoad.comentariosCampos };
-          }
-        }
-        
-        // No sobreescribir el estado de la BD con un estado local, a menos que no esté sincronizado
-        if (!reportToLoad.syncedToDb && parsed.estado && parsed.estado === 'Devuelto' && reportToLoad.estado !== 'Aprobado' && reportToLoad.estado !== 'Borrador') {
-          reportToLoad.estado = parsed.estado;
-        }
-      } catch (e) {}
-    }
 
     if (reportToLoad.estado === 'Borrador') {
       reportToLoad.comentariosCampos = {};
-    } else if (!reportToLoad.syncedToDb && (!reportToLoad.comentariosCampos || Object.keys(reportToLoad.comentariosCampos).length === 0)) {
-      const doc = report.contratistaDocumento || currentUser?.documentoIdentidad || '';
-      const savedComm = localStorage.getItem(`informe_comentarios_${doc}_${report.informeNro}`) ||
-                        localStorage.getItem(`informe_comentarios_${report.informeNro}`);
-      if (savedComm) {
-        try {
-          const parsedComm = JSON.parse(savedComm);
-          if (parsedComm && Object.keys(parsedComm).length > 0) {
-            reportToLoad.comentariosCampos = parsedComm;
-          }
-        } catch (e) {}
-      }
-    }
-
-    if (reportToLoad.estado !== 'Borrador' && reportToLoad.comentariosCampos && Object.keys(reportToLoad.comentariosCampos).length > 0 && reportToLoad.estado !== 'Aprobado') {
+    } else if (reportToLoad.comentariosCampos && Object.keys(reportToLoad.comentariosCampos).length > 0 && reportToLoad.estado !== 'Aprobado') {
       reportToLoad.estado = 'Devuelto';
-    }
-
-    // Marcar en sessionStorage que el informe aprobado ya fue visto/ingresado
-    const doc = reportToLoad.contratistaDocumento || currentUser?.documentoIdentidad || '';
-    if (doc && reportToLoad.estado === 'Aprobado') {
-      sessionStorage.setItem(`notified_approved_${doc}_${reportToLoad.informeNro}`, 'seen');
     }
 
     setActiveReportData(reportToLoad);
@@ -282,6 +230,17 @@ export default function App() {
   };
 
   const handleRadicarToSupabase = async () => {
+    // Validar de forma estricta antes de radicar
+    const validation = validateReportForRadicacion(activeReportData);
+    if (!validation.isValid) {
+      setValidationModal({
+        isOpen: true,
+        errors: validation.errors,
+        reportNro: activeReportData.informeNro,
+      });
+      return { success: false, error: 'Validación de radicación no superada' };
+    }
+
     setIsSaving(true);
     const updatedData: ReportData = {
       ...activeReportData,
@@ -560,6 +519,16 @@ export default function App() {
         )}
 
       </div>
+
+      {/* MODAL DE VALIDACIÓN ESTRICTA DE RADICACIÓN */}
+      {validationModal && (
+        <ValidationAlertModal
+          isOpen={validationModal.isOpen}
+          onClose={() => setValidationModal(null)}
+          errors={validationModal.errors}
+          reportNro={validationModal.reportNro}
+        />
+      )}
 
     </div>
   );

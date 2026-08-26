@@ -21,6 +21,7 @@ import {
 import { supabaseService } from '../services/supabaseService';
 import { SUPABASE_CONFIG } from '../lib/supabase';
 import QuibdoLogo from './QuibdoLogo';
+import NotificationBell from './NotificationBell';
 
 interface Props {
   currentUser: AuthUser;
@@ -31,6 +32,7 @@ interface Props {
   onPrint?: () => void;
   onDownloadPDF?: () => void;
   onSaveToSupabase?: () => void;
+  onOpenReport?: (informeNro: string) => void;
   isSaving?: boolean;
   isGeneratingPDF?: boolean;
   hasUnsavedChanges?: boolean;
@@ -45,6 +47,7 @@ export default function Navbar({
   onPrint,
   onDownloadPDF,
   onSaveToSupabase,
+  onOpenReport,
   isSaving = false,
   isGeneratingPDF = false,
   hasUnsavedChanges = false,
@@ -147,6 +150,12 @@ export default function Navbar({
                 )}
               </div>
             )}
+
+            {/* Campana de Notificaciones Institucionales */}
+            <NotificationBell 
+              currentUser={currentUser} 
+              onOpenReport={onOpenReport} 
+            />
 
             {/* Selector / Menú de Usuario */}
             <div className="relative">

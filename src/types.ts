@@ -23,9 +23,12 @@ export interface AuthUser {
   cdpNro?: string;
   crpNro?: string;
   polizaNro?: string;
+  fechaPoliza?: string;
+  plazo?: string;
   fechaInicio?: string;
   fechaTerminacion?: string;
   supervisorNombre?: string;
+  supervisorCargo?: string;
   supervisorDocumento?: string;
   apoyoSupervisionNombre?: string;
   apoyoSupervisionDocumento?: string;
@@ -123,12 +126,28 @@ export interface Contrato {
   created_at?: string;
 }
 
+export interface Notificacion {
+  id: string;
+  user_id: string;
+  mensaje: string;
+  tipo: 'aprobacion' | 'devolucion' | 'radicado' | 'info' | 'sistema';
+  leida: boolean;
+  created_at?: string;
+  informe_nro?: string;
+  report_id?: string;
+  titulo?: string;
+}
+
 export interface Obligacion {
   id: string;
+  num?: number | string;
   descripcion: string;
   actividades: string;
   soportes: string;
   fotos?: Anexo[];
+  isUpdated?: boolean;
+  isTouched?: boolean;
+  isClonedStructure?: boolean;
 }
 
 export interface Anexo {
@@ -139,6 +158,7 @@ export interface Anexo {
   isPendingUpload?: boolean;
   obligacionId?: string;
   obligacionIndex?: number;
+  isUpdated?: boolean;
 }
 
 export interface FieldComment {
@@ -165,6 +185,11 @@ export interface ReportData {
   syncedToDb?: boolean;
   watermarkImage?: string;
   nitAlcaldia?: string;
+  isUpdated?: boolean;
+  isTouched?: boolean;
+  isClonedFromPrevious?: boolean;
+  touchedFields?: Record<string, boolean>;
+  updatedFields?: Record<string, boolean>;
   
   fechaAplicacion: string;
   tipoInforme: 'Mensual' | 'Final';
@@ -177,6 +202,7 @@ export interface ReportData {
   contratistaCorreo: string;
   contratistaTelefono: string;
   supervisorNombre: string;
+  supervisorCargo?: string;
   supervisorDocumento: string;
   apoyoSupervisionNombre: string;
   apoyoSupervisionDocumento: string;
