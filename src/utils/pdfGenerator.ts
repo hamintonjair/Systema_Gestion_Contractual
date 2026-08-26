@@ -24,17 +24,23 @@ export const exportInformeToPDF = async (options: PDFExportOptions): Promise<boo
   const contratoStr = options.contratoNro ? `_CONTRATO_${options.contratoNro}` : '';
   const filename = `INFORME_${options.informeNro}${contratoStr}_${cleanName}.pdf`;
 
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    window.print();
+    return true;
+  }
+
   const opt = {
     margin: [8, 8, 8, 8] as [number, number, number, number],
     filename: filename,
     image: { type: 'jpeg' as const, quality: 0.98 },
     html2canvas: { 
-      scale: 2, 
+      scale: 1.5, 
       useCORS: true,
       allowTaint: true,
       logging: false,
       letterRendering: true,
-      windowWidth: 800
+      windowWidth: 1024
     },
     jsPDF: { unit: 'mm' as const, format: 'letter' as const, orientation: 'portrait' as const },
     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }

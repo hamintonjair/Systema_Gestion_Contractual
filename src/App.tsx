@@ -215,6 +215,7 @@ export default function App() {
       setTimeout(() => {
         window.focus();
         document.body?.focus();
+        window.dispatchEvent(new Event('resize'));
       }, 350);
     }
   };
@@ -242,6 +243,7 @@ export default function App() {
       setTimeout(() => {
         window.focus();
         document.body?.focus();
+        window.dispatchEvent(new Event('resize'));
       }, 350);
     }
   };
@@ -530,8 +532,8 @@ export default function App() {
             </div>
 
             {/* Panel Derecho: Visualizador Hoja A4 con Reglas Estrictas de Impresión */}
-            <div className="hidden lg:flex flex-1 h-full overflow-y-auto p-6 xl:p-8 bg-gray-200 justify-center print:block print:p-0 print:overflow-visible print:bg-white print:w-full">
-              <div className="w-full max-w-[215mm] min-h-[279mm] bg-white shadow-2xl p-[14mm] print:shadow-none print:p-0 print:mx-0 print:w-full border border-gray-300 print:border-none">
+            <div className={`${isGeneratingPDF ? 'flex absolute inset-0 z-0 opacity-0 lg:static lg:opacity-100 lg:z-auto' : 'hidden lg:flex'} flex-1 h-full overflow-y-auto p-6 xl:p-8 bg-gray-200 justify-center print:block print:p-0 print:overflow-visible print:bg-white print:w-full`}>
+              <div className={`w-full max-w-[215mm] min-h-[279mm] ${isGeneratingPDF ? 'min-w-[800px]' : ''} bg-white shadow-2xl p-[14mm] print:shadow-none print:p-0 print:mx-0 print:w-full border border-gray-300 print:border-none`}>
                 <ReportPreview data={activeReportData} />
               </div>
             </div>

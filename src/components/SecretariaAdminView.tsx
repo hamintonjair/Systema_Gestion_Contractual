@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase';
 import { formatFechaAplicacion, formatDateSlash } from '../utils/formatters';
 import ReportPreview from './ReportPreview';
 import CertificadoSupervisionModal from './CertificadoSupervisionModal';
+import WhatsAppNotifyModal from './WhatsAppNotifyModal';
+import { WhatsAppNotificationPayload } from '../utils/whatsappNotifier';
 import { 
   Building2, 
   Users, 
@@ -75,6 +77,98 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
   const [selectedCertReportData, setSelectedCertReportData] = useState<ReportData | null>(null);
   const [selectedCertData, setSelectedCertData] = useState<CertificadoSupervisionData | null>(null);
   const [showCertModal, setShowCertModal] = useState(false);
+
+  // WhatsApp Notification State
+  const [whatsappPayload, setWhatsappPayload] = useState<WhatsAppNotificationPayload | null>(null);
+
+  const handleOpenWhatsAppModal = (
+    item: InformeSummary | ReportData | AuthUser,
+    forcedTipo?: 'aprobado' | 'devuelto' | 'recordatorio'
+  ) => {
+    let contratistaNombre = '';
+    let contratistaDocumento = '';
+    let contratistaTelefono = '';
+    let informeNro = '1';
+    let contratoNro = 'Por registrar';
+    let periodoDesde = '';
+    let periodoHasta = '';
+    let comentariosCampos: Record<string, FieldComment> | undefined = undefined;
+    let estado = 'Enviado';
+
+    // Si es ReportData (ej. inspectingInforme)
+    if ('obligaciones' in item) {
+      contratistaNombre = item.contratistaNombre || '';
+      contratistaDocumento = item.contratistaDocumento || '';
+      contratistaTelefono = item.contratistaTelefono || '';
+      informeNro = item.informeNro || '1';
+      contratoNro = item.contratoNro || 'Por registrar';
+      periodoDesde = item.periodoDesde || '';
+      periodoHasta = item.periodoHasta || '';
+      comentariosCampos = item.comentariosCampos;
+      estado = item.estado || 'Enviado';
+    } 
+    // Si es InformeSummary (de la tabla de informes)
+    else if ('informe_nro' in item) {
+      contratistaNombre = item.contratista_nombre || '';
+      contratistaDocumento = item.contratista_documento || '';
+      informeNro = String(item.informe_nro || '1');
+      contratoNro = item.contrato_nro || 'Por registrar';
+      periodoDesde = item.periodo_desde || '';
+      periodoHasta = item.periodo_hasta || '';
+      comentariosCampos = item.comentariosCampos;
+      estado = item.estado || 'Enviado';
+    } 
+    // Si es AuthUser (de la lista de contratistas)
+    else {
+      contratistaNombre = item.nombreCompleto || '';
+      contratistaDocumento = item.documentoIdentidad || '';
+      contratistaTelefono = item.telefono || '';
+      contratoNro = item.contratoNro || 'Por registrar';
+      estado = 'Enviado';
+    }
+
+    // Buscar teléfono si no está en el informe
+    if (!contratistaTelefono && contratistaDocumento) {
+      const found = contractors.find(c => c.documentoIdentidad === contratistaDocumento);
+      if (found?.telefono) {
+        contratistaTelefono = found.telefono;
+      }
+    }
+
+    let tipo: 'aprobado' | 'devuelto' | 'recordatorio' = 'recordatorio';
+    if (forcedTipo) {
+      tipo = forcedTipo;
+    } else if (estado === 'Aprobado') {
+      tipo = 'aprobado';
+    } else if (estado === 'Devuelto' || (comentariosCampos && Object.keys(comentariosCampos).length > 0)) {
+      tipo = 'devuelto';
+    }
+
+    setWhatsappPayload({
+      tipo,
+      contratistaNombre,
+      contratistaDocumento,
+      contratistaTelefono,
+      informeNro,
+      contratoNro,
+      periodoDesde,
+      periodoHasta,
+      supervisorNombre: user.nombreCompleto || 'Supervisora Municipal',
+      secretariaNombre: user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social',
+      comentariosCampos,
+      appUrl: typeof window !== 'undefined' ? window.location.origin : undefined
+    });
+  };
+
+  const handleUpdatePhoneFromWhatsApp = async (newPhone: string) => {
+    if (!whatsappPayload?.contratistaDocumento) return;
+    const target = contractors.find(c => c.documentoIdentidad === whatsappPayload.contratistaDocumento);
+    if (target?.id) {
+      await supabaseService.updateContractor(target.id, { telefono: newPhone });
+      const updated = await supabaseService.getContractors(user.secretariaId);
+      setContractors(updated);
+    }
+  };
 
   const handleOpenCertModal = async (item: InformeSummary) => {
     let repData: ReportData | null = null;
@@ -826,6 +920,15 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                             Revisar / Inspeccionar
                           </button>
 
+                          <button
+                            onClick={() => handleOpenWhatsAppModal(item)}
+                            className="px-2 py-1 bg-emerald-50 hover:bg-[#25D366] text-emerald-800 hover:text-white border border-emerald-300 hover:border-[#25D366] rounded font-semibold text-[11px] inline-flex items-center gap-1 transition-all"
+                            title="Enviar notificación oficial por WhatsApp al contratista"
+                          >
+                            <MessageSquare size={13} />
+                            <span className="hidden sm:inline">WhatsApp</span>
+                          </button>
+
                           {item.estado !== 'Aprobado' ? (
                             <button
                               onClick={() => handleUpdateStatus(item.id, 'Aprobado')}
@@ -1026,6 +1129,15 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                             </button>
 
                             <button
+                              onClick={() => handleOpenWhatsAppModal(inf, 'aprobado')}
+                              className="px-2.5 py-1.5 bg-emerald-50 hover:bg-[#25D366] text-emerald-800 hover:text-white border border-emerald-300 hover:border-[#25D366] rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-all"
+                              title="Notificar visto bueno y certificado listo por WhatsApp"
+                            >
+                              <MessageSquare size={13} />
+                              <span>WhatsApp</span>
+                            </button>
+
+                            <button
                               onClick={() => onPrintInforme(inf)}
                               className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
                               title="Ver informe mensual completo"
@@ -1152,6 +1264,14 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                   </button>
 
                   <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleOpenWhatsAppModal(c, 'recordatorio')}
+                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-[#25D366] text-emerald-800 hover:text-white border border-emerald-300 hover:border-[#25D366] rounded-lg text-xs font-semibold flex items-center gap-1 transition-all"
+                      title="Enviar mensaje oficial por WhatsApp al contratista"
+                    >
+                      <MessageSquare size={13} />
+                      <span>WhatsApp</span>
+                    </button>
                     <button
                       onClick={() => handleOpenEditModal(c)}
                       className="px-2.5 py-1.5 bg-gray-100 hover:bg-emerald-50 text-gray-700 hover:text-emerald-800 border border-gray-200 hover:border-emerald-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
@@ -1449,14 +1569,26 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                 <span>• Supervisión oficial de actividades contractuales</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleOpenWhatsAppModal(inspectingInforme, inspectingInforme.estado === 'Aprobado' ? 'aprobado' : 'devuelto')}
+                  className="px-3 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  title="Notificar observaciones o visto bueno directamente al WhatsApp del contratista"
+                >
+                  <MessageSquare size={14} />
+                  <span>Notificar por WhatsApp</span>
+                </button>
+
                 {Object.keys(inspectingInforme.comentariosCampos || {}).length > 0 && inspectingInforme.estado !== 'Devuelto' && (
                   <button
                     onClick={() => {
                       if (inspectingInforme.id) {
                         handleUpdateStatus(inspectingInforme.id, 'Devuelto');
                       }
-                      setInspectingInforme({ ...inspectingInforme, estado: 'Devuelto' });
+                      const updated = { ...inspectingInforme, estado: 'Devuelto' as EstadoInforme };
+                      setInspectingInforme(updated);
+                      handleOpenWhatsAppModal(updated, 'devuelto');
                     }}
                     className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs"
                   >
@@ -1471,7 +1603,9 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                       if (inspectingInforme.id) {
                         handleUpdateStatus(inspectingInforme.id, 'Aprobado');
                       }
-                      setInspectingInforme({ ...inspectingInforme, estado: 'Aprobado' });
+                      const updated = { ...inspectingInforme, estado: 'Aprobado' as EstadoInforme };
+                      setInspectingInforme(updated);
+                      handleOpenWhatsAppModal(updated, 'aprobado');
                     }}
                     className="px-4 py-1.5 bg-[#006b33] hover:bg-[#005729] text-white rounded-lg font-bold flex items-center gap-1.5 shadow-xs"
                   >
@@ -1691,6 +1825,15 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
           reportData={selectedCertReportData || undefined}
           initialCertData={selectedCertData || undefined}
           isEditable={true}
+        />
+      )}
+
+      {/* Modal Notificación Oficial por WhatsApp */}
+      {whatsappPayload && (
+        <WhatsAppNotifyModal
+          payload={whatsappPayload}
+          onClose={() => setWhatsappPayload(null)}
+          onUpdatePhone={handleUpdatePhoneFromWhatsApp}
         />
       )}
 

@@ -44,16 +44,26 @@ export default function LoginView({ onLoginSuccess }: Props) {
       // 1. Intentar inicio de sesión real en Supabase Auth si es correo y clave
       if (passVal && inputVal.includes('@')) {
         try {
-          const { data } = await supabase.auth.signInWithPassword({
+          const { data, error: authError } = await supabase.auth.signInWithPassword({
             email: inputVal,
             password: passVal,
           });
 
-          if (data?.user) {
+          let userIdToFetch = data?.user?.id;
+          
+          // Si Supabase devuelve email_not_confirmed significa que la CONTRASEÑA ES CORRECTA
+          if (authError && (authError.message === 'Email not confirmed' || authError.code === 'email_not_confirmed')) {
+             const { data: profs } = await supabase.from('profiles').select('id').ilike('email', inputVal).limit(1);
+             if (profs && profs.length > 0) {
+                userIdToFetch = profs[0].id;
+             }
+          }
+
+          if (userIdToFetch) {
             const { data: profile } = await supabase
               .from('profiles')
               .select('*, sec_secretarias(*)')
-              .eq('id', data.user.id)
+              .eq('id', userIdToFetch)
               .maybeSingle();
 
             if (profile) {
@@ -85,14 +95,31 @@ export default function LoginView({ onLoginSuccess }: Props) {
 
         if (dbProfiles && dbProfiles.length > 0) {
           const profile = dbProfiles[0];
-          const storedPass = supabaseService.getUserPassword(profile.email) || 
-                             supabaseService.getUserPassword(profile.documento_identidad) || 
-                             (profile.role === 'secretaria_admin' ? 'Inclusion2026*' : profile.role === 'super_admin' ? 'Quibdo2026*' : 'Contratista2026*');
+          
+          // 3. Intentar autenticar con Supabase Auth usando el email real del perfil (por si ingresaron con cédula)
+          let authSuccess = false;
+          if (passVal && profile.email) {
+            try {
+              const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                email: profile.email,
+                password: passVal,
+              });
+              if (authData?.user || (authError && (authError.message === 'Email not confirmed' || authError.code === 'email_not_confirmed'))) {
+                authSuccess = true;
+              }
+            } catch (err) {}
+          }
 
-          if (passVal && passVal !== storedPass && passVal !== 'Contratista2026*' && passVal !== 'Admin2026*' && passVal !== 'Inclusion2026*' && passVal !== 'Quibdo2026*') {
-            setErrorMsg('Contraseña incorrecta. Por favor verifica la clave asignada por tu dependencia.');
-            setLoading(false);
-            return;
+          if (!authSuccess) {
+            const storedPass = supabaseService.getUserPassword(profile.email) || 
+                               supabaseService.getUserPassword(profile.documento_identidad) || 
+                               (profile.role === 'secretaria_admin' ? 'Inclusion2026*' : profile.role === 'super_admin' ? 'Quibdo2026*' : 'Contratista2026*');
+
+            if (passVal && passVal !== storedPass && passVal !== 'Contratista2026*' && passVal !== 'Admin2026*' && passVal !== 'Inclusion2026*' && passVal !== 'Quibdo2026*') {
+              setErrorMsg('Correo, Cédula o Contraseña incorrectos. Verifica tus datos de acceso.');
+              setLoading(false);
+              return;
+            }
           }
 
           onLoginSuccess({
@@ -123,7 +150,7 @@ export default function LoginView({ onLoginSuccess }: Props) {
           (matchedUser.role === 'super_admin' ? 'Quibdo2026*' : matchedUser.role === 'secretaria_admin' ? 'Inclusion2026*' : 'Contratista2026*');
 
         if (passVal && passVal !== expectedPass && passVal !== 'Contratista2026*' && passVal !== 'Admin2026*' && passVal !== 'Inclusion2026*' && passVal !== 'Quibdo2026*') {
-          setErrorMsg('Contraseña incorrecta. Por favor verifica tus datos de acceso.');
+          setErrorMsg('Correo, Cédula o Contraseña incorrectos. Verifica tus datos de acceso.');
           setLoading(false);
           return;
         }
@@ -133,7 +160,7 @@ export default function LoginView({ onLoginSuccess }: Props) {
       }
 
       // Si no coincide con ninguno, indicar error
-      setErrorMsg('Usuario o documento no registrado. Comunícate con la Secretaría correspondiente para habilitar tu cuenta.');
+      setErrorMsg('Correo, Cédula o Contraseña incorrectos. Verifica tus datos de acceso.');
     } catch (err: any) {
       console.warn('Login error:', err);
       setErrorMsg('Ocurrió un error al procesar el ingreso. Inténtalo nuevamente.');

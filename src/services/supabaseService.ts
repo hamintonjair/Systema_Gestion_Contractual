@@ -1320,7 +1320,7 @@ export const supabaseService = {
   },
 
   // 8.2. Cargar Informes Específicos de un Contratista con sus Obligaciones y Fotos de Supabase
-  async getContractorReports(contractorDocument?: string, contractorId?: string): Promise<ReportData[]> {
+  async getContractorReports(contractorDocument?: string, contractorId?: string): Promise<ReportData[] | null> {
     try {
       const { data, error } = await supabase
         .from('informes_mensuales')
@@ -1491,6 +1491,7 @@ export const supabaseService = {
       }
     } catch (err) {
       console.warn('Error in getContractorReports from Supabase:', err);
+      return null;
     }
 
     return [];

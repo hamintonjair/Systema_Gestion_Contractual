@@ -445,6 +445,7 @@ export interface InformeSummary {
   contrato_nro: string;
   secretaria_nombre: string;
   created_at: string;
+  comentariosCampos?: Record<string, FieldComment>;
 }
 
 export const initialMockData: ReportData = {
