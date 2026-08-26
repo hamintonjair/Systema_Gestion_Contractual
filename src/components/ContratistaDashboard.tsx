@@ -84,20 +84,24 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     return dateStr;
   };
 
-  // Campos base del contrato para el INFORME (Auto-completados con la información contractual existente)
-  const [newContratoNro, setNewContratoNro] = useState(user.contratoNro || '015');
-  const [newObjeto, setNewObjeto] = useState(user.objetoContrato || 'Prestación de servicios profesionales y de apoyo a la gestión en la Secretaría de Inclusión y Cohesión Social del Municipio de Quibdó.');
-  const [newValorContrato, setNewValorContrato] = useState(user.valorContrato || '$ 20.029.800');
-  const [newCdpNro, setNewCdpNro] = useState(user.cdpNro || '356');
-  const [newCrpNro, setNewCrpNro] = useState(user.crpNro || '123');
-  const [newPlazo, setNewPlazo] = useState(user.plazo || '6 MESES');
-  const [newFechaInicio, setNewFechaInicio] = useState(convertDDMMYYYYtoYYYYMMDD(user.fechaInicio || '14/01/2026'));
-  const [newFechaTerminacion, setNewFechaTerminacion] = useState(convertDDMMYYYYtoYYYYMMDD(user.fechaTerminacion || '14/07/2026'));
+  // Campos base del contrato para el INFORME
+  // En el 1er informe: los campos contractuales se cargan únicamente si están en 'user', de lo contrario van en blanco ("")
+  // Los datos de administración/supervisión SIEMPRE cargan por defecto
+  const [newContratoNro, setNewContratoNro] = useState(user.contratoNro || '');
+  const [newObjeto, setNewObjeto] = useState(user.objetoContrato || '');
+  const [newValorContrato, setNewValorContrato] = useState(user.valorContrato || '');
+  const [newCdpNro, setNewCdpNro] = useState(user.cdpNro || '');
+  const [newCrpNro, setNewCrpNro] = useState(user.crpNro || '');
+  const [newPlazo, setNewPlazo] = useState(user.plazo || '');
+  const [newFechaInicio, setNewFechaInicio] = useState(convertDDMMYYYYtoYYYYMMDD(user.fechaInicio));
+  const [newFechaTerminacion, setNewFechaTerminacion] = useState(convertDDMMYYYYtoYYYYMMDD(user.fechaTerminacion));
+  const [newPolizaNro, setNewPolizaNro] = useState(user.polizaNro || '');
+  const [newFechaPoliza, setNewFechaPoliza] = useState(convertDDMMYYYYtoYYYYMMDD(user.fechaPoliza));
+
+  // Datos del Administrador / Supervisor (SIEMPRE se cargan en el primer informe)
   const [newSupervisorNombre, setNewSupervisorNombre] = useState(user.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA');
   const [newSecretariaNombre, setNewSecretariaNombre] = useState(user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social');
   const [newSecretariaCodigo, setNewSecretariaCodigo] = useState(user.secretariaCodigo || '170');
-  const [newPolizaNro, setNewPolizaNro] = useState(user.polizaNro || 'N/A');
-  const [newFechaPoliza, setNewFechaPoliza] = useState(user.fechaPoliza || 'N/A');
 
   const handleOpenCreateModal = () => {
     const lastReport = reportsList[0];
@@ -105,20 +109,43 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     setNewPeriodoDesde('');
     setNewPeriodoHasta('');
     setNewTipoInforme('Mensual');
-    setNewValorMensual(lastReport?.valorMensual || existingValorMensual || '$ 3.338.300');
-    setNewContratoNro(lastReport?.contratoNro || user.contratoNro || '015');
-    setNewObjeto(lastReport?.objeto || user.objetoContrato || 'Prestación de servicios profesionales y de apoyo a la gestión en la Secretaría de Inclusión y Cohesión Social del Municipio de Quibdó.');
-    setNewValorContrato(lastReport?.valorContrato || user.valorContrato || '$ 20.029.800');
-    setNewCdpNro(lastReport?.cdpNro || user.cdpNro || '356');
-    setNewCrpNro(lastReport?.crpNro || user.crpNro || '123');
-    setNewPlazo(lastReport?.plazo || user.plazo || '6 MESES');
-    setNewFechaInicio(convertDDMMYYYYtoYYYYMMDD(lastReport?.fechaInicio || user.fechaInicio || '14/01/2026'));
-    setNewFechaTerminacion(convertDDMMYYYYtoYYYYMMDD(lastReport?.fechaTerminacion || user.fechaTerminacion || '14/07/2026'));
-    setNewSupervisorNombre(lastReport?.supervisorNombre || user.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA');
-    setNewSecretariaNombre(lastReport?.secretariaNombre || user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social');
-    setNewSecretariaCodigo(lastReport?.secretariaCodigo || user.secretariaCodigo || '170');
-    setNewPolizaNro(lastReport?.polizaNro || user.polizaNro || 'N/A');
-    setNewFechaPoliza(lastReport?.fechaPoliza || user.fechaPoliza || 'N/A');
+
+    if (lastReport) {
+      // SEGUNDO INFORME EN ADELANTE: Carga automáticamente todo del último informe guardado
+      setNewValorMensual(lastReport.valorMensual || user.valorMensual || '');
+      setNewContratoNro(lastReport.contratoNro || user.contratoNro || '');
+      setNewObjeto(lastReport.objeto || user.objetoContrato || '');
+      setNewValorContrato(lastReport.valorContrato || user.valorContrato || '');
+      setNewCdpNro(lastReport.cdpNro || user.cdpNro || '');
+      setNewCrpNro(lastReport.crpNro || user.crpNro || '');
+      setNewPlazo(lastReport.plazo || user.plazo || '');
+      setNewFechaInicio(convertDDMMYYYYtoYYYYMMDD(lastReport.fechaInicio || user.fechaInicio));
+      setNewFechaTerminacion(convertDDMMYYYYtoYYYYMMDD(lastReport.fechaTerminacion || user.fechaTerminacion));
+      setNewSupervisorNombre(lastReport.supervisorNombre || user.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA');
+      setNewSecretariaNombre(lastReport.secretariaNombre || user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social');
+      setNewSecretariaCodigo(lastReport.secretariaCodigo || user.secretariaCodigo || '170');
+      setNewPolizaNro(lastReport.polizaNro || user.polizaNro || '');
+      setNewFechaPoliza(convertDDMMYYYYtoYYYYMMDD(lastReport.fechaPoliza || user.fechaPoliza));
+    } else {
+      // PRIMER INFORME:
+      // Campos de contrato específicos: Se cargan únicamente si existen en el perfil 'user', de lo contrario van en blanco ("")
+      setNewValorMensual(user.valorMensual || '');
+      setNewContratoNro(user.contratoNro || '');
+      setNewObjeto(user.objetoContrato || '');
+      setNewValorContrato(user.valorContrato || '');
+      setNewCdpNro(user.cdpNro || '');
+      setNewCrpNro(user.crpNro || '');
+      setNewPlazo(user.plazo || '');
+      setNewFechaInicio(convertDDMMYYYYtoYYYYMMDD(user.fechaInicio));
+      setNewFechaTerminacion(convertDDMMYYYYtoYYYYMMDD(user.fechaTerminacion));
+      setNewPolizaNro(user.polizaNro || '');
+      setNewFechaPoliza(convertDDMMYYYYtoYYYYMMDD(user.fechaPoliza));
+
+      // Datos de Administración y Supervisión: SI O SI cargan siempre
+      setNewSupervisorNombre(user.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA');
+      setNewSecretariaNombre(user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social');
+      setNewSecretariaCodigo(user.secretariaCodigo || '170');
+    }
 
     setShowCreateModal(true);
   };
@@ -1586,26 +1613,27 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
       {/* Modal para Crear Nuevo Informe */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className={`bg-white rounded-2xl shadow-2xl ${reportsList.length === 0 ? 'max-w-3xl' : 'max-w-md'} w-full p-6 border border-slate-200 animate-in fade-in zoom-in-95 my-8`}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className={`bg-white rounded-2xl shadow-2xl ${reportsList.length === 0 ? 'max-w-3xl' : 'max-w-md'} w-full border border-slate-200 animate-in fade-in zoom-in-95 my-auto max-h-[90vh] flex flex-col my-3 sm:my-8`}>
             
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <div className="flex items-center justify-between p-4 sm:p-5 pb-3 border-b border-slate-200 shrink-0">
               <div className="flex items-center gap-2 text-[#006b33]">
                 <Plus size={20} />
-                <h3 className="font-bold text-slate-900 text-base">
+                <h3 className="font-bold text-slate-900 text-sm sm:text-base">
                   {reportsList.length === 0 ? 'Crear Primer Informe de Ejecución' : 'Crear Nuevo Informe'}
                 </h3>
               </div>
               <button 
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                className="text-slate-400 hover:text-slate-600 font-bold text-lg p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                aria-label="Cerrar modal"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateNewReport} className="mt-4 space-y-4 text-xs">
+            <form onSubmit={handleCreateNewReport} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs">
               
               {reportsList.length === 0 ? (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
@@ -1876,7 +1904,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 </div>
               )}
 
-              <div className="mt-6 flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <div className="sticky -bottom-5 bg-white pt-3 pb-2 border-t border-slate-200 flex justify-end gap-2 shrink-0 z-10 -mx-4 -mb-4 px-4 sm:-mx-5 sm:-mb-5 sm:px-5">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
