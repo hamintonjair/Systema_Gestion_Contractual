@@ -71,7 +71,7 @@ ${saludo}
 
 Le informamos que su *Informe Mensual de Actividades #${informeNro}* correspondiente al Contrato de Prestación de Servicios *#${contratoNro}* (Período: ${periodoDesde || ''} al ${periodoHasta || ''}) ha sido *REVISADO Y APROBADO SATISFACTORIAMENTE* por la supervisora *${supervisorNombre}*.
 
-📄 Su informe ya se encuentra habilitado para la expedición de su *Certificado de Supervisión* y trámite correspondiente de pago.
+📄 Su informe ya se encuentra aprobado y listo para su impresión y entrega a la Secretaría para su firma.
 
 👉 Puede ingresar a la plataforma para descargar su copia oficial en PDF:
 🔗 ${appUrl}

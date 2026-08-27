@@ -15,7 +15,6 @@ export function validateReportForRadicacion(report: ReportData): { isValid: bool
     { key: 'contratoNro', label: 'Número de Contrato' },
     { key: 'objeto', label: 'Objeto del Contrato' },
     { key: 'valorContrato', label: 'Valor Total del Contrato' },
-    { key: 'valorMensual', label: 'Valor Mensual' },
     { key: 'periodoDesde', label: 'Período Desde' },
     { key: 'periodoHasta', label: 'Período Hasta' },
     { key: 'supervisorNombre', label: 'Nombre del Supervisor' }

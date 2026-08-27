@@ -1630,7 +1630,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 </div>
               ) : (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                  <p className="font-bold text-emerald-950">Generación con Base en Contrato #{user.contratoNro || '015'}:</p>
+                  <p className="font-bold text-emerald-950">Generación con Base en Contrato #{user.contratoNro || reportsList[0]?.contratoNro || '015'}:</p>
                   <p className="text-emerald-800 text-[11px] mt-0.5">
                     El nuevo informe heredará automáticamente los datos contractuales de tu último informe guardado en Supabase.
                   </p>
