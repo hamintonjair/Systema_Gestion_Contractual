@@ -52,7 +52,7 @@ interface Props {
 }
 
 export default function SecretariaAdminView({ user, onSelectInformeToView, onPrintInforme }: Props) {
-  const [activeTab, setActiveTab] = useState<'informes' | 'certificaciones' | 'contratistas'>('informes');
+  const [activeTab, setActiveTab] = useState<'informes' | 'contratistas'>('informes');
   
   // Informes State
   const [informes, setInformes] = useState<InformeSummary[]>([]);
@@ -692,21 +692,6 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
           </button>
 
           <button
-            onClick={() => setActiveTab('certificaciones')}
-            className={`py-3.5 px-3 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
-              activeTab === 'certificaciones'
-                ? 'border-[#006b33] text-[#006b33] bg-emerald-50/50'
-                : 'border-transparent text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <ShieldCheck size={17} />
-            <span>2. Certificaciones y Desembolsos</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-mono font-bold">
-              {totalAprobados}
-            </span>
-          </button>
-
-          <button
             onClick={() => setActiveTab('contratistas')}
             className={`py-3.5 px-3 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
               activeTab === 'contratistas'
@@ -715,7 +700,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
             }`}
           >
             <Users size={17} />
-            <span>3. Directorio de Contratistas</span>
+            <span>2. Directorio de Contratistas</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-mono font-bold">
               {contractors.length}
             </span>
@@ -942,13 +927,23 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                               Aprobar
                             </button>
                           ) : (
-                            <button
-                              onClick={() => handleUpdateStatus(item.id, 'Enviado')}
-                              className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-[10px]"
-                              title="Revertir para correcciones"
-                            >
-                              Reabrir
-                            </button>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button
+                                onClick={() => handleOpenCertModal(item)}
+                                className="px-2.5 py-1 bg-[#006b33] hover:bg-[#005729] text-white rounded font-semibold text-[11px] inline-flex items-center gap-1 shadow-xs"
+                                title="Ver y emitir Certificado de Supervisión oficial"
+                              >
+                                <ShieldCheck size={13} />
+                                Certificado
+                              </button>
+                              <button
+                                onClick={() => handleUpdateStatus(item.id, 'Enviado')}
+                                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-[10px]"
+                                title="Revertir para correcciones"
+                              >
+                                Reabrir
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -1044,123 +1039,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
         </div>
       )}
 
-      {/* PESTAÑA 2: CERTIFICACIONES DE SUPERVISIÓN Y DESEMBOLSOS */}
-      {activeTab === 'certificaciones' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
-          
-          <div className="bg-gradient-to-r from-[#00381a] to-[#005226] text-white p-6 rounded-2xl border border-emerald-800 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-emerald-300 font-bold text-xs uppercase tracking-wider">
-                <ShieldCheck size={18} />
-                <span>Módulo de Emisión y Visto Bueno Institucional</span>
-              </div>
-              <h3 className="text-xl font-black text-white">
-                Certificaciones de Cumplimiento & Autorizaciones de Desembolso
-              </h3>
-              <p className="text-xs text-emerald-200 max-w-2xl">
-                Consolida la emisión de certificados de supervisión con firma digital de la Secretaría de Despacho y autoriza la radicación de cuentas de cobro ante Tesorería Municipal.
-              </p>
-            </div>
-
-            <div className="bg-emerald-950/80 px-4 py-3 rounded-xl border border-emerald-600/60 text-right shrink-0">
-              <span className="text-[10px] uppercase font-bold text-emerald-300">Certificados Emitidos</span>
-              <p className="text-2xl font-black text-white">{totalAprobados} de {informes.length}</p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h4 className="font-bold text-gray-900 text-sm">Contratos con Cumplimiento Avalado</h4>
-                <p className="text-xs text-gray-500">Listado de informes en estado Aprobado con derecho a liquidación mensual</p>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-200">
-                  <tr>
-                    <th className="py-3 px-4">Contratista</th>
-                    <th className="py-3 px-4">Contrato</th>
-                    <th className="py-3 px-4">Informe Avalado</th>
-                    <th className="py-3 px-4">Periodo de Ejecución</th>
-                    <th className="py-3 px-4">Certificación de Supervisión</th>
-                    <th className="py-3 px-4 text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {informes.filter(i => i.estado === 'Aprobado').length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-10 text-center text-gray-500">
-                        <ShieldCheck size={36} className="mx-auto text-gray-300 mb-2" />
-                        <p className="font-bold">No hay informes aprobados pendientes de trámite</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Aprueba los informes radicados en la pestaña "Informes y Supervisión" para emitir certificados.</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    informes.filter(i => i.estado === 'Aprobado').map(inf => (
-                      <tr key={inf.id} className="hover:bg-emerald-50/40 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <p className="font-bold text-gray-900">{inf.contratista_nombre}</p>
-                          <p className="text-[11px] text-gray-500 font-mono">C.C. {inf.contratista_documento}</p>
-                        </td>
-                        <td className="py-3.5 px-4 font-mono font-bold text-emerald-800">
-                          #{inf.contrato_nro} de 2026
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className="font-semibold text-gray-900">Informe #{inf.informe_nro}</span>
-                          <span className="block text-[11px] text-gray-500">{inf.tipo_informe}</span>
-                        </td>
-                        <td className="py-3.5 px-4 text-gray-600 font-mono text-[11px]">
-                          {inf.periodo_desde} al {inf.periodo_hasta}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            <CheckCircle2 size={12} />
-                            Certificado Expedido
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                            <button
-                              onClick={() => handleOpenCertModal(inf)}
-                              className="px-3 py-1.5 bg-[#006b33] hover:bg-[#005729] text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 shadow-xs transition-colors"
-                              title="Ver y emitir Certificado de Supervisión oficial"
-                            >
-                              <ShieldCheck size={14} />
-                              <span>Certificado Oficial</span>
-                            </button>
-
-                            <button
-                              onClick={() => handleOpenWhatsAppModal(inf, 'aprobado')}
-                              className="px-2.5 py-1.5 bg-emerald-50 hover:bg-[#25D366] text-emerald-800 hover:text-white border border-emerald-300 hover:border-[#25D366] rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-all"
-                              title="Notificar visto bueno y certificado listo por WhatsApp"
-                            >
-                              <MessageSquare size={13} />
-                              <span>WhatsApp</span>
-                            </button>
-
-                            <button
-                              onClick={() => onPrintInforme(inf)}
-                              className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors"
-                              title="Ver informe mensual completo"
-                            >
-                              <Printer size={13} />
-                              <span>Informe PDF</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PESTAÑA 3: GESTIÓN DE CONTRATISTAS */}
+      {/* PESTAÑA 2: GESTIÓN DE CONTRATISTAS */}
       {activeTab === 'contratistas' && (
         <div className="space-y-6">
           

@@ -161,12 +161,36 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
 
   const handleDismissAllApproved = () => {
+    unseenApprovedReports.forEach(r => {
+      if (r.informeNro) {
+        const key = `notified_approved_${user.documentoIdentidad || ''}_${r.informeNro}`;
+        localStorage.setItem(key, 'seen');
+      }
+    });
     setLastActionTimestamp(Date.now());
   };
 
   const handleInterceptOpenReport = (report: ReportData) => {
+    if (report.informeNro) {
+      const key = `notified_approved_${user.documentoIdentidad || ''}_${report.informeNro}`;
+      localStorage.setItem(key, 'seen');
+    }
     setLastActionTimestamp(Date.now());
     onOpenReportEditor(report);
+  };
+
+  const handleToggleBell = () => {
+    const nextState = !showNotificationsMenu;
+    setShowNotificationsMenu(nextState);
+    if (nextState && unseenApprovedReports.length > 0) {
+      unseenApprovedReports.forEach(r => {
+        if (r.informeNro) {
+          const key = `notified_approved_${user.documentoIdentidad || ''}_${r.informeNro}`;
+          localStorage.setItem(key, 'seen');
+        }
+      });
+      setLastActionTimestamp(Date.now());
+    }
   };
 
   const handleInterceptDirectPrint = (report: ReportData) => {
@@ -470,7 +494,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   const allUnseenApproved = reportsList.filter(r => {
     if (r.estado !== 'Aprobado') return false;
     const key = `notified_approved_${user.documentoIdentidad || ''}_${r.informeNro}`;
-    return sessionStorage.getItem(key) !== 'seen';
+    return localStorage.getItem(key) !== 'seen';
   });
 
   // Mostramos únicamente el último informe aprobado (el más reciente, número de informe más alto) para no acumular alertas antiguas
@@ -564,7 +588,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
             {/* Botón Campana de Notificaciones de Aprobación */}
             <div className="relative">
               <button
-                onClick={() => setShowNotificationsMenu(!showNotificationsMenu)}
+                onClick={handleToggleBell}
                 className={`p-3 rounded-xl border transition-all relative ${
                   totalAprobadosUnseen > 0
                     ? 'bg-emerald-800/90 hover:bg-emerald-700 text-amber-300 border-amber-400/80 shadow-md ring-2 ring-amber-400/30 animate-pulse'
