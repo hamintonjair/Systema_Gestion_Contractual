@@ -931,9 +931,12 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
 
                           {item.estado !== 'Aprobado' ? (
                             <button
-                              onClick={() => handleUpdateStatus(item.id, 'Aprobado')}
+                              onClick={() => {
+                                handleUpdateStatus(item.id, 'Aprobado');
+                                handleOpenWhatsAppModal(item, 'aprobado');
+                              }}
                               className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-semibold text-[11px] inline-flex items-center gap-1 shadow-xs"
-                              title="Aprobar para pago"
+                              title="Aprobar para pago y notificar por WhatsApp"
                             >
                               <CheckCircle2 size={13} />
                               Aprobar
