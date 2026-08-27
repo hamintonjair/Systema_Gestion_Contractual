@@ -61,20 +61,20 @@ export const generateWhatsAppMessage = (payload: WhatsAppNotificationPayload): s
     appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://ais-pre-lcuenae36vdqnc5x4idqnr-736890033354.us-east1.run.app'
   } = payload;
 
-  const header = `🏛️ *ALCALDÍA DE QUIBDÓ - SUPERVISIÓN CONTRACTUAL*\n_${secretariaNombre}_\n`;
+  const header = `*ALCALDÍA DE QUIBDÓ - SUPERVISIÓN CONTRACTUAL*\n_${secretariaNombre}_\n`;
   const saludo = `Hola, estimado(a) *${contratistaNombre.trim()}*.\n`;
 
   if (tipo === 'aprobado') {
     return `${header}
 ${saludo}
-✅ *INFORME MENSUAL APROBADO*
+*INFORME MENSUAL APROBADO*
 
 Le informamos que su *Informe Mensual de Actividades #${informeNro}* correspondiente al Contrato de Prestación de Servicios *#${contratoNro}* (Período: ${periodoDesde || ''} al ${periodoHasta || ''}) ha sido *REVISADO Y APROBADO SATISFACTORIAMENTE* por la supervisora *${supervisorNombre}*.
 
-📄 Su informe ya se encuentra aprobado y listo para su impresión y entrega a la Secretaría para su firma.
+* Su informe ya se encuentra aprobado y listo para su impresión y entrega a la Secretaría para su firma.
 
-👉 Puede ingresar a la plataforma para descargar su copia oficial en PDF:
-🔗 ${appUrl}
+* Puede ingresar a la plataforma para descargar su copia oficial en PDF:
+${appUrl}
 
 _Mensaje oficial emitido desde el Panel de Supervisión Municipal._`;
   }
@@ -85,13 +85,13 @@ _Mensaje oficial emitido desde el Panel de Supervisión Municipal._`;
     
     let commentsText = '';
     if (pendingComments.length > 0) {
-      commentsText = `\n📝 *Observaciones Registradas (${pendingComments.length}):*\n` + 
+      commentsText = `\n*Observaciones Registradas (${pendingComments.length}):*\n` + 
         pendingComments.map((c, i) => {
           const field = c.nombreCampo || c.campoId || `Campo ${i + 1}`;
           return `• *${field}:* ${c.comentario}`;
         }).join('\n') + '\n';
     } else if (commentsList.length > 0) {
-      commentsText = `\n📝 *Observaciones Registradas:*\n` + 
+      commentsText = `\n*Observaciones Registradas:*\n` + 
         commentsList.map((c, i) => {
           const field = c.nombreCampo || c.campoId || `Campo ${i + 1}`;
           return `• *${field}:* ${c.comentario}`;
@@ -100,12 +100,12 @@ _Mensaje oficial emitido desde el Panel de Supervisión Municipal._`;
 
     return `${header}
 ${saludo}
-⚠️ *NOTIFICACIÓN DE OBSERVACIONES EN SU INFORME*
+*NOTIFICACIÓN DE OBSERVACIONES EN SU INFORME*
 
 Le informamos que su *Informe Mensual #${informeNro}* (Contrato *#${contratoNro}*) ha sido revisado por la supervisora *${supervisorNombre}* y presenta observaciones que deben ser corregidas para proceder con la aprobación de su pago.
 ${commentsText}
-👉 Por favor ingrese a la plataforma, corrija las casillas resaltadas en amarillo y presione *"Radicar / Reenviar Informe"*:
-🔗 ${appUrl}
+* Por favor ingrese a la plataforma, corrija las casillas resaltadas en amarillo y presione *"Radicar / Reenviar Informe"*:
+${appUrl}
 
 _Quedamos atentos a su pronta radicación corregida._`;
   }
@@ -113,12 +113,12 @@ _Quedamos atentos a su pronta radicación corregida._`;
   // Recordatorio
   return `${header}
 ${saludo}
-🔔 *RECORDATORIO DE SUPERVISIÓN*
+*RECORDATORIO DE SUPERVISIÓN*
 
 Le recordamos verificar el estado de su *Informe Mensual #${informeNro}* correspondiente al Contrato *#${contratoNro}*.
 
-👉 Ingrese a la plataforma institucional:
-🔗 ${appUrl}
+* Ingrese a la plataforma institucional:
+${appUrl}
 
 _Supervisión: ${supervisorNombre}_`;
 };
