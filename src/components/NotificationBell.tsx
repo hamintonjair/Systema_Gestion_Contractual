@@ -85,8 +85,26 @@ export default function NotificationBell({ currentUser, onOpenReport }: Props) {
       await supabaseService.marcarNotificacionLeida(notif.id, currentUser.documentoIdentidad);
       setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, leida: true } : n));
     }
-    if (notif.informe_nro && onOpenReport) {
-      setIsOpen(false);
+    setIsOpen(false);
+
+    const fullText = `${notif.titulo || ''} ${notif.mensaje || ''}`.toLowerCase();
+    if (fullText.includes('certificado de supervisión') || fullText.includes('certificado de cumplimiento') || fullText.includes('supervisión')) {
+      window.dispatchEvent(new CustomEvent('switch_contractor_tab', {
+        detail: { tab: 'supervision', informeNro: notif.informe_nro }
+      }));
+    } else if (fullText.includes('soporte fiduciaria') || fullText.includes('fiduciaria') || fullText.includes('seguridad social')) {
+      window.dispatchEvent(new CustomEvent('switch_contractor_tab', {
+        detail: { tab: 'fiduciaria', informeNro: notif.informe_nro }
+      }));
+    } else if (fullText.includes('declaración') || fullText.includes('juramento') || fullText.includes('renta')) {
+      window.dispatchEvent(new CustomEvent('switch_contractor_tab', {
+        detail: { tab: 'juramento', informeNro: notif.informe_nro }
+      }));
+    } else if (fullText.includes('desembolso') || fullText.includes('documento equivalente')) {
+      window.dispatchEvent(new CustomEvent('switch_contractor_tab', {
+        detail: { tab: 'desembolso', informeNro: notif.informe_nro }
+      }));
+    } else if (notif.informe_nro && onOpenReport) {
       onOpenReport(notif.informe_nro);
     }
   };

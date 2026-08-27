@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { CertificadoSupervisionData, ReportData, createDefaultCertificadoData } from '../types';
+import { CertificadoSupervisionData, ReportData, createDefaultCertificadoData, FieldComment } from '../types';
 import { supabaseService } from '../services/supabaseService';
 import { getDatosLiquidacionPeriodo, limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
 import { formatDateSlash, quitarDecimales } from '../utils/formatters';
 import QuibdoLogo from './QuibdoLogo';
-import { Printer, Download, Edit3, Check, Save, RotateCcw, Sparkles, Image as ImageIcon, Calculator } from 'lucide-react';
+import FieldCommentModal from './FieldCommentModal';
+import { Printer, Download, Edit3, Check, Save, RotateCcw, Sparkles, Image as ImageIcon, Calculator, MessageSquare, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -17,6 +18,11 @@ interface Props {
   isEditable?: boolean;
   onPrint?: () => void;
   storageKey?: string;
+  hideGuide?: boolean;
+  isReviewMode?: boolean;
+  onSaveComment?: (fieldId: string, fieldName: string, comentario: string) => void;
+  onDeleteComment?: (fieldId: string) => void;
+  authorName?: string;
 }
 
 export default function CertificadoSupervisionDoc({
@@ -27,7 +33,29 @@ export default function CertificadoSupervisionDoc({
   isEditable = true,
   onPrint,
   storageKey,
+  hideGuide = false,
+  isReviewMode = false,
+  onSaveComment,
+  onDeleteComment,
+  authorName = 'Supervisora',
 }: Props) {
+  const [commentModalState, setCommentModalState] = useState<{
+    isOpen: boolean;
+    fieldId: string;
+    fieldName: string;
+    fieldValuePreview?: string;
+  }>({ isOpen: false, fieldId: '', fieldName: '' });
+
+  const openCommentModal = (fieldId: string, fieldName: string, val?: string) => {
+    if (isReviewMode && onSaveComment) {
+      setCommentModalState({
+        isOpen: true,
+        fieldId,
+        fieldName,
+        fieldValuePreview: val
+      });
+    }
+  };
   const getInitialData = (): CertificadoSupervisionData => {
     let baseData: CertificadoSupervisionData;
     const key = storageKey || (reportData ? `cert_data_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}` : 'cert_data_global');
@@ -263,6 +291,54 @@ export default function CertificadoSupervisionDoc({
     }
   };
 
+  const certComment = reportData?.comentariosCampos?.['certificado_supervision'] || 
+    Object.values(reportData?.comentariosCampos || {}).find((c: any) => 
+      c.campoId === 'certificado_supervision' || (c.nombreCampo && c.nombreCampo.toLowerCase().includes('certificado de supervisión'))
+    );
+
+  const handleMarkCommentAsFixed = async () => {
+    if (!reportData) return;
+    const currentComments = { ...(reportData.comentariosCampos || {}) };
+    const targetKey = Object.keys(currentComments).find(k => 
+      k === 'certificado_supervision' || 
+      (currentComments[k]?.nombreCampo && currentComments[k]?.nombreCampo.toLowerCase().includes('certificado de supervisión'))
+    ) || 'certificado_supervision';
+
+    if (currentComments[targetKey]) {
+      currentComments[targetKey] = {
+        ...currentComments[targetKey],
+        corregido: true
+      };
+    }
+
+    // Guardar en Supabase
+    await supabaseService.saveReportComments(
+      reportData.id || '', 
+      reportData.informeNro, 
+      reportData.contratistaDocumento || '', 
+      currentComments, 
+      reportData.estado || 'Devuelto'
+    );
+    
+    // Guardar en LocalStorage
+    const userDocKey = reportData.contratistaDocumento ? `_${reportData.contratistaDocumento}` : '';
+    const storageKeyInforme = `informe_data${userDocKey}_${reportData.informeNro}`;
+    const rawInforme = localStorage.getItem(storageKeyInforme);
+    if (rawInforme) {
+      try {
+        const parsed = JSON.parse(rawInforme);
+        parsed.comentariosCampos = currentComments;
+        localStorage.setItem(storageKeyInforme, JSON.stringify(parsed));
+      } catch (e) {}
+    }
+
+    const notifKey = `notified_obs_${reportData.contratistaDocumento || ''}_${reportData.informeNro || ''}_${targetKey}`;
+    localStorage.setItem(notifKey, 'seen');
+
+    window.dispatchEvent(new CustomEvent('informe_comments_updated'));
+    window.dispatchEvent(new CustomEvent('notificaciones_actualizadas'));
+  };
+
   const handleSave = async () => {
     const key = storageKey || (reportData ? `cert_data_${reportData.contratistaDocumento || ''}_${reportData.informeNro || formData.pagoNro || '1'}` : `cert_data_${formData.contratistaDocumento || ''}_${formData.pagoNro || '1'}`);
     localStorage.setItem(key, JSON.stringify(formData));
@@ -270,6 +346,10 @@ export default function CertificadoSupervisionDoc({
     
     // Guardar y sincronizar en Supabase
     await supabaseService.saveCertificadoSupervision(formData, reportData?.id);
+
+    if (certComment && !certComment.corregido) {
+      await handleMarkCommentAsFixed();
+    }
 
     if (onSave) {
       onSave(formData);
@@ -610,37 +690,104 @@ export default function CertificadoSupervisionDoc({
       </div>
 
       {/* Guía Paso a Paso para Edición de Campos (Oculta al imprimir) */}
-      <div className="w-full max-w-[850px] bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50/60 border border-emerald-200 rounded-xl p-3 mb-4 text-slate-700 shadow-xs print:hidden">
-        <div className="flex items-start gap-2.5">
-          <div className="bg-[#006b33] text-white p-1 rounded-md mt-0.5 shrink-0 shadow-xs">
-            <Sparkles size={14} />
-          </div>
-          <div className="space-y-1.5 flex-1">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-xs text-emerald-950">
-                Guía para Diligenciar y Editar este Certificado:
-              </span>
-              <span className="text-[10.5px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                {isEditing ? 'Modo Edición Activado' : 'Modo Lectura'}
-              </span>
+      {!hideGuide && (
+        <div className="w-full max-w-[850px] bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50/60 border border-emerald-200 rounded-xl p-3 mb-4 text-slate-700 shadow-xs print:hidden">
+          <div className="flex items-start gap-2.5">
+            <div className="bg-[#006b33] text-white p-1 rounded-md mt-0.5 shrink-0 shadow-xs">
+              <Sparkles size={14} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] leading-snug">
-              <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
-                <span className="font-bold text-emerald-900 block mb-0.5">1. Habilitar Edición:</span>
-                Haga clic en <strong className="text-amber-900 bg-amber-100 px-1 py-0.5 rounded">«Llenar / Editar Campos»</strong> para habilitar las casillas editables del documento (resaltadas en amarillo suave).
+            <div className="space-y-1.5 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs text-emerald-950">
+                  Guía para Diligenciar y Editar este Certificado:
+                </span>
+                <span className="text-[10.5px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  {isEditing ? 'Modo Edición Activado' : 'Modo Lectura'}
+                </span>
               </div>
-              <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
-                <span className="font-bold text-emerald-900 block mb-0.5">2. Calcular o Modificar:</span>
-                Use <strong className="text-emerald-900 bg-emerald-100 px-1 py-0.5 rounded">«Autocalcular Liquidación»</strong> para autocompletar días y saldos, o ajuste los rubros, fechas y firmas directamente.
-              </div>
-              <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
-                <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar e Imprimir:</span>
-                Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Cambios»</strong> para registrar los datos y luego <strong className="text-slate-900 bg-slate-200 px-1 py-0.5 rounded">«Imprimir»</strong> para obtener el PDF oficial.
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] leading-snug">
+                <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                  <span className="font-bold text-emerald-900 block mb-0.5">1. Habilitar Edición:</span>
+                  Haga clic en <strong className="text-amber-900 bg-amber-100 px-1 py-0.5 rounded">«Llenar / Editar Campos»</strong> para habilitar las casillas editables del documento (resaltadas en amarillo suave).
+                </div>
+                <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                  <span className="font-bold text-emerald-900 block mb-0.5">2. Calcular o Modificar:</span>
+                  Use <strong className="text-emerald-900 bg-emerald-100 px-1 py-0.5 rounded">«Autocalcular Liquidación»</strong> para autocompletar días y saldos, o ajuste los rubros, fechas y firmas directamente.
+                </div>
+                <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                  <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar e Imprimir:</span>
+                  Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Cambios»</strong> para registrar los datos y luego <strong className="text-slate-900 bg-slate-200 px-1 py-0.5 rounded">«Imprimir»</strong> para obtener el PDF oficial.
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* BANNER OBSERVACIONES PARA EL CONTRATISTA */}
+      {!isReviewMode && certComment && !certComment.corregido && (
+        <div className="w-full max-w-[850px] mb-3 p-3.5 bg-amber-50 border-2 border-amber-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-sm print:hidden">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle size={18} className="text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-black text-[10.5px] uppercase bg-amber-200 text-amber-950 px-2 py-0.5 rounded border border-amber-300">
+                  Observación de Supervisión
+                </span>
+                <span className="text-[10.5px] text-amber-800 font-semibold">
+                  {certComment.fecha || 'Reciente'} • {certComment.autor || 'Supervisora'}
+                </span>
+              </div>
+              <p className="text-xs font-bold text-amber-950 mt-1">
+                "{certComment.comentario}"
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleMarkCommentAsFixed}
+            className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors cursor-pointer"
+          >
+            <CheckCircle2 size={14} />
+            <span>Marcar como Subsanado</span>
+          </button>
+        </div>
+      )}
+
+      {/* BANNER MODO REVISIÓN ADMINISTRADORA */}
+      {isReviewMode && (
+        <div className="w-full max-w-[850px] mb-3 p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between text-xs text-amber-950 shadow-xs print:hidden">
+          <div className="flex items-center gap-2 font-bold">
+            <MessageSquare size={16} className="text-amber-700" />
+            <span>Modo Revisión: Haga clic en el botón para dejar observaciones y comentarios sobre este certificado.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => openCommentModal('certificado_supervision', 'Certificado de Supervisión', 'Certificado Oficial de Supervisión')}
+            className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow-2xs transition-colors"
+          >
+            <MessageSquare size={13} />
+            <span>Comentar Certificado</span>
+          </button>
+        </div>
+      )}
+
+      {/* MODAL DE COMENTARIOS */}
+      <FieldCommentModal
+        isOpen={commentModalState.isOpen}
+        fieldId={commentModalState.fieldId}
+        fieldName={commentModalState.fieldName}
+        fieldValuePreview={commentModalState.fieldValuePreview}
+        initialComment={reportData?.comentariosCampos?.[commentModalState.fieldId]}
+        authorName={authorName}
+        onSave={(fId, fName, comm) => {
+          if (onSaveComment) onSaveComment(fId, fName, comm);
+        }}
+        onDelete={(fId) => {
+          if (onDeleteComment) onDeleteComment(fId);
+        }}
+        onClose={() => setCommentModalState(prev => ({ ...prev, isOpen: false }))}
+      />
 
       {/* DOCUMENTO OFICIAL EXACTO - Times New Roman */}
       <div className="w-full max-w-full overflow-x-auto pb-4 flex justify-start sm:justify-center">

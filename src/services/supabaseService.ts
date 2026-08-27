@@ -1843,10 +1843,28 @@ export const supabaseService = {
     // Disparar notificación automática si el informe fue devuelto con observaciones
     if (contractorDoc && newStatus === 'Devuelto') {
       const obsCount = Object.keys(comments).length;
+      const certComments = Object.values(comments).filter(c => {
+        const fn = (c.nombreCampo || c.fieldName || '').toLowerCase();
+        const fid = (c.campoId || '').toLowerCase();
+        return fid === 'certificado_supervision' || fid.startsWith('cert_') || fn.includes('certificado') ||
+               fid === 'soporte_fiduciaria' || fid.startsWith('fid_') || fn.includes('fiduciaria') ||
+               fid === 'declaracion_juramento' || fid.startsWith('dec_') || fn.includes('declaración') || fn.includes('juramento') ||
+               fid === 'autorizacion_desembolso' || fid.startsWith('desemb_') || fn.includes('desembolso');
+      });
+
+      let titulo = `Informe #${informeNro} Devuelto para Corrección`;
+      let mensaje = `La supervisión ha devuelto el Informe #${informeNro} con ${obsCount} observación(es) por subsanar.`;
+      
+      if (certComments.length > 0) {
+        const names = Array.from(new Set(certComments.map(c => c.nombreCampo || c.fieldName || 'Certificado'))).join(', ');
+        titulo = `Observación en ${names} (Informe #${informeNro})`;
+        mensaje = `La supervisión ha registrado observaciones en ${names} del Informe #${informeNro}: "${certComments[0].comentario}".`;
+      }
+
       this.crearNotificacion({
         user_id: contractorDoc,
-        titulo: `Informe #${informeNro} Devuelto para Corrección`,
-        mensaje: `La supervisión ha devuelto el Informe #${informeNro} con ${obsCount} observación(es) por subsanar.`,
+        titulo,
+        mensaje,
         tipo: 'devolucion',
         leida: false,
         informe_nro: informeNro,

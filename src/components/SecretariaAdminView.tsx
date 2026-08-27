@@ -3,6 +3,10 @@ import { AuthUser, InformeSummary, EstadoInforme, ReportData, FieldComment, crea
 import { supabaseService } from '../services/supabaseService';
 import { supabase } from '../lib/supabase';
 import { formatFechaAplicacion, formatDateSlash } from '../utils/formatters';
+import CertificadoSupervisionDoc from './CertificadoSupervisionDoc';
+import SoporteFiduciariaDoc from './SoporteFiduciariaDoc';
+import DeclaracionRentaDoc from './DeclaracionRentaDoc';
+import AutorizacionDesembolsoDoc from './AutorizacionDesembolsoDoc';
 import ReportPreview from './ReportPreview';
 import CertificadoSupervisionModal from './CertificadoSupervisionModal';
 import WhatsAppNotifyModal from './WhatsAppNotifyModal';
@@ -42,7 +46,10 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
-  RotateCcw
+  RotateCcw,
+  Landmark,
+  Scale,
+  CreditCard
 } from 'lucide-react';
 
 interface Props {
@@ -60,6 +67,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [inspectingInforme, setInspectingInforme] = useState<ReportData | null>(null);
+  const [adminModuleTab, setAdminModuleTab] = useState<'informe' | 'supervision' | 'fiduciaria' | 'juramento' | 'desembolso'>('informe');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -72,6 +80,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
   const [showAddContractorModal, setShowAddContractorModal] = useState(false);
   const [editingContractor, setEditingContractor] = useState<AuthUser | null>(null);
   const [contractorToDelete, setContractorToDelete] = useState<AuthUser | null>(null);
+  const [selectedContractorForReports, setSelectedContractorForReports] = useState<AuthUser | null>(null);
 
   // Certificado de Supervisión Modal State
   const [selectedCertReportData, setSelectedCertReportData] = useState<ReportData | null>(null);
@@ -553,6 +562,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
 
   const handleOpenInspectModal = async (item: InformeSummary) => {
     if (item.estado === 'Borrador') return; // Protección: Los borradores no radicados no son inspeccionables por la supervisora
+    setAdminModuleTab('informe');
 
     // 1. Intentar cargar desde Supabase si tiene un ID válido
     if (item.id) {
@@ -1163,6 +1173,14 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                       <span>Editar</span>
                     </button>
                     <button
+                      onClick={() => setSelectedContractorForReports(c)}
+                      className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+                      title="Ver historial individual de informes y certificados de este contratista"
+                    >
+                      <FileBadge size={14} />
+                      <span>Historial & Certificados</span>
+                    </button>
+                    <button
                       onClick={() => {
                         setActiveTab('informes');
                         setSearchTerm(c.nombreCompleto);
@@ -1331,10 +1349,10 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
         </div>
       )}
 
-      {/* MODAL DE INSPECCIÓN COMPLETA CON VISTA A4 Y MODO REVISIÓN */}
+      {/* MODAL DE INSPECCIÓN COMPLETA CON 5 PESTAÑAS Y MODO REVISIÓN */}
       {inspectingInforme && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-white text-gray-900 rounded-2xl shadow-2xl max-w-5xl w-full h-[92vh] flex flex-col overflow-hidden border border-gray-200">
+          <div className="bg-white text-gray-900 rounded-2xl shadow-2xl max-w-5xl w-full h-[94vh] flex flex-col overflow-hidden border border-gray-200">
             
             {/* Header del Visor */}
             <div className="p-4 bg-emerald-950 text-white flex items-center justify-between shrink-0">
@@ -1360,33 +1378,6 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setSelectedCertReportData(inspectingInforme);
-                    setShowCertModal(true);
-                  }}
-                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm border border-emerald-500"
-                  title="Expedir o visualizar Certificado de Supervisión oficial"
-                >
-                  <ShieldCheck size={15} />
-                  <span>Certificado de Supervisión</span>
-                </button>
-
-                {inspectingInforme.estado !== 'Aprobado' && (
-                  <button
-                    onClick={() => {
-                      if (inspectingInforme.id) {
-                        handleUpdateStatus(inspectingInforme.id, 'Aprobado');
-                      }
-                      setInspectingInforme({ ...inspectingInforme, estado: 'Aprobado' });
-                    }}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm"
-                  >
-                    <CheckCircle2 size={15} />
-                    Aprobar para Pago
-                  </button>
-                )}
-
                 <button 
                   onClick={() => setInspectingInforme(null)}
                   className="p-1.5 text-gray-400 hover:text-white rounded-lg"
@@ -1397,125 +1388,187 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
               </div>
             </div>
 
-            {/* Banner de Ayuda e Instrucciones de Revisión en Casillas */}
-            <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-amber-950 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-amber-200 text-amber-950 font-black rounded text-[10.5px]">
-                  📝 MODO REVISIÓN ACTIVO
-                </span>
-                <span className="text-[11.5px]">
-                  Haz clic sobre cualquier casilla para escribir o editar observaciones. Quedarán resaltadas en <strong className="bg-amber-200 px-1 py-0.5 rounded text-amber-950 font-bold">amarillo</strong> para que el contratista las corrija.
-                </span>
-              </div>
+            {/* Barra de Pestañas de la Suite Contractual (5 Certificados / Documentos) */}
+            <div className="bg-white px-4 py-2.5 border-b border-slate-200 shadow-xs shrink-0 overflow-x-auto">
+              <div className="flex items-center gap-2 min-w-max">
+                
+                <button
+                  onClick={() => setAdminModuleTab('informe')}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                    adminModuleTab === 'informe'
+                      ? 'bg-[#006b33] text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <FileText size={15} />
+                  <span>1. Informe Mensual</span>
+                </button>
 
-              {Object.keys(inspectingInforme.comentariosCampos || {}).length > 0 && (() => {
-                const commsList = Object.values(inspectingInforme.comentariosCampos || {}) as FieldComment[];
-                const corregidosCount = commsList.filter(c => c.corregido).length;
-                const pendientesCount = commsList.length - corregidosCount;
-                return (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {corregidosCount > 0 && (
-                      <div className="bg-emerald-100 text-emerald-950 font-bold px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0 border border-emerald-400 shadow-xs">
-                        <CheckCircle2 size={13} className="text-emerald-700" />
-                        <span>{corregidosCount} corrección(es) realizada(s) (Verde)</span>
-                      </div>
-                    )}
-                    {pendientesCount > 0 && (
-                      <div className="bg-amber-200/90 text-amber-950 font-bold px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0 border border-amber-400 shadow-xs">
-                        <AlertTriangle size={13} className="text-amber-800" />
-                        <span>{pendientesCount} observación(es) pendiente(s)</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+                <button
+                  onClick={() => setAdminModuleTab('supervision')}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                    adminModuleTab === 'supervision'
+                      ? 'bg-[#006b33] text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <ShieldCheck size={15} />
+                  <span>2. Certificado de Supervisión</span>
+                </button>
+
+                <button
+                  onClick={() => setAdminModuleTab('fiduciaria')}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                    adminModuleTab === 'fiduciaria'
+                      ? 'bg-[#006b33] text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <Landmark size={15} />
+                  <span>3. Soporte Fiduciaria / Pagos</span>
+                </button>
+
+                <button
+                  onClick={() => setAdminModuleTab('juramento')}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                    adminModuleTab === 'juramento'
+                      ? 'bg-[#006b33] text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <Scale size={15} />
+                  <span>4. Declaración Bajo Juramento</span>
+                </button>
+
+                <button
+                  onClick={() => setAdminModuleTab('desembolso')}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                    adminModuleTab === 'desembolso'
+                      ? 'bg-[#006b33] text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <CreditCard size={15} />
+                  <span>5. Autorización de Desembolso</span>
+                </button>
+
+              </div>
             </div>
 
-            {/* Cuerpo del Visor con ReportPreview Interactivo */}
+            {/* Banner de Ayuda de Revisión (Solo visible en la pestaña 1 de informe) */}
+            {adminModuleTab === 'informe' && (
+              <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-amber-950 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 bg-amber-200 text-amber-950 font-black rounded text-[10.5px]">
+                    📝 MODO REVISIÓN & COMENTARIOS
+                  </span>
+                  <span className="text-[11.5px]">
+                    Haz clic sobre cualquier casilla para escribir o editar observaciones. Quedarán resaltadas en <strong className="bg-amber-200 px-1 py-0.5 rounded text-amber-950 font-bold">amarillo</strong> para que el contratista las corrija.
+                  </span>
+                </div>
+
+                {Object.keys(inspectingInforme.comentariosCampos || {}).length > 0 && (() => {
+                  const commsList = Object.values(inspectingInforme.comentariosCampos || {}) as FieldComment[];
+                  const corregidosCount = commsList.filter(c => c.corregido).length;
+                  const pendientesCount = commsList.length - corregidosCount;
+                  return (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {corregidosCount > 0 && (
+                        <div className="bg-emerald-100 text-emerald-950 font-bold px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0 border border-emerald-400 shadow-xs">
+                          <CheckCircle2 size={13} className="text-emerald-700" />
+                          <span>{corregidosCount} corrección(es) realizada(s)</span>
+                        </div>
+                      )}
+                      {pendientesCount > 0 && (
+                        <div className="bg-amber-200/90 text-amber-950 font-bold px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0 border border-amber-400 shadow-xs">
+                          <AlertTriangle size={13} className="text-amber-800" />
+                          <span>{pendientesCount} observación(es) pendiente(s)</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Cuerpo del Visor con el Documento Activo */}
             <div className="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-6 md:p-8 flex justify-center">
               <div className="w-full max-w-4xl bg-white shadow-md rounded-lg p-4 sm:p-6">
-                <ReportPreview 
-                  data={inspectingInforme}
-                  isReviewMode={true}
-                  onSaveComment={handleSaveComment}
-                  onDeleteComment={handleDeleteComment}
-                  authorName={user.nombreCompleto || 'Supervisora'}
-                />
+                
+                {adminModuleTab === 'informe' && (
+                  <ReportPreview 
+                    data={inspectingInforme}
+                    isReviewMode={true}
+                    onSaveComment={handleSaveComment}
+                    onDeleteComment={handleDeleteComment}
+                    authorName={user.nombreCompleto || 'Supervisora'}
+                  />
+                )}
+
+                {adminModuleTab === 'supervision' && (
+                  <CertificadoSupervisionDoc
+                    reportData={inspectingInforme}
+                    isEditable={false}
+                    hideGuide={true}
+                    isReviewMode={true}
+                    onSaveComment={handleSaveComment}
+                    onDeleteComment={handleDeleteComment}
+                    authorName={user.nombreCompleto || 'Supervisora'}
+                  />
+                )}
+
+                {adminModuleTab === 'fiduciaria' && (
+                  <SoporteFiduciariaDoc
+                    reportData={inspectingInforme}
+                    isEditable={false}
+                    hideGuide={true}
+                    isReviewMode={true}
+                    onSaveComment={handleSaveComment}
+                    onDeleteComment={handleDeleteComment}
+                    authorName={user.nombreCompleto || 'Supervisora'}
+                  />
+                )}
+
+                {adminModuleTab === 'juramento' && (
+                  <DeclaracionRentaDoc
+                    reportData={inspectingInforme}
+                    isEditable={false}
+                    hideGuide={true}
+                    isReviewMode={true}
+                    onSaveComment={handleSaveComment}
+                    onDeleteComment={handleDeleteComment}
+                    authorName={user.nombreCompleto || 'Supervisora'}
+                  />
+                )}
+
+                {adminModuleTab === 'desembolso' && (
+                  <AutorizacionDesembolsoDoc
+                    reportData={inspectingInforme}
+                    isEditable={false}
+                    hideGuide={true}
+                    isReviewMode={true}
+                    onSaveComment={handleSaveComment}
+                    onDeleteComment={handleDeleteComment}
+                    authorName={user.nombreCompleto || 'Supervisora'}
+                  />
+                )}
+
               </div>
             </div>
 
-            {/* Footer con Acciones de Decisión */}
-            <div className="p-3 bg-white border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600 shrink-0">
+            {/* Footer con Cerrar Visor */}
+            <div className="p-3 bg-white border-t border-gray-200 flex items-center justify-between text-xs text-gray-600 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-gray-700">Alcaldía de Quibdó</span>
-                <span>• Supervisión oficial de actividades contractuales</span>
+                <span>• Visualización y comentarios de supervisión contractual</span>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => handleOpenWhatsAppModal(inspectingInforme, inspectingInforme.estado === 'Aprobado' ? 'aprobado' : 'devuelto')}
-                  className="px-3 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                  title="Notificar observaciones o visto bueno directamente al WhatsApp del contratista"
-                >
-                  <MessageSquare size={14} />
-                  <span>Notificar por WhatsApp</span>
-                </button>
-
-                {Object.keys(inspectingInforme.comentariosCampos || {}).length > 0 && inspectingInforme.estado !== 'Devuelto' && (
-                  <button
-                    onClick={() => {
-                      if (inspectingInforme.id) {
-                        handleUpdateStatus(inspectingInforme.id, 'Devuelto');
-                      }
-                      const updated = { ...inspectingInforme, estado: 'Devuelto' as EstadoInforme };
-                      setInspectingInforme(updated);
-                      handleOpenWhatsAppModal(updated, 'devuelto');
-                    }}
-                    className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs"
-                  >
-                    <AlertTriangle size={14} />
-                    <span>Devolver al Contratista con Observaciones</span>
-                  </button>
-                )}
-
-                {inspectingInforme.estado !== 'Aprobado' ? (
-                  <button
-                    onClick={() => {
-                      if (inspectingInforme.id) {
-                        handleUpdateStatus(inspectingInforme.id, 'Aprobado');
-                      }
-                      const updated = { ...inspectingInforme, estado: 'Aprobado' as EstadoInforme };
-                      setInspectingInforme(updated);
-                      handleOpenWhatsAppModal(updated, 'aprobado');
-                    }}
-                    className="px-4 py-1.5 bg-[#006b33] hover:bg-[#005729] text-white rounded-lg font-bold flex items-center gap-1.5 shadow-xs"
-                  >
-                    <CheckCircle2 size={14} />
-                    <span>Aprobar Informe para Pago</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      if (inspectingInforme.id) {
-                        handleUpdateStatus(inspectingInforme.id, 'Enviado');
-                      }
-                      setInspectingInforme({ ...inspectingInforme, estado: 'Enviado' });
-                    }}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold flex items-center gap-1"
-                  >
-                    <RotateCcw size={13} />
-                    <span>Revertir Aprobación</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setInspectingInforme(null)}
-                  className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-semibold"
-                >
-                  Cerrar Visor
-                </button>
-              </div>
+              <button
+                onClick={() => setInspectingInforme(null)}
+                className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold text-xs"
+              >
+                Cerrar Visor
+              </button>
             </div>
 
           </div>
@@ -1717,6 +1770,141 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
           onClose={() => setWhatsappPayload(null)}
           onUpdatePhone={handleUpdatePhoneFromWhatsApp}
         />
+      )}
+
+      {/* Modal Historial de Informes y Certificados por Contratista */}
+      {selectedContractorForReports && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white text-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
+            
+            {/* Header */}
+            <div className="p-5 bg-emerald-950 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-900/80 border border-emerald-600 flex items-center justify-center text-emerald-300">
+                  <FileBadge size={22} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    Historial de Informes y Certificados • {selectedContractorForReports.nombreCompleto}
+                  </h3>
+                  <p className="text-xs text-emerald-300 font-mono">
+                    C.C. {selectedContractorForReports.documentoIdentidad} • Contrato #{selectedContractorForReports.contratoNro || 'Por registrar'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedContractorForReports(null)}
+                className="p-1.5 text-gray-400 hover:text-white rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body / List */}
+            <div className="p-6 overflow-y-auto space-y-4 bg-gray-50 flex-1">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-xs">Informes Radicados y Certificados Emitidos</h4>
+                    <p className="text-[11px] text-gray-500">Visualice y gestione individualmente cada informe sin mezclar datos</p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-100 text-emerald-800">
+                    {informes.filter(i => i.contratista_documento === selectedContractorForReports.documentoIdentidad || (i.contratista_nombre && selectedContractorForReports.nombreCompleto && i.contratista_nombre.trim().toLowerCase() === selectedContractorForReports.nombreCompleto.trim().toLowerCase())).length} Informes
+                  </span>
+                </div>
+
+                <div className="divide-y divide-gray-100">
+                  {informes.filter(i => i.contratista_documento === selectedContractorForReports.documentoIdentidad || (i.contratista_nombre && selectedContractorForReports.nombreCompleto && i.contratista_nombre.trim().toLowerCase() === selectedContractorForReports.nombreCompleto.trim().toLowerCase())).length === 0 ? (
+                    <div className="py-12 text-center text-gray-500">
+                      <FileText size={36} className="mx-auto text-gray-300 mb-2" />
+                      <p className="font-bold text-sm">Este contratista aún no ha radicado informes mensuales</p>
+                      <p className="text-xs text-gray-400 mt-1">Los informes enviados por el contratista aparecerán aquí en tiempo real para su revisión.</p>
+                    </div>
+                  ) : (
+                    informes
+                      .filter(i => i.contratista_documento === selectedContractorForReports.documentoIdentidad || (i.contratista_nombre && selectedContractorForReports.nombreCompleto && i.contratista_nombre.trim().toLowerCase() === selectedContractorForReports.nombreCompleto.trim().toLowerCase()))
+                      .map(inf => (
+                        <div key={inf.id} className="p-4 hover:bg-emerald-50/30 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-900 text-sm">Informe Nro. {inf.informe_nro} ({inf.tipo_informe})</span>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                inf.estado === 'Aprobado' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                                inf.estado === 'Devuelto' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                                'bg-blue-100 text-blue-800 border border-blue-200'
+                              }`}>
+                                {inf.estado}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 font-mono">
+                              Período: {inf.periodo_desde} al {inf.periodo_hasta} • Radicado: {inf.fecha_presentacion || 'N/A'}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap shrink-0">
+                            <button
+                              onClick={() => {
+                                handleOpenInspectModal(inf);
+                                setSelectedContractorForReports(null);
+                              }}
+                              className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 border border-emerald-300 transition-colors"
+                              title="Revisar informe, agregar observaciones y resaltar casillas"
+                            >
+                              <Eye size={13} />
+                              <span>Revisar / Inspeccionar</span>
+                            </button>
+
+
+
+                            <button
+                              onClick={() => handleOpenWhatsAppModal(inf)}
+                              className="px-3 py-1.5 bg-emerald-50 hover:bg-[#25D366] text-emerald-800 hover:text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 border border-emerald-300 transition-all"
+                              title="Enviar notificación por WhatsApp"
+                            >
+                              <MessageSquare size={13} />
+                              <span>WhatsApp</span>
+                            </button>
+
+                            {inf.estado !== 'Aprobado' ? (
+                              <button
+                                onClick={() => {
+                                  handleUpdateStatus(inf.id, 'Aprobado');
+                                  handleOpenWhatsAppModal(inf, 'aprobado');
+                                }}
+                                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 shadow-xs"
+                                title="Aprobar para pago"
+                              >
+                                <CheckCircle2 size={13} />
+                                <span>Aprobar</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleUpdateStatus(inf.id, 'Enviado')}
+                                className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold"
+                                title="Reabrir para correcciones"
+                              >
+                                Reabrir
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-white border-t border-gray-200 flex justify-end shrink-0">
+              <button
+                onClick={() => setSelectedContractorForReports(null)}
+                className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold"
+              >
+                Cerrar
+              </button>
+            </div>
+
+          </div>
+        </div>
       )}
 
     </div>

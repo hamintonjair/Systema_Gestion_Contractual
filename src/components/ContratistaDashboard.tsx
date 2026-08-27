@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AuthUser, ReportData, EstadoInforme, initialMockData, Obligacion, CertificadoSupervisionData, createDefaultCertificadoData, SoporteFiduciariaData, createDefaultFiduciariaData } from '../types';
 import { formatColombianCurrency, formatFechaAplicacion } from '../utils/formatters';
 import { supabaseService } from '../services/supabaseService';
@@ -182,13 +182,21 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   const handleToggleBell = () => {
     const nextState = !showNotificationsMenu;
     setShowNotificationsMenu(nextState);
-    if (nextState && unseenApprovedReports.length > 0) {
-      unseenApprovedReports.forEach(r => {
-        if (r.informeNro) {
-          const key = `notified_approved_${user.documentoIdentidad || ''}_${r.informeNro}`;
+    if (nextState) {
+      if (unseenApprovedReports.length > 0) {
+        unseenApprovedReports.forEach(r => {
+          if (r.informeNro) {
+            const key = `notified_approved_${user.documentoIdentidad || ''}_${r.informeNro}`;
+            localStorage.setItem(key, 'seen');
+          }
+        });
+      }
+      if (allUnseenObservations.length > 0) {
+        allUnseenObservations.forEach(obs => {
+          const key = `notified_obs_${user.documentoIdentidad || ''}_${obs.report.informeNro || ''}_${obs.key}`;
           localStorage.setItem(key, 'seen');
-        }
-      });
+        });
+      }
       setLastActionTimestamp(Date.now());
     }
   };
@@ -240,16 +248,35 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
       loadContractorData();
     };
 
+    const handleSwitchTab = (e: any) => {
+      if (e.detail?.tab) {
+        setActiveModuleTab(e.detail.tab);
+        if (e.detail.informeNro) {
+          const found = reportsList.find(r => String(r.informeNro) === String(e.detail.informeNro));
+          if (found) {
+            if (e.detail.tab === 'supervision') setSelectedCertReport(found);
+            if (e.detail.tab === 'fiduciaria') setSelectedFidReport(found);
+            if (e.detail.tab === 'juramento') setSelectedJuramentoReport(found);
+            if (e.detail.tab === 'desembolso') setSelectedDesembolsoReport(found);
+          }
+        }
+      }
+    };
+
     window.addEventListener('storage', handleDataUpdate);
     window.addEventListener('informe_comments_updated', handleDataUpdate);
+    window.addEventListener('notificaciones_actualizadas', handleDataUpdate);
+    window.addEventListener('switch_contractor_tab', handleSwitchTab);
     window.addEventListener('focus', handleDataUpdate);
 
     return () => {
       window.removeEventListener('storage', handleDataUpdate);
       window.removeEventListener('informe_comments_updated', handleDataUpdate);
+      window.removeEventListener('notificaciones_actualizadas', handleDataUpdate);
+      window.removeEventListener('switch_contractor_tab', handleSwitchTab);
       window.removeEventListener('focus', handleDataUpdate);
     };
-  }, [user.documentoIdentidad, user.id]);
+  }, [user.documentoIdentidad, user.id, reportsList]);
 
   // Guardar / Sincronizar informe en Supabase
   const handleSaveToDatabase = async (report: ReportData) => {
@@ -503,6 +530,74 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     : [];
 
   const totalAprobadosUnseen = unseenApprovedReports.length;
+
+  // Agrupar comentarios de supervisión pendientes por módulo
+  const pendingCommentsByModule = useMemo(() => {
+    const supervision: { report: ReportData; comment: any; key: string }[] = [];
+    const fiduciaria: { report: ReportData; comment: any; key: string }[] = [];
+    const juramento: { report: ReportData; comment: any; key: string }[] = [];
+    const desembolso: { report: ReportData; comment: any; key: string }[] = [];
+    const informe: { report: ReportData; comment: any; key: string }[] = [];
+
+    reportsList.forEach(r => {
+      if (r.estado === 'Aprobado') return;
+      const comms = r.comentariosCampos || {};
+      Object.entries(comms).forEach(([key, comm]) => {
+        const c = comm as any;
+        if (c.corregido) return;
+        const fn = (c.nombreCampo || c.fieldName || key).toLowerCase();
+        const fid = (c.campoId || key).toLowerCase();
+
+        if (fid === 'certificado_supervision' || fid.startsWith('cert_') || fn.includes('certificado de supervisión') || fn.includes('certificado de cumplimiento') || fn.includes('supervisión')) {
+          supervision.push({ report: r, comment: c, key });
+        } else if (fid === 'soporte_fiduciaria' || fid.startsWith('fid_') || fn.includes('soporte fiduciaria') || fn.includes('fiduciaria')) {
+          fiduciaria.push({ report: r, comment: c, key });
+        } else if (fid === 'declaracion_juramento' || fid.startsWith('dec_') || fn.includes('declaración') || fn.includes('juramento') || fn.includes('renta')) {
+          juramento.push({ report: r, comment: c, key });
+        } else if (fid === 'autorizacion_desembolso' || fid.startsWith('desemb_') || fn.includes('autorización de desembolso') || fn.includes('desembolso') || fn.includes('documento equivalente')) {
+          desembolso.push({ report: r, comment: c, key });
+        } else {
+          informe.push({ report: r, comment: c, key });
+        }
+      });
+    });
+
+    return { supervision, fiduciaria, juramento, desembolso, informe };
+  }, [reportsList]);
+
+  // Observaciones pendientes que aún no se han visto en la campana
+  const allUnseenObservations = useMemo(() => {
+    const list: {
+      report: ReportData;
+      comment: any;
+      key: string;
+      moduleTab: 'informe' | 'supervision' | 'fiduciaria' | 'juramento' | 'desembolso';
+      moduleLabel: string;
+    }[] = [];
+
+    const addIfUnseen = (
+      items: { report: ReportData; comment: any; key: string }[],
+      moduleTab: 'informe' | 'supervision' | 'fiduciaria' | 'juramento' | 'desembolso',
+      moduleLabel: string
+    ) => {
+      items.forEach(item => {
+        const storageKey = `notified_obs_${user.documentoIdentidad || ''}_${item.report.informeNro || ''}_${item.key}`;
+        if (localStorage.getItem(storageKey) !== 'seen') {
+          list.push({ ...item, moduleTab, moduleLabel });
+        }
+      });
+    };
+
+    addIfUnseen(pendingCommentsByModule.informe, 'informe', 'Informe Mensual');
+    addIfUnseen(pendingCommentsByModule.supervision, 'supervision', 'Certificado de Supervisión');
+    addIfUnseen(pendingCommentsByModule.fiduciaria, 'fiduciaria', 'Soporte Fiduciaria');
+    addIfUnseen(pendingCommentsByModule.juramento, 'juramento', 'Declaración Bajo Juramento');
+    addIfUnseen(pendingCommentsByModule.desembolso, 'desembolso', 'Autorización de Desembolso');
+
+    return list;
+  }, [pendingCommentsByModule, user.documentoIdentidad, lastActionTimestamp]);
+
+  const totalNotificationsUnseen = totalAprobadosUnseen + allUnseenObservations.length;
   
   // Informes devueltos con observaciones PENDIENTES por corregir
   const reportsWithPendingObs = reportsList.filter(r => {
@@ -585,25 +680,25 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0 relative">
-            {/* Botón Campana de Notificaciones de Aprobación */}
+            {/* Botón Campana de Notificaciones */}
             <div className="relative">
               <button
                 onClick={handleToggleBell}
                 className={`p-3 rounded-xl border transition-all relative ${
-                  totalAprobadosUnseen > 0
+                  totalNotificationsUnseen > 0
                     ? 'bg-emerald-800/90 hover:bg-emerald-700 text-amber-300 border-amber-400/80 shadow-md ring-2 ring-amber-400/30 animate-pulse'
                     : 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border-emerald-700/80'
                 }`}
-                title={totalAprobadosUnseen > 0 ? `Tienes ${totalAprobadosUnseen} informe(s) aprobados por la supervisión` : 'Centro de Notificaciones'}
+                title={totalNotificationsUnseen > 0 ? `Tienes ${totalNotificationsUnseen} notificación(es) de supervisión` : 'Centro de Notificaciones'}
               >
-                {totalAprobadosUnseen > 0 ? (
+                {totalNotificationsUnseen > 0 ? (
                   <BellRing size={18} className="text-amber-300" />
                 ) : (
                   <Bell size={18} />
                 )}
-                {totalAprobadosUnseen > 0 && (
+                {totalNotificationsUnseen > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-gray-950 font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-md border-2 border-emerald-950">
-                    {totalAprobadosUnseen}
+                    {totalNotificationsUnseen}
                   </span>
                 )}
               </button>
@@ -624,46 +719,100 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                     </button>
                   </div>
 
-                  <div className="mt-3 space-y-2.5 max-h-72 overflow-y-auto">
-                    {totalAprobados === 0 ? (
-                      <div className="text-center py-6 text-slate-400 text-xs">
-                        <CheckCircle2 size={24} className="mx-auto mb-1 text-slate-300" />
-                        <p>No tienes informes aprobados pendientes.</p>
-                      </div>
-                    ) : (
-                      reportsList.filter(r => r.estado === 'Aprobado').map(r => (
-                        <div key={r.id || r.informeNro} className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-                                <Sparkles size={11} className="text-emerald-600" /> ¡Informe Aprobado!
-                              </span>
-                              <h5 className="font-black text-slate-900 text-xs mt-1">
-                                Informe Nro. {r.informeNro} ({r.tipoInforme})
-                              </h5>
-                              <p className="text-[11px] text-slate-600 mt-0.5">
-                                Período: {r.periodoDesde} al {r.periodoHasta}
-                              </p>
-                              <p className="text-[10px] text-emerald-800 font-medium mt-0.5">
-                                Aprobado por: {r.supervisorNombre || activeSupervisor}
-                              </p>
+                  <div className="mt-3 space-y-2.5 max-h-80 overflow-y-auto">
+                    {/* SECCIÓN 1: Observaciones y Devoluciones por Módulo */}
+                    {allUnseenObservations.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <AlertTriangle size={13} className="text-amber-600" />
+                          <span>Observaciones pendientes ({allUnseenObservations.length})</span>
+                        </div>
+                        {allUnseenObservations.map((obs, idx) => (
+                          <div key={idx} className="p-3 bg-amber-50/90 border border-amber-300 rounded-xl space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full border border-amber-300">
+                                  {obs.moduleLabel} • Inf #{obs.report.informeNro}
+                                </span>
+                                <p className="text-xs font-bold text-slate-900 mt-1">
+                                  "{obs.comment?.comentario || 'Se requiere ajuste en el documento'}"
+                                </p>
+                                <p className="text-[10px] text-amber-800 font-medium mt-0.5">
+                                  Por: {obs.comment?.autor || activeSupervisor} {obs.comment?.fecha ? `• ${obs.comment.fecha}` : ''}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1 border-t border-amber-200">
+                              <button
+                                onClick={() => {
+                                  setShowNotificationsMenu(false);
+                                  setActiveModuleTab(obs.moduleTab);
+                                  if (obs.moduleTab === 'supervision') setSelectedCertReport(obs.report);
+                                  if (obs.moduleTab === 'fiduciaria') setSelectedFidReport(obs.report);
+                                  if (obs.moduleTab === 'juramento') setSelectedJuramentoReport(obs.report);
+                                  if (obs.moduleTab === 'desembolso') setSelectedDesembolsoReport(obs.report);
+                                  if (obs.moduleTab === 'informe') handleInterceptOpenReport(obs.report);
+                                }}
+                                className="w-full py-1.5 px-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-colors"
+                              >
+                                <FileEdit size={12} />
+                                <span>Ver {obs.moduleLabel}</span>
+                              </button>
                             </div>
                           </div>
+                        ))}
+                      </div>
+                    )}
 
-                          <div className="flex items-center gap-2 pt-1 border-t border-emerald-100">
-                            <button
-                              onClick={() => {
-                                setShowNotificationsMenu(false);
-                                handleInterceptOpenReport(r);
-                              }}
-                              className="w-full py-1.5 px-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-colors"
-                            >
-                              <FileEdit size={12} />
-                              <span>Consultar Informe</span>
-                            </button>
-                          </div>
+                    {/* SECCIÓN 2: Informes Aprobados */}
+                    {reportsList.some(r => r.estado === 'Aprobado') && (
+                      <div className="space-y-2 pt-1">
+                        <div className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <Sparkles size={13} className="text-emerald-600" />
+                          <span>Informes aprobados para pago</span>
                         </div>
-                      ))
+                        {reportsList.filter(r => r.estado === 'Aprobado').map(r => (
+                          <div key={r.id || r.informeNro} className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                  <Sparkles size={11} className="text-emerald-600" /> ¡Informe Aprobado!
+                                </span>
+                                <h5 className="font-black text-slate-900 text-xs mt-1">
+                                  Informe Nro. {r.informeNro} ({r.tipoInforme})
+                                </h5>
+                                <p className="text-[11px] text-slate-600 mt-0.5">
+                                  Período: {r.periodoDesde} al {r.periodoHasta}
+                                </p>
+                                <p className="text-[10px] text-emerald-800 font-medium mt-0.5">
+                                  Aprobado por: {r.supervisorNombre || activeSupervisor}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1 border-t border-emerald-100">
+                              <button
+                                onClick={() => {
+                                  setShowNotificationsMenu(false);
+                                  handleInterceptOpenReport(r);
+                                }}
+                                className="w-full py-1.5 px-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-colors"
+                              >
+                                <FileEdit size={12} />
+                                <span>Consultar Informe</span>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {allUnseenObservations.length === 0 && totalAprobados === 0 && (
+                      <div className="text-center py-6 text-slate-400 text-xs">
+                        <CheckCircle2 size={24} className="mx-auto mb-1 text-slate-300" />
+                        <p>No tienes notificaciones u observaciones pendientes.</p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -695,7 +844,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           
           <button
             onClick={() => setActiveModuleTab('informe')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
               activeModuleTab === 'informe'
                 ? 'bg-[#006b33] text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -703,16 +852,22 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           >
             <FileText size={16} />
             <span>1. Informe Mensual de Actividades</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-              activeModuleTab === 'informe' ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-200 text-slate-700'
-            }`}>
-              {reportsList.length}
-            </span>
+            {pendingCommentsByModule.informe.length > 0 ? (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-amber-400 text-amber-950 animate-pulse border border-amber-500 shadow-xs">
+                ⚠️ {pendingCommentsByModule.informe.length} Obs
+              </span>
+            ) : (
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                activeModuleTab === 'informe' ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {reportsList.length}
+              </span>
+            )}
           </button>
 
           <button
             onClick={() => setActiveModuleTab('supervision')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
               activeModuleTab === 'supervision'
                 ? 'bg-[#006b33] text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -720,16 +875,22 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           >
             <ShieldCheck size={16} />
             <span>2. Certificado de Supervisión</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-              activeModuleTab === 'supervision' ? 'bg-emerald-800 text-emerald-100' : 'bg-emerald-100 text-emerald-800'
-            }`}>
-              {totalAprobados > 0 ? `${totalAprobados} Listo` : 'En trámite'}
-            </span>
+            {pendingCommentsByModule.supervision.length > 0 ? (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-amber-400 text-amber-950 animate-pulse border border-amber-500 shadow-xs">
+                ⚠️ {pendingCommentsByModule.supervision.length} Obs
+              </span>
+            ) : (
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                activeModuleTab === 'supervision' ? 'bg-emerald-800 text-emerald-100' : 'bg-emerald-100 text-emerald-800'
+              }`}>
+                {totalAprobados > 0 ? `${totalAprobados} Listo` : 'En trámite'}
+              </span>
+            )}
           </button>
 
           <button
             onClick={() => setActiveModuleTab('fiduciaria')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
               activeModuleTab === 'fiduciaria'
                 ? 'bg-[#006b33] text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -737,11 +898,16 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           >
             <Landmark size={16} />
             <span>3. Soporte Fiduciaria / Pagos</span>
+            {pendingCommentsByModule.fiduciaria.length > 0 && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-amber-400 text-amber-950 animate-pulse border border-amber-500 shadow-xs">
+                ⚠️ {pendingCommentsByModule.fiduciaria.length} Obs
+              </span>
+            )}
           </button>
 
           <button
             onClick={() => setActiveModuleTab('juramento')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
               activeModuleTab === 'juramento'
                 ? 'bg-[#006b33] text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -749,11 +915,16 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           >
             <Scale size={16} />
             <span>4. Declaración Bajo Juramento</span>
+            {pendingCommentsByModule.juramento.length > 0 && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-amber-400 text-amber-950 animate-pulse border border-amber-500 shadow-xs">
+                ⚠️ {pendingCommentsByModule.juramento.length} Obs
+              </span>
+            )}
           </button>
 
           <button
             onClick={() => setActiveModuleTab('desembolso')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
               activeModuleTab === 'desembolso'
                 ? 'bg-[#006b33] text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -761,6 +932,11 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           >
             <CreditCard size={16} />
             <span>5. Autorización de Desembolso</span>
+            {pendingCommentsByModule.desembolso.length > 0 && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-amber-400 text-amber-950 animate-pulse border border-amber-500 shadow-xs">
+                ⚠️ {pendingCommentsByModule.desembolso.length} Obs
+              </span>
+            )}
           </button>
 
         </div>
