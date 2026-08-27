@@ -148,10 +148,10 @@ export default function App() {
     // 1. Cargar el informe completo con todos sus datos, anexos y estado en el visor/editor
     handleOpenReportEditor(report);
     
-    // 2. Ejecutar la función oficial de descarga PDF con el layout exacto del editor
+    // 2. Ejecutar la función oficial de descarga PDF con el formato exacto
     setTimeout(() => {
       handleDownloadPDF(report);
-    }, 450);
+    }, 600);
   };
 
   const handlePrint = () => {

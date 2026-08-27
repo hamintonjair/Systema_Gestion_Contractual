@@ -630,21 +630,12 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                             <button
                               onClick={() => {
                                 setShowNotificationsMenu(false);
-                                handleInterceptDirectPrint(r);
-                              }}
-                              className="flex-1 py-1.5 px-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-colors"
-                            >
-                              <Printer size={12} />
-                              <span>Descargar PDF Oficial</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setShowNotificationsMenu(false);
                                 handleInterceptOpenReport(r);
                               }}
-                              className="py-1.5 px-2.5 bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-lg text-[11px] font-bold transition-colors"
+                              className="w-full py-1.5 px-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-colors"
                             >
-                              Consultar
+                              <FileEdit size={12} />
+                              <span>Consultar Informe</span>
                             </button>
                           </div>
                         </div>
@@ -817,12 +808,12 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 {unseenApprovedReports.map(apRep => (
                   <button
                     key={apRep.id || apRep.informeNro}
-                    onClick={() => handleInterceptDirectPrint(apRep)}
+                    onClick={() => handleInterceptOpenReport(apRep)}
                     className="px-3.5 py-2 bg-gradient-to-r from-amber-400 to-amber-300 hover:from-amber-300 hover:to-amber-200 text-gray-950 rounded-xl font-black text-xs inline-flex items-center gap-1.5 shadow-md transition-all hover:scale-105"
-                    title={`Descargar copia oficial en PDF del Informe #${apRep.informeNro}`}
+                    title={`Consultar Informe #${apRep.informeNro}`}
                   >
-                    <Printer size={14} />
-                    <span>PDF Informe #{apRep.informeNro}</span>
+                    <FileEdit size={14} />
+                    <span>Consultar Informe #{apRep.informeNro}</span>
                   </button>
                 ))}
               </div>
@@ -934,7 +925,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 Por política de optimización y depuración de almacenamiento institucional, los <strong>informes mensuales radicados, sus evidencias de actividades y los anexos fotográficos</strong> permanecerán disponibles en el portal durante un período máximo de <strong>7 meses (210 días)</strong>. Cumplido este plazo, los registros con fotos de informes revisados y tramitados son eliminados automáticamente del sistema.
               </p>
               <p className="text-amber-800 font-medium pt-0.5">
-                💡 <strong>Nota para el contratista:</strong> Se recomienda descargar y conservar en su archivo digital personal la copia oficial en PDF de cada informe aprobado mediante el botón <strong>«PDF Oficial»</strong>.
+                💡 <strong>Nota para el contratista:</strong> Se recomienda consultar y conservar en su archivo digital personal la copia oficial en PDF de cada informe aprobado.
               </p>
             </div>
           </div>
@@ -1177,15 +1168,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                           );
                         })()}
 
-                        {/* 2. Botón Generar PDF */}
-                        <button
-                          onClick={() => handleInterceptDirectPrint(report)}
-                          className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-950 rounded-xl border border-amber-300 font-bold text-xs inline-flex items-center gap-1.5 transition-colors shadow-xs"
-                          title="Imprimir documento oficial en PDF"
-                        >
-                          <Printer size={14} />
-                          <span>PDF Oficial</span>
-                        </button>
+
 
                         {/* 3. Botón Radicar (Solo para borradores iniciales) */}
                         {report.estado === 'Borrador' && (
