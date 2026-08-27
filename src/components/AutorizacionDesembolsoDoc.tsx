@@ -46,7 +46,7 @@ export default function AutorizacionDesembolsoDoc({
     if (reportData) {
       const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
       const defaultObjeto = formatearObjetoConPeriodo(
-        (baseData && baseData.objeto) ? baseData.objeto : reportData.objeto,
+        reportData.objeto || (baseData && baseData.objeto),
         reportData.fechaAplicacion,
         reportData.fechaInicio,
         reportData.fechaTerminacion,
@@ -110,7 +110,7 @@ export default function AutorizacionDesembolsoDoc({
       if (reportData) {
         const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
         const defaultObjeto = formatearObjetoConPeriodo(
-          (baseData && baseData.objeto) ? baseData.objeto : reportData.objeto,
+          reportData.objeto || (baseData && baseData.objeto),
           reportData.fechaAplicacion,
           reportData.fechaInicio,
           reportData.fechaTerminacion,

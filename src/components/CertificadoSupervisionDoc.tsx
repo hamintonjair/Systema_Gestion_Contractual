@@ -2057,17 +2057,17 @@ export default function CertificadoSupervisionDoc({
 
             <p className="flex items-baseline gap-2 flex-wrap m-0">
               <span>Que, con base en lo anterior se avala el pago por un valor de:</span>
-              <span className="border-b border-black font-bold font-mono px-4 min-w-[170px] text-center pb-0.5 print:border-b-[1px] italic font-serif">
+              <span className="border-b border-black font-bold px-4 min-w-[170px] text-center pb-0.5 print:border-b-[1px]">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.valorAvalado}
                     onChange={(e) => handleFieldChange('valorAvalado', e.target.value)}
-                    className="bg-amber-50 font-bold font-mono text-center text-[9.5px] focus:outline-none w-full italic font-serif"
-                    style={{ color: '#000000', fontStyle: 'italic' }}
+                    className="bg-amber-50 font-bold text-center text-[9.5px] focus:outline-none w-full"
+                    style={{ color: '#000000', fontStyle: 'normal' }}
                   />
                 ) : (
-                  <span className="italic font-serif font-bold">{formData.valorAvalado}</span>
+                  <span className="font-bold">{formData.valorAvalado}</span>
                 )}
               </span>
               <span>incluido IVA.</span>

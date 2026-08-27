@@ -739,32 +739,15 @@ export default function ReportPreview({
                 </div>
                 
                 <div className="space-y-6">
-                  {/* Agrupamiento inteligente por Obligación con todas sus fotos (con fallback robusto a data.anexos) */}
-                  {(() => {
-                    const mappedObligaciones = data.obligaciones.map((obs, oIdx) => {
-                      const obsFotos = (obs.fotos && obs.fotos.length > 0)
-                        ? obs.fotos
-                        : data.anexos.slice(oIdx * 5, (oIdx + 1) * 5);
-                      return {
-                        ...obs,
-                        fotos: obsFotos,
-                        index: oIdx
-                      };
-                    }).filter(obs => obs.fotos.length > 0);
-
-                    const finalObligaciones = mappedObligaciones.length > 0 ? mappedObligaciones : data.obligaciones.map((obs, oIdx) => ({
-                      ...obs,
-                      fotos: oIdx === 0 ? data.anexos : [],
-                      index: oIdx
-                    })).filter(obs => obs.fotos.length > 0);
-
-                    return finalObligaciones.map((obs) => {
-                      const oIdx = obs.index;
-                      const obsFotos = obs.fotos;
+                  {/* Agrupamiento inteligente por Obligación */}
+                  {data.obligaciones.some(o => o.fotos && o.fotos.length > 0) ? (
+                    data.obligaciones.map((obs, oIdx) => {
+                      const obsFotos = obs.fotos || [];
+                      if (obsFotos.length === 0) return null;
 
                       return (
-                        <div key={obs.id || oIdx} className="space-y-3 break-inside-avoid mb-6">
-                          {/* ÚNICO ENCABEZADO PARA LA OBLIGACIÓN Y SUS FOTOS */}
+                        <div key={obs.id} className="space-y-3 break-inside-avoid">
+                          {/* ÚNICO ENCABEZADO PARA LA OBLIGACIÓN Y TODAS SUS FOTOS */}
                           <div className="bg-[#f0f7f2] border border-[#b8dec2] px-3 py-1.5 rounded text-center print:bg-[#f0f7f2]">
                             <span className="font-bold text-[11.5px] uppercase text-[#005226] tracking-wide block">
                               OBLIGACIÓN Nº {oIdx + 1}
@@ -776,21 +759,21 @@ export default function ReportPreview({
                             )}
                           </div>
 
-                          {/* TODAS LAS FOTOS DE ESTA OBLIGACIÓN */}
-                          <div className="space-y-4">
+                          {/* TODAS LAS FOTOS DE ESTA OBLIGACIÓN DEBAJO DEL ENCABEZADO */}
+                          <div className="space-y-3">
                             {obsFotos.map((anexo, aIdx) => {
-                              const anexoKey = `anexo_${anexo.id || `${oIdx}_${aIdx}`}`;
+                              const anexoKey = `anexo_${anexo.id || aIdx}`;
                               const hasAnexoComment = Boolean(data.comentariosCampos?.[anexoKey]);
 
                               return (
                                 <div 
-                                  key={anexo.id || `${oIdx}_${aIdx}`} 
-                                  className={`break-inside-avoid flex flex-col items-center p-1.5 rounded transition-colors ${
+                                  key={anexo.id || aIdx} 
+                                  className={`break-inside-avoid flex flex-col items-center p-1.5 rounded mb-1 transition-colors ${
                                     hasAnexoComment 
                                       ? 'bg-amber-100/90 border-2 border-amber-400 print:bg-transparent print:border-none' 
                                       : 'bg-transparent'
                                   }`}
-                                  onClick={isReviewMode ? () => openCommentModal(anexoKey, `Evidencia Fotográfica - Obligación #${oIdx + 1} (Foto ${aIdx + 1})`, anexo.titulo) : undefined}
+                                  onClick={isReviewMode ? () => openCommentModal(anexoKey, `Evidencia Fotográfica - Obligación #${oIdx + 1}`, anexo.titulo) : undefined}
                                 >
                                   {isReviewMode && (
                                     <div className="flex items-center justify-end w-full mb-1">
@@ -798,7 +781,7 @@ export default function ReportPreview({
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          openCommentModal(anexoKey, `Evidencia Fotográfica - Obligación #${oIdx + 1} (Foto ${aIdx + 1})`, anexo.titulo);
+                                          openCommentModal(anexoKey, `Evidencia Fotográfica - Obligación #${oIdx + 1}`, anexo.titulo);
                                         }}
                                         className={`px-2 py-0.5 rounded text-white text-[10px] font-semibold flex items-center gap-1 ${hasAnexoComment ? 'bg-amber-500' : 'bg-emerald-700'}`}
                                         title="Dejar observación sobre este anexo"
@@ -830,8 +813,57 @@ export default function ReportPreview({
                           </div>
                         </div>
                       );
-                    });
-                  })()}
+                    })
+                  ) : (
+                    data.anexos.map((anexo, aIdx) => {
+                      const anexoKey = `anexo_${anexo.id || aIdx}`;
+                      const hasAnexoComment = Boolean(data.comentariosCampos?.[anexoKey]);
+
+                      return (
+                        <div 
+                          key={anexo.id || aIdx} 
+                          className={`break-inside-avoid flex flex-col items-center p-2 rounded mb-2 transition-colors ${
+                            hasAnexoComment 
+                              ? 'bg-amber-100/90 border-2 border-amber-400 print:bg-transparent print:border-none' 
+                              : 'bg-transparent'
+                          }`}
+                          onClick={isReviewMode ? () => openCommentModal(anexoKey, `Anexo Fotográfico`, anexo.titulo) : undefined}
+                        >
+                          {isReviewMode && (
+                            <div className="flex items-center justify-end w-full mb-1">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openCommentModal(anexoKey, `Anexo Fotográfico`, anexo.titulo);
+                                }}
+                                className={`p-1 rounded text-white text-[10px] ${hasAnexoComment ? 'bg-amber-500' : 'bg-emerald-700'}`}
+                                title="Dejar observación sobre este anexo"
+                              >
+                                <MessageSquare size={12} />
+                              </button>
+                            </div>
+                          )}
+
+                          {hasAnexoComment && (
+                            <div className="print:hidden mb-2 p-1.5 bg-amber-200 border border-amber-400 rounded text-amber-950 text-xs font-medium flex items-center gap-1.5">
+                              <AlertTriangle size={13} className="text-amber-800 shrink-0" />
+                              <span>Observación: {data.comentariosCampos?.[anexoKey].comentario}</span>
+                            </div>
+                          )}
+
+                          <div className="w-full flex justify-center items-center bg-white/95 p-2 border border-gray-300 rounded shadow-xs relative z-10">
+                            <img 
+                              src={anexo.imagenUrl} 
+                              alt={anexo.titulo || `Foto ${aIdx + 1}`} 
+                              crossOrigin="anonymous"
+                              className="max-w-full max-h-[295px] w-auto h-auto object-contain rounded"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </td>
             </tr>

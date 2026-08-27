@@ -13,16 +13,38 @@ const isUuid = (val?: string): boolean => {
 };
 
 // Helper para obtener comentarios por campo almacenados
-const getStoredComments = (_docKey?: string, _informeNro?: string): Record<string, FieldComment> => {
+const getStoredComments = (docKey?: string, informeNro?: string): Record<string, FieldComment> => {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    if (docKey && informeNro) {
+      const raw = localStorage.getItem(`informe_comentarios_${docKey}_${informeNro}`);
+      if (raw) return JSON.parse(raw);
+    }
+    if (informeNro) {
+      const raw = localStorage.getItem(`informe_comentarios_${informeNro}`);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch (e) {}
   return {};
 };
 
 // Helper para obtener informe completo almacenado
-const getStoredReportData = (_docKey?: string, _informeNro?: string): Partial<ReportData> | null => {
+const getStoredReportData = (docKey?: string, informeNro?: string): Partial<ReportData> | null => {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    if (docKey && informeNro) {
+      const raw = localStorage.getItem(`alcaldia_quibdo_report_${docKey}_${informeNro}`);
+      if (raw) return JSON.parse(raw);
+    }
+    if (informeNro) {
+      const raw = localStorage.getItem(`alcaldia_quibdo_report_${informeNro}`);
+      if (raw) return JSON.parse(raw);
+    }
+  } catch (e) {}
   return null;
 };
 
-// Helper para asociar hasta 5 fotos por obligación de forma consistente
+// Helper para asociar hasta 5 fotos por obligación de forma consistente con respaldo posicional y textual
 const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[], storedObs?: Obligacion[]): { obsWithFotos: Obligacion[]; allAnexos: Anexo[] } => {
   const allAnexos = [...anexos];
   const assignedAnexosIds = new Set<string>();
@@ -30,7 +52,7 @@ const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[
   const obsWithFotos = obligaciones.map((obs, idx) => {
     const stored = storedObs?.find(so => so.id === obs.id || so.descripcion === obs.descripcion);
     if (stored?.fotos && stored.fotos.length > 0) {
-      stored.fotos.forEach(f => assignedAnexosIds.add(f.id));
+      stored.fotos.forEach(f => { if (f.id) assignedAnexosIds.add(f.id); });
       return { ...obs, fotos: stored.fotos.slice(0, 5) };
     }
 
@@ -39,13 +61,23 @@ const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[
       if (a.obligacionId && a.obligacionId === obs.id) return true;
       if (a.obligacionIndex !== undefined && a.obligacionIndex === (idx + 1)) return true;
       const t = (a.titulo || '').toLowerCase();
-      if (t.includes(`obligación #${idx + 1}`) || t.includes(`obligacion #${idx + 1}`) || t.includes(`[obligación ${idx + 1}]`) || t.includes(`[obligacion ${idx + 1}]`)) {
+      if (
+        t.includes(`obligación #${idx + 1}`) || 
+        t.includes(`obligacion #${idx + 1}`) || 
+        t.includes(`obligación ${idx + 1}`) || 
+        t.includes(`obligacion ${idx + 1}`) || 
+        t.includes(`obl #${idx + 1}`) ||
+        t.includes(`obligación n° ${idx + 1}`) ||
+        t.includes(`obligacion n ${idx + 1}`) ||
+        t.startsWith(`[obligación ${idx + 1}]`) || 
+        t.startsWith(`[obligacion ${idx + 1}]`)
+      ) {
         return true;
       }
       return false;
     });
 
-    matched.forEach(a => assignedAnexosIds.add(a.id));
+    matched.forEach(m => assignedAnexosIds.add(m.id));
 
     const finalFotos = matched.slice(0, 5).map((f, fIdx) => ({
       ...f,
@@ -60,23 +92,26 @@ const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[
     };
   });
 
-  // Fallback: si alguna obligación quedó sin fotos, asignar secuencialmente de los anexos no asignados
-  obsWithFotos.forEach((obs, idx) => {
-    if ((obs.fotos?.length || 0) === 0) {
-      const unassigned = allAnexos.filter(a => !assignedAnexosIds.has(a.id));
-      if (unassigned.length > 0) {
-        const takeCount = Math.min(5, unassigned.length);
-        const taken = unassigned.slice(0, takeCount);
-        taken.forEach(a => assignedAnexosIds.add(a.id));
-        obs.fotos = taken.map((f, fIdx) => ({
+  // Fallback positional distribution for unassigned anexos if obligations have no photos
+  let unassignedAnexos = allAnexos.filter(a => !assignedAnexosIds.has(a.id));
+  if (unassignedAnexos.length > 0) {
+    for (let i = 0; i < obsWithFotos.length && unassignedAnexos.length > 0; i++) {
+      const obs = obsWithFotos[i];
+      if ((obs.fotos?.length || 0) === 0) {
+        const takeCount = Math.min(5, unassignedAnexos.length);
+        const taken = unassignedAnexos.splice(0, takeCount).map((f, fIdx) => ({
           ...f,
           obligacionId: obs.id,
-          obligacionIndex: idx + 1,
-          titulo: f.titulo || `Evidencia fotográfica ${fIdx + 1} - Obligación #${idx + 1}`
+          obligacionIndex: i + 1,
+          titulo: f.titulo || `Evidencia fotográfica ${fIdx + 1} - Obligación #${i + 1}`
         }));
+        obsWithFotos[i] = {
+          ...obs,
+          fotos: taken
+        };
       }
     }
-  });
+  }
 
   const flatAnexos: Anexo[] = [];
   obsWithFotos.forEach(obs => {
@@ -1670,9 +1705,13 @@ export const supabaseService = {
             }
           }
 
+          const rawTitle = foto.titulo || `Evidencia ${processedObsFotos.length + 1}`;
+          const hasObligacionTag = rawTitle.toLowerCase().includes('obligación') || rawTitle.toLowerCase().includes('obligacion');
+          const finalTitle = hasObligacionTag ? rawTitle : `Obligación #${obsIdx + 1} - ${rawTitle}`;
+
           const processedFoto: Anexo = {
             id: foto.id,
-            titulo: foto.titulo || `Obligación #${obsIdx + 1} - Evidencia ${processedObsFotos.length + 1}`,
+            titulo: finalTitle,
             imagenUrl: finalUrl,
             obligacionId: obs.id,
             obligacionIndex: obsIdx + 1,
@@ -1755,6 +1794,13 @@ export const supabaseService = {
         anexos: processedAnexos,
         syncedToDb: true,
       };
+
+      if (typeof localStorage !== 'undefined') {
+        if (contractorDoc) {
+          localStorage.setItem(`alcaldia_quibdo_report_${contractorDoc}_${report.informeNro}`, JSON.stringify(updatedReportWithDb));
+        }
+        localStorage.setItem(`alcaldia_quibdo_report_${report.informeNro}`, JSON.stringify(updatedReportWithDb));
+      }
 
       return { success: true, id: informeId || `local-${Date.now()}` };
     } catch (err: any) {
