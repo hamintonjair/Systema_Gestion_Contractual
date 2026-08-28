@@ -77,6 +77,7 @@ export default function DeclaracionRentaDoc({
   });
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   useEffect(() => {
     const currentKey = getIdentityKey();
@@ -84,6 +85,7 @@ export default function DeclaracionRentaDoc({
       return;
     }
     loadedKeyRef.current = currentKey;
+    setHasChanges(false);
 
     const loadData = async () => {
       let baseData: DeclaracionRentaData | null = null;
@@ -125,6 +127,7 @@ export default function DeclaracionRentaDoc({
   const handleFieldChange = (field: keyof DeclaracionRentaData, value: string | boolean) => {
     const updated = { ...formData, [field]: value };
     setFormData(updated);
+    setHasChanges(true);
     if (onChange) {
       onChange(updated);
     }
@@ -197,6 +200,7 @@ export default function DeclaracionRentaDoc({
     if (onSave) {
       onSave(formData);
     }
+    setHasChanges(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
   };
@@ -359,9 +363,15 @@ export default function DeclaracionRentaDoc({
               
               <button
                 onClick={handleSave}
+                disabled={!hasChanges}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  saveSuccess ? 'bg-emerald-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  !hasChanges
+                    ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed opacity-60'
+                    : saveSuccess 
+                      ? 'bg-emerald-500 text-white' 
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer'
                 }`}
+                title={!hasChanges ? 'Sin cambios pendientes para guardar' : 'Guardar modificaciones en la base de datos'}
               >
                 {saveSuccess ? <Check size={14} /> : <Save size={14} />}
                 <span>{saveSuccess ? '¡Guardado con Éxito!' : 'Guardar Datos'}</span>

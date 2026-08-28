@@ -106,6 +106,7 @@ export default function SoporteFiduciariaDoc({
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isExportingImage, setIsExportingImage] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   useEffect(() => {
     const currentKey = getIdentityKey();
@@ -113,6 +114,7 @@ export default function SoporteFiduciariaDoc({
       return;
     }
     loadedKeyRef.current = currentKey;
+    setHasChanges(false);
 
     const loadData = async () => {
       let baseData: SoporteFiduciariaData | null = null;
@@ -169,6 +171,7 @@ export default function SoporteFiduciariaDoc({
   const handleFieldChange = (field: keyof SoporteFiduciariaData, value: string) => {
     const updated = { ...formData, [field]: value };
     setFormData(updated);
+    setHasChanges(true);
     if (onChange) {
       onChange(updated);
     }
@@ -242,6 +245,7 @@ export default function SoporteFiduciariaDoc({
     if (onSave) {
       onSave(formData);
     }
+    setHasChanges(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
   };
@@ -519,6 +523,7 @@ export default function SoporteFiduciariaDoc({
     if (window.confirm('¿Está seguro de restaurar los datos fiduciarios por defecto con la información del informe?')) {
       const def = createDefaultFiduciariaData(reportData);
       setFormData(def);
+      setHasChanges(true);
       if (onChange) onChange(def);
     }
   };
@@ -554,9 +559,15 @@ export default function SoporteFiduciariaDoc({
               
               <button
                 onClick={handleSave}
+                disabled={!hasChanges}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  saveSuccess ? 'bg-emerald-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  !hasChanges
+                    ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed opacity-60'
+                    : saveSuccess 
+                      ? 'bg-emerald-500 text-white' 
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer'
                 }`}
+                title={!hasChanges ? 'Sin cambios pendientes para guardar' : 'Guardar modificaciones en la base de datos'}
               >
                 {saveSuccess ? <Check size={14} /> : <Save size={14} />}
                 <span>{saveSuccess ? '¡Guardado con Éxito!' : 'Guardar Datos'}</span>

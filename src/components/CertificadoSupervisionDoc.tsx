@@ -103,6 +103,7 @@ export default function CertificadoSupervisionDoc({
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isExportingImage, setIsExportingImage] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   const getIdentityKey = () => {
     if (data?.id) return `data_${data.id}`;
@@ -119,6 +120,7 @@ export default function CertificadoSupervisionDoc({
       return;
     }
     loadedKeyRef.current = currentKey;
+    setHasChanges(false);
 
     let baseData: CertificadoSupervisionData;
     if (data) {
@@ -262,6 +264,7 @@ export default function CertificadoSupervisionDoc({
     }
 
     setFormData(updated);
+    setHasChanges(true);
     if (onChange) {
       onChange(updated);
     }
@@ -299,6 +302,7 @@ export default function CertificadoSupervisionDoc({
           valorAvalado: `$ ${autoLiq.valorTotalAPagar}`,
         };
         setFormData(updated);
+        setHasChanges(true);
         if (onChange) onChange(updated);
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
@@ -369,6 +373,7 @@ export default function CertificadoSupervisionDoc({
     if (onSave) {
       onSave(formData);
     }
+    setHasChanges(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
   };
@@ -687,7 +692,15 @@ export default function CertificadoSupervisionDoc({
           {isEditable && (
             <button
               onClick={handleSave}
-              className="px-3.5 py-1.5 bg-[#006b33] hover:bg-[#005729] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+              disabled={!hasChanges}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all ${
+                !hasChanges
+                  ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed opacity-60'
+                  : saveSuccess
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-[#006b33] hover:bg-[#005729] text-white cursor-pointer'
+              }`}
+              title={!hasChanges ? 'Sin cambios pendientes para guardar' : 'Guardar modificaciones en la base de datos'}
             >
               {saveSuccess ? <Check size={14} className="text-amber-300" /> : <Save size={14} />}
               <span>{saveSuccess ? '¡Guardado con Éxito!' : 'Guardar Cambios'}</span>
