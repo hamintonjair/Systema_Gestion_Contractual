@@ -1389,107 +1389,205 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
             </div>
 
             {/* Barra de Pestañas de la Suite Contractual (5 Certificados / Documentos) */}
-            <div className="bg-white px-4 py-2.5 border-b border-slate-200 shadow-xs shrink-0 overflow-x-auto">
-              <div className="flex items-center gap-2 min-w-max">
-                
-                <button
-                  onClick={() => setAdminModuleTab('informe')}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                    adminModuleTab === 'informe'
-                      ? 'bg-[#006b33] text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <FileText size={15} />
-                  <span>1. Informe Mensual</span>
-                </button>
+            {(() => {
+              const allComms = inspectingInforme.comentariosCampos || {};
+              const certKeys = ['certificado_supervision', 'soporte_fiduciaria', 'declaracion_juramento', 'autorizacion_desembolso'];
+              
+              const informeComms = Object.entries(allComms)
+                .filter(([k]) => !certKeys.includes(k))
+                .map(([_, v]) => v as FieldComment);
+              const informePending = informeComms.filter(c => !c.corregido).length;
+              const informeFixed = informeComms.filter(c => c.corregido).length;
 
-                <button
-                  onClick={() => setAdminModuleTab('supervision')}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                    adminModuleTab === 'supervision'
-                      ? 'bg-[#006b33] text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <ShieldCheck size={15} />
-                  <span>2. Certificado de Supervisión</span>
-                </button>
+              const supComm = allComms['certificado_supervision'] || 
+                Object.values(allComms).find((c: any) => c.campoId === 'certificado_supervision' || (c.nombreCampo && c.nombreCampo.toLowerCase().includes('certificado de supervisión')));
+              
+              const fidComm = allComms['soporte_fiduciaria'] || 
+                Object.values(allComms).find((c: any) => c.campoId === 'soporte_fiduciaria' || (c.nombreCampo && c.nombreCampo.toLowerCase().includes('soporte fiduciaria')));
 
-                <button
-                  onClick={() => setAdminModuleTab('fiduciaria')}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                    adminModuleTab === 'fiduciaria'
-                      ? 'bg-[#006b33] text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <Landmark size={15} />
-                  <span>3. Soporte Fiduciaria / Pagos</span>
-                </button>
+              const jurComm = allComms['declaracion_juramento'] || 
+                Object.values(allComms).find((c: any) => c.campoId === 'declaracion_juramento' || (c.nombreCampo && c.nombreCampo.toLowerCase().includes('declaración')));
 
-                <button
-                  onClick={() => setAdminModuleTab('juramento')}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                    adminModuleTab === 'juramento'
-                      ? 'bg-[#006b33] text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <Scale size={15} />
-                  <span>4. Declaración Bajo Juramento</span>
-                </button>
+              const desComm = allComms['autorizacion_desembolso'] || 
+                Object.values(allComms).find((c: any) => c.campoId === 'autorizacion_desembolso' || (c.nombreCampo && c.nombreCampo.toLowerCase().includes('desembolso')));
 
-                <button
-                  onClick={() => setAdminModuleTab('desembolso')}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                    adminModuleTab === 'desembolso'
-                      ? 'bg-[#006b33] text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <CreditCard size={15} />
-                  <span>5. Autorización de Desembolso</span>
-                </button>
+              return (
+                <>
+                  <div className="bg-white px-4 py-2.5 border-b border-slate-200 shadow-xs shrink-0 overflow-x-auto">
+                    <div className="flex items-center gap-2 min-w-max">
+                      
+                      <button
+                        onClick={() => setAdminModuleTab('informe')}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                          adminModuleTab === 'informe'
+                            ? 'bg-[#006b33] text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                      >
+                        <FileText size={15} />
+                        <span>1. Informe Mensual</span>
+                        {informePending > 0 ? (
+                          <span className="px-1.5 py-0.5 bg-amber-200 text-amber-950 font-black text-[10px] rounded-full border border-amber-400">
+                            ⚠️ {informePending}
+                          </span>
+                        ) : informeFixed > 0 ? (
+                          <span className="px-1.5 py-0.5 bg-emerald-200 text-emerald-950 font-black text-[10px] rounded-full border border-emerald-400">
+                            🟢 {informeFixed}
+                          </span>
+                        ) : null}
+                      </button>
 
-              </div>
-            </div>
+                      <button
+                        onClick={() => setAdminModuleTab('supervision')}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                          adminModuleTab === 'supervision'
+                            ? 'bg-[#006b33] text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                      >
+                        <ShieldCheck size={15} />
+                        <span>2. Certificado de Supervisión</span>
+                        {supComm && (!supComm.corregido ? (
+                          <span className="px-1.5 py-0.5 bg-amber-200 text-amber-950 font-black text-[10px] rounded-full border border-amber-400">
+                            ⚠️ Obs
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 bg-emerald-200 text-emerald-950 font-black text-[10px] rounded-full border border-emerald-400">
+                            🟢 Subsanado
+                          </span>
+                        ))}
+                      </button>
 
-            {/* Banner de Ayuda de Revisión (Solo visible en la pestaña 1 de informe) */}
-            {adminModuleTab === 'informe' && (
-              <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-amber-950 shrink-0">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-amber-200 text-amber-950 font-black rounded text-[10.5px]">
-                    📝 MODO REVISIÓN & COMENTARIOS
-                  </span>
-                  <span className="text-[11.5px]">
-                    Haz clic sobre cualquier casilla para escribir o editar observaciones. Quedarán resaltadas en <strong className="bg-amber-200 px-1 py-0.5 rounded text-amber-950 font-bold">amarillo</strong> para que el contratista las corrija.
-                  </span>
-                </div>
+                      <button
+                        onClick={() => setAdminModuleTab('fiduciaria')}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                          adminModuleTab === 'fiduciaria'
+                            ? 'bg-[#006b33] text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Landmark size={15} />
+                        <span>3. Soporte Fiduciaria / Pagos</span>
+                        {fidComm && (!fidComm.corregido ? (
+                          <span className="px-1.5 py-0.5 bg-amber-200 text-amber-950 font-black text-[10px] rounded-full border border-amber-400">
+                            ⚠️ Obs
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 bg-emerald-200 text-emerald-950 font-black text-[10px] rounded-full border border-emerald-400">
+                            🟢 Subsanado
+                          </span>
+                        ))}
+                      </button>
 
-                {Object.keys(inspectingInforme.comentariosCampos || {}).length > 0 && (() => {
-                  const commsList = Object.values(inspectingInforme.comentariosCampos || {}) as FieldComment[];
-                  const corregidosCount = commsList.filter(c => c.corregido).length;
-                  const pendientesCount = commsList.length - corregidosCount;
-                  return (
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {corregidosCount > 0 && (
-                        <div className="bg-emerald-100 text-emerald-950 font-bold px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0 border border-emerald-400 shadow-xs">
-                          <CheckCircle2 size={13} className="text-emerald-700" />
-                          <span>{corregidosCount} corrección(es) realizada(s)</span>
-                        </div>
-                      )}
-                      {pendientesCount > 0 && (
-                        <div className="bg-amber-200/90 text-amber-950 font-bold px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0 border border-amber-400 shadow-xs">
-                          <AlertTriangle size={13} className="text-amber-800" />
-                          <span>{pendientesCount} observación(es) pendiente(s)</span>
-                        </div>
-                      )}
+                      <button
+                        onClick={() => setAdminModuleTab('juramento')}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                          adminModuleTab === 'juramento'
+                            ? 'bg-[#006b33] text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Scale size={15} />
+                        <span>4. Declaración Bajo Juramento</span>
+                        {jurComm && (!jurComm.corregido ? (
+                          <span className="px-1.5 py-0.5 bg-amber-200 text-amber-950 font-black text-[10px] rounded-full border border-amber-400">
+                            ⚠️ Obs
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 bg-emerald-200 text-emerald-950 font-black text-[10px] rounded-full border border-emerald-400">
+                            🟢 Subsanado
+                          </span>
+                        ))}
+                      </button>
+
+                      <button
+                        onClick={() => setAdminModuleTab('desembolso')}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                          adminModuleTab === 'desembolso'
+                            ? 'bg-[#006b33] text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        }`}
+                      >
+                        <CreditCard size={15} />
+                        <span>5. Autorización de Desembolso</span>
+                        {desComm && (!desComm.corregido ? (
+                          <span className="px-1.5 py-0.5 bg-amber-200 text-amber-950 font-black text-[10px] rounded-full border border-amber-400">
+                            ⚠️ Obs
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 bg-emerald-200 text-emerald-950 font-black text-[10px] rounded-full border border-emerald-400">
+                            🟢 Subsanado
+                          </span>
+                        ))}
+                      </button>
+
                     </div>
-                  );
-                })()}
-              </div>
-            )}
+                  </div>
+
+                  {/* Banner Informativo de Revisión y Estado de Subsanación */}
+                  <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-amber-950 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-amber-200 text-amber-950 font-black rounded text-[10.5px]">
+                        📝 MODO REVISIÓN & COMENTARIOS
+                      </span>
+                      <span className="text-[11.5px]">
+                        {adminModuleTab === 'informe' 
+                          ? 'Haz clic sobre cualquier casilla para escribir o editar observaciones. Quedarán resaltadas en amarillo para que el contratista las corrija.'
+                          : 'Revisa los datos del documento. Puedes añadir, editar o validar observaciones con los botones correspondientes.'
+                        }
+                      </span>
+                    </div>
+
+                    {/* Stats de observaciones según pestaña activa */}
+                    {adminModuleTab === 'informe' ? (
+                      (informePending > 0 || informeFixed > 0) && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {informeFixed > 0 && (
+                            <div className="bg-emerald-100 text-emerald-950 font-bold px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0 border border-emerald-400 shadow-xs">
+                              <CheckCircle2 size={13} className="text-emerald-700" />
+                              <span>{informeFixed} corrección(es) lista(s) para validar</span>
+                            </div>
+                          )}
+                          {informePending > 0 && (
+                            <div className="bg-amber-200/90 text-amber-950 font-bold px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0 border border-amber-400 shadow-xs">
+                              <AlertTriangle size={13} className="text-amber-800" />
+                              <span>{informePending} observación(es) pendiente(s) por el contratista</span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    ) : (
+                      (() => {
+                        const currentComm = adminModuleTab === 'supervision' ? supComm
+                          : adminModuleTab === 'fiduciaria' ? fidComm
+                          : adminModuleTab === 'juramento' ? jurComm
+                          : desComm;
+                        
+                        if (!currentComm) {
+                          return (
+                            <span className="text-[11px] text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+                              Sin observaciones en este certificado
+                            </span>
+                          );
+                        }
+                        
+                        return currentComm.corregido ? (
+                          <div className="bg-emerald-100 text-emerald-950 font-bold px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0 border border-emerald-400 shadow-xs">
+                            <CheckCircle2 size={13} className="text-emerald-700" />
+                            <span>Corrección realizada por el contratista • Lista para validar</span>
+                          </div>
+                        ) : (
+                          <div className="bg-amber-200/90 text-amber-950 font-bold px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0 border border-amber-400 shadow-xs">
+                            <AlertTriangle size={13} className="text-amber-800" />
+                            <span>Observación activa • Pendiente de corrección por el contratista</span>
+                          </div>
+                        );
+                      })()
+                    )}
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Cuerpo del Visor con el Documento Activo */}
             <div className="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-6 md:p-8 flex justify-center">

@@ -471,7 +471,7 @@ export default function AutorizacionDesembolsoDoc({
             </div>
           )}
 
-          {/* BANNER OBSERVACIONES PARA EL CONTRATISTA */}
+          {/* BANNER OBSERVACIONES PARA EL CONTRATISTA (PENDIENTE DE CORREGIR) */}
           {!isReviewMode && desembComment && !desembComment.corregido && (
             <div className="w-full mb-3 p-3.5 bg-amber-50 border-2 border-amber-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-sm print:hidden">
               <div className="flex items-start gap-2.5">
@@ -479,7 +479,7 @@ export default function AutorizacionDesembolsoDoc({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-black text-[10.5px] uppercase bg-amber-200 text-amber-950 px-2 py-0.5 rounded border border-amber-300">
-                      Observación de Supervisión
+                      Observación de Supervisión (Pendiente)
                     </span>
                     <span className="text-[10.5px] text-amber-800 font-semibold">
                       {desembComment.fecha || 'Reciente'} • {desembComment.autor || 'Supervisora'}
@@ -487,6 +487,9 @@ export default function AutorizacionDesembolsoDoc({
                   </div>
                   <p className="text-xs font-bold text-amber-950 mt-1">
                     "{desembComment.comentario}"
+                  </p>
+                  <p className="text-[11px] text-amber-900 mt-0.5">
+                    Modifique los datos correspondientes y presione <strong>"Guardar Datos"</strong> o <strong>"Marcar como Subsanado"</strong> para enviar la corrección.
                   </p>
                 </div>
               </div>
@@ -501,22 +504,127 @@ export default function AutorizacionDesembolsoDoc({
             </div>
           )}
 
-          {/* BANNER MODO REVISIÓN ADMINISTRADORA */}
-          {isReviewMode && (
-            <div className="w-full mb-3 p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between text-xs text-amber-950 shadow-xs print:hidden">
-              <div className="flex items-center gap-2 font-bold">
-                <MessageSquare size={16} className="text-amber-700" />
-                <span>Modo Revisión: Haga clic en el botón para dejar observaciones y comentarios sobre esta autorización de desembolso.</span>
+          {/* BANNER OBSERVACIONES PARA EL CONTRATISTA (CORRECCIÓN REALIZADA / SUBSANADA) */}
+          {!isReviewMode && desembComment && desembComment.corregido && (
+            <div className="w-full mb-3 p-3.5 bg-emerald-50 border-2 border-emerald-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-emerald-950 shadow-sm print:hidden">
+              <div className="flex items-start gap-2.5">
+                <CheckCircle2 size={18} className="text-emerald-700 shrink-0 mt-0.5" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-[10.5px] uppercase bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded border border-emerald-300">
+                      🟢 Subsanación Realizada
+                    </span>
+                    <span className="text-[10.5px] text-emerald-800 font-semibold">
+                      Enviado a revisión de supervisión
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-emerald-900 mt-1">
+                    Has corregido la observación: <span className="italic font-bold">"{desembComment.comentario}"</span>. Tu documento actualizado está registrado y en espera de validación final por la supervisora.
+                  </p>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => openCommentModal('autorizacion_desembolso', 'Autorización Desembolso', 'Autorización de Desembolso')}
-                className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow-2xs transition-colors"
-              >
-                <MessageSquare size={13} />
-                <span>Comentar Desembolso</span>
-              </button>
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-lg text-xs font-bold shrink-0">
+                En espera de aval
+              </span>
             </div>
+          )}
+
+          {/* BANNER MODO REVISIÓN ADMINISTRADORA / SUPERVISORA */}
+          {isReviewMode && (
+            desembComment ? (
+              desembComment.corregido ? (
+                <div className="w-full mb-3 p-3.5 bg-emerald-50 border-2 border-emerald-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-emerald-950 shadow-sm print:hidden">
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 size={18} className="text-emerald-700 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-[10.5px] uppercase bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded border border-emerald-300">
+                          🟢 Corrección Realizada por el Contratista
+                        </span>
+                        <span className="text-[10.5px] text-emerald-800 font-semibold">
+                          Listo para Validar
+                        </span>
+                      </div>
+                      <p className="text-xs font-bold text-emerald-950 mt-1">
+                        Observación atendida: "{desembComment.comentario}"
+                      </p>
+                      <p className="text-[11px] text-emerald-900 mt-0.5">
+                        El contratista ha modificado y marcado como subsanada esta autorización. Verifique los datos y presione <strong>"Validar y Quitar Observación"</strong> si es conforme.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onDeleteComment) {
+                          onDeleteComment('autorizacion_desembolso');
+                        }
+                      }}
+                      className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                    >
+                      <CheckCircle2 size={14} />
+                      <span>Validar y Quitar Observación</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openCommentModal('autorizacion_desembolso', 'Autorización Desembolso', 'Autorización de Desembolso')}
+                      className="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-colors"
+                      title="Editar observación"
+                    >
+                      <Edit3 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full mb-3 p-3.5 bg-amber-50 border-2 border-amber-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-sm print:hidden">
+                  <div className="flex items-start gap-2.5">
+                    <AlertTriangle size={18} className="text-amber-700 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-[10.5px] uppercase bg-amber-200 text-amber-950 px-2 py-0.5 rounded border border-amber-300">
+                          ⚠️ Observación Activa (Pendiente de Corrección)
+                        </span>
+                        <span className="text-[10.5px] text-amber-800 font-semibold">
+                          {desembComment.fecha || 'Reciente'} • {desembComment.autor || 'Supervisora'}
+                        </span>
+                      </div>
+                      <p className="text-xs font-bold text-amber-950 mt-1">
+                        "{desembComment.comentario}"
+                      </p>
+                      <p className="text-[11px] text-amber-900 mt-0.5">
+                        El contratista aún <strong>NO</strong> ha modificado ni marcado como subsanado este documento.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => openCommentModal('autorizacion_desembolso', 'Autorización Desembolso', 'Autorización de Desembolso')}
+                      className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                    >
+                      <Edit3 size={13} />
+                      <span>Editar Observación</span>
+                    </button>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="w-full mb-3 p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between text-xs text-amber-950 shadow-xs print:hidden">
+                <div className="flex items-center gap-2 font-bold">
+                  <MessageSquare size={16} className="text-amber-700" />
+                  <span>Modo Revisión: Haga clic en el botón para dejar observaciones y comentarios sobre esta autorización de desembolso.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openCommentModal('autorizacion_desembolso', 'Autorización Desembolso', 'Autorización de Desembolso')}
+                  className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow-2xs transition-colors"
+                >
+                  <MessageSquare size={13} />
+                  <span>Comentar Desembolso</span>
+                </button>
+              </div>
+            )
           )}
 
           {/* MODAL DE COMENTARIOS */}

@@ -1496,18 +1496,42 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                    (selectedCertReport || reportsList[0])?.estado === 'Aprobado'
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-amber-100 text-amber-900 border border-amber-300'
-                  }`}>
-                    <CheckCircle2 size={13} />
-                    <span>
-                      {(selectedCertReport || reportsList[0])?.estado === 'Aprobado' 
-                        ? 'Certificación Avalada por Supervisión' 
-                        : 'En Trámite de Supervisión'}
-                    </span>
-                  </span>
+                  {(() => {
+                    const currentRep = selectedCertReport || reportsList[0];
+                    const certComm = currentRep?.comentariosCampos?.['certificado_supervision'] || 
+                      Object.values(currentRep?.comentariosCampos || {}).find((c: any) => 
+                        c.campoId === 'certificado_supervision' || (c.nombreCampo && c.nombreCampo.toLowerCase().includes('certificado de supervisión'))
+                      );
+
+                    if (certComm) {
+                      return !certComm.corregido ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                          <AlertTriangle size={13} className="text-amber-700" />
+                          <span>⚠️ Observación Pendiente por Corregir</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                          <CheckCircle2 size={13} className="text-emerald-700" />
+                          <span>🟢 Corrección Enviada (En Revisión)</span>
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                        currentRep?.estado === 'Aprobado'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-slate-100 text-slate-700 border border-slate-300'
+                      }`}>
+                        <CheckCircle2 size={13} />
+                        <span>
+                          {currentRep?.estado === 'Aprobado' 
+                            ? 'Certificación Avalada por Supervisión' 
+                            : 'En Trámite de Supervisión'}
+                        </span>
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -1572,18 +1596,42 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                    (selectedFidReport || reportsList[0])?.estado === 'Aprobado'
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-amber-100 text-amber-900 border border-amber-300'
-                  }`}>
-                    <CheckCircle2 size={13} />
-                    <span>
-                      {(selectedFidReport || reportsList[0])?.estado === 'Aprobado' 
-                        ? 'Soporte Avalado por Supervisión' 
-                        : 'En Trámite de Supervisión'}
-                    </span>
-                  </span>
+                  {(() => {
+                    const currentRep = selectedFidReport || reportsList[0];
+                    const fidComm = currentRep?.comentariosCampos?.['soporte_fiduciaria'] || 
+                      Object.values(currentRep?.comentariosCampos || {}).find((c: any) => 
+                        c.campoId === 'soporte_fiduciaria' || (c.nombreCampo && c.nombreCampo.toLowerCase().includes('soporte fiduciaria'))
+                      );
+
+                    if (fidComm) {
+                      return !fidComm.corregido ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                          <AlertTriangle size={13} className="text-amber-700" />
+                          <span>⚠️ Observación Pendiente por Corregir</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                          <CheckCircle2 size={13} className="text-emerald-700" />
+                          <span>🟢 Corrección Enviada (En Revisión)</span>
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                        currentRep?.estado === 'Aprobado'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-slate-100 text-slate-700 border border-slate-300'
+                      }`}>
+                        <CheckCircle2 size={13} />
+                        <span>
+                          {currentRep?.estado === 'Aprobado' 
+                            ? 'Soporte Avalado por Supervisión' 
+                            : 'En Trámite de Supervisión'}
+                        </span>
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -1689,19 +1737,39 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                   </select>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {(selectedJuramentoReport || reportsList[0])?.estado === 'Aprobado' 
-                    ? (
+                  {(() => {
+                    const currentRep = selectedJuramentoReport || reportsList[0];
+                    const jurComm = currentRep?.comentariosCampos?.['declaracion_juramento'] || 
+                      Object.values(currentRep?.comentariosCampos || {}).find((c: any) => 
+                        c.campoId === 'declaracion_juramento' || (c.nombreCampo && c.nombreCampo.toLowerCase().includes('declaración'))
+                      );
+
+                    if (jurComm) {
+                      return !jurComm.corregido ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-900 rounded-full text-xs font-bold border border-amber-300 animate-pulse">
+                          <AlertTriangle size={14} className="text-amber-700" />
+                          <span>⚠️ Observación Pendiente por Corregir</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-900 rounded-full text-xs font-bold border border-emerald-300">
+                          <CheckCircle2 size={14} className="text-emerald-700" />
+                          <span>🟢 Corrección Enviada (En Revisión)</span>
+                        </div>
+                      );
+                    }
+
+                    return currentRep?.estado === 'Aprobado' ? (
                       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200">
                         <CheckCircle2 size={14} />
                         <span>Soporte Avalado por Supervisión</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-full text-xs font-bold border border-amber-200">
-                        <AlertCircle size={14} />
-                        <span>Requiere Aprobación Previa</span>
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full text-xs font-bold border border-slate-300">
+                        <Clock size={14} />
+                        <span>En Trámite de Supervisión</span>
                       </div>
-                    )
-                  }
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -1765,19 +1833,39 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                   </select>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {(selectedDesembolsoReport || reportsList[0])?.estado === 'Aprobado' 
-                    ? (
+                  {(() => {
+                    const currentRep = selectedDesembolsoReport || reportsList[0];
+                    const desComm = currentRep?.comentariosCampos?.['autorizacion_desembolso'] || 
+                      Object.values(currentRep?.comentariosCampos || {}).find((c: any) => 
+                        c.campoId === 'autorizacion_desembolso' || (c.nombreCampo && c.nombreCampo.toLowerCase().includes('desembolso'))
+                      );
+
+                    if (desComm) {
+                      return !desComm.corregido ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-900 rounded-full text-xs font-bold border border-amber-300 animate-pulse">
+                          <AlertTriangle size={14} className="text-amber-700" />
+                          <span>⚠️ Observación Pendiente por Corregir</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-900 rounded-full text-xs font-bold border border-emerald-300">
+                          <CheckCircle2 size={14} className="text-emerald-700" />
+                          <span>🟢 Corrección Enviada (En Revisión)</span>
+                        </div>
+                      );
+                    }
+
+                    return currentRep?.estado === 'Aprobado' ? (
                       <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200">
                         <CheckCircle2 size={14} />
                         <span>Soporte Avalado por Supervisión</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 rounded-full text-xs font-bold border border-amber-200">
-                        <AlertCircle size={14} />
-                        <span>Requiere Aprobación Previa</span>
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full text-xs font-bold border border-slate-300">
+                        <Clock size={14} />
+                        <span>En Trámite de Supervisión</span>
                       </div>
-                    )
-                  }
+                    );
+                  })()}
                 </div>
               </div>
             )}
