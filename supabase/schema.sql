@@ -341,3 +341,20 @@ DROP POLICY IF EXISTS "Lectura y escritura declaraciones renta" ON declaraciones
 CREATE POLICY "Lectura y escritura declaraciones renta" ON declaraciones_renta FOR ALL USING (true);
 CREATE INDEX IF NOT EXISTS idx_declaraciones_renta_informe ON declaraciones_renta(informe_id);
 CREATE INDEX IF NOT EXISTS idx_declaraciones_renta_doc ON declaraciones_renta(contratista_documento);
+
+CREATE TABLE IF NOT EXISTS autorizaciones_desembolso (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  informe_id UUID REFERENCES informes_mensuales(id) ON DELETE CASCADE,
+  contratista_documento TEXT,
+  pago_nro TEXT DEFAULT '1',
+  datos_formulario JSONB DEFAULT '{}'::jsonb,
+  fecha_creacion TIMESTAMPTZ DEFAULT NOW(),
+  fecha_actualizacion TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE autorizaciones_desembolso ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Lectura y escritura autorizaciones desembolso" ON autorizaciones_desembolso;
+CREATE POLICY "Lectura y escritura autorizaciones desembolso" ON autorizaciones_desembolso FOR ALL USING (true);
+CREATE INDEX IF NOT EXISTS idx_autorizaciones_desembolso_informe ON autorizaciones_desembolso(informe_id);
+CREATE INDEX IF NOT EXISTS idx_autorizaciones_desembolso_doc ON autorizaciones_desembolso(contratista_documento);
+
