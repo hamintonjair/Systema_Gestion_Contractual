@@ -358,3 +358,20 @@ CREATE POLICY "Lectura y escritura autorizaciones desembolso" ON autorizaciones_
 CREATE INDEX IF NOT EXISTS idx_autorizaciones_desembolso_informe ON autorizaciones_desembolso(informe_id);
 CREATE INDEX IF NOT EXISTS idx_autorizaciones_desembolso_doc ON autorizaciones_desembolso(contratista_documento);
 
+CREATE TABLE IF NOT EXISTS notificaciones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  mensaje TEXT NOT NULL,
+  tipo TEXT NOT NULL DEFAULT 'info',
+  leida BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  informe_nro TEXT,
+  report_id UUID REFERENCES informes_mensuales(id) ON DELETE CASCADE
+);
+
+ALTER TABLE notificaciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir todo notificaciones" ON notificaciones;
+CREATE POLICY "Permitir todo notificaciones" ON notificaciones FOR ALL USING (true);
+CREATE INDEX IF NOT EXISTS idx_notificaciones_user_id ON notificaciones(user_id);
+CREATE INDEX IF NOT EXISTS idx_notificaciones_leida ON notificaciones(leida);
+
