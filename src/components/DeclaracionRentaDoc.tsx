@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DeclaracionRentaData, ReportData, createDefaultDeclaracionRentaData, FieldComment } from '../types';
 import { supabaseService } from '../services/supabaseService';
 import FieldCommentModal from './FieldCommentModal';
@@ -17,6 +17,15 @@ interface DeclaracionRentaDocProps {
   onDeleteComment?: (fieldId: string) => void;
   authorName?: string;
 }
+
+const normalizeSenores = (val: string | undefined): string => {
+  if (!val || !val.trim()) return 'Señores\nALCALDIA\nCiudad.';
+  const trimmed = val.trim();
+  if (!trimmed.toLowerCase().includes('señor') && !trimmed.toLowerCase().includes('senor')) {
+    return `Señores\n${trimmed}`;
+  }
+  return trimmed;
+};
 
 export default function DeclaracionRentaDoc({
   data,
@@ -48,11 +57,34 @@ export default function DeclaracionRentaDoc({
       });
     }
   };
-  const [formData, setFormData] = useState<DeclaracionRentaData>(createDefaultDeclaracionRentaData());
-    const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+
+  const getIdentityKey = () => {
+    if (data?.id) return `data_${data.id}`;
+    if (reportData) return `rep_${reportData.id || ''}_${reportData.informeNro || ''}_${storageKey || ''}`;
+    return 'default';
+  };
+
+  const loadedKeyRef = useRef<string>(getIdentityKey());
+  const [formData, setFormData] = useState<DeclaracionRentaData>(() => {
+    let initial: DeclaracionRentaData;
+    if (data) initial = data;
+    else if (reportData) initial = createDefaultDeclaracionRentaData(reportData);
+    else initial = createDefaultDeclaracionRentaData();
+    return {
+      ...initial,
+      senores: normalizeSenores(initial.senores)
+    };
+  });
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
   useEffect(() => {
+    const currentKey = getIdentityKey();
+    if (loadedKeyRef.current === currentKey && !data) {
+      return;
+    }
+    loadedKeyRef.current = currentKey;
+
     const loadData = async () => {
       let baseData: DeclaracionRentaData | null = null;
       if (data) {
@@ -78,14 +110,17 @@ export default function DeclaracionRentaDoc({
         return;
       }
 
-      setFormData({
-        ...baseData,
-        reportId: reportData?.id || baseData.reportId,
-        fecha: reportData ? createDefaultDeclaracionRentaData(reportData).fecha : baseData.fecha,
-      });
+      if (loadedKeyRef.current === currentKey) {
+        setFormData({
+          ...baseData,
+          senores: normalizeSenores(baseData.senores),
+          reportId: reportData?.id || baseData.reportId,
+          fecha: reportData ? createDefaultDeclaracionRentaData(reportData).fecha : baseData.fecha,
+        });
+      }
     };
     loadData();
-  }, [data, reportData, storageKey]);
+  }, [data, reportData?.id, reportData?.informeNro, storageKey]);
 
   const handleFieldChange = (field: keyof DeclaracionRentaData, value: string | boolean) => {
     const updated = { ...formData, [field]: value };
@@ -294,20 +329,22 @@ export default function DeclaracionRentaDoc({
 
   
   return (
-    <div className="flex flex-col items-center w-full pb-10">
-      {isEditable && (
-        <div className="w-full max-w-[21.59cm] flex flex-col gap-3 mb-6 print:hidden">
-          <div className="flex justify-between items-center bg-slate-900 text-white p-3 rounded-xl shadow-md border border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="bg-slate-800 p-2 rounded-lg text-emerald-400">
-                <Printer size={18} />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm">Declaración de Renta y Retención en la Fuente</h3>
-                <p className="text-xs text-slate-300 hidden sm:block">Ley 1819 de 2016 - Rentas de Trabajo</p>
-              </div>
-            </div>
-            <div className="flex gap-2 items-center">
+    <div className="w-full max-w-[21.59cm] flex flex-col gap-3 mx-auto pb-10 font-sans">
+      {/* PANEL DE ACCIONES */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-xs print:hidden">
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-[#006b33]"></span>
+          <span className="text-xs font-bold text-slate-800 uppercase tracking-wide font-sans">
+            Declaración de Renta y Retención en la Fuente
+          </span>
+          <span className="text-[11px] font-mono bg-emerald-100 text-[#006b33] font-bold px-2 py-0.5 rounded border border-emerald-300">
+            Ley 1819 de 2016
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {isEditable && (
+            <>
               <button
                 onClick={() => setIsEditing(!isEditing)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -317,8 +354,9 @@ export default function DeclaracionRentaDoc({
                 }`}
               >
                 {isEditing ? <Check size={14} /> : <Edit3 size={14} />}
-                <span className="hidden sm:inline">{isEditing ? 'Modo Visualización' : 'Llenar / Editar Campos'}</span>
+                <span>{isEditing ? 'Modo Visualización' : 'Llenar / Editar Campos'}</span>
               </button>
+              
               <button
                 onClick={handleSave}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -326,63 +364,170 @@ export default function DeclaracionRentaDoc({
                 }`}
               >
                 {saveSuccess ? <Check size={14} /> : <Save size={14} />}
-                <span className="hidden sm:inline">{saveSuccess ? '¡Guardado con Éxito!' : 'Guardar Datos'}</span>
+                <span>{saveSuccess ? '¡Guardado con Éxito!' : 'Guardar Datos'}</span>
               </button>
-              <button
-                onClick={handleDirectPrint}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition-colors"
-                title="Imprimir Copia Oficial"
-              >
-                <Printer size={14} />
-                <span className="hidden sm:inline">Imprimir</span>
-              </button>
-            </div>
-          </div>
+            </>
+          )}
 
-          {/* Guía Paso a Paso para Edición de Campos */}
-          {!hideGuide && (
-            <div className="w-full bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50/60 border border-emerald-200 rounded-xl p-3 text-slate-700 shadow-xs">
-              <div className="flex items-start gap-2.5">
-                <div className="bg-[#006b33] text-white p-1 rounded-md mt-0.5 shrink-0 shadow-xs">
-                  <Sparkles size={14} />
+          <button
+            onClick={handleDirectPrint}
+            className="p-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl transition-all font-bold flex items-center gap-1.5 text-xs shadow-xs"
+            title="Imprimir Copia Oficial"
+          >
+            <Printer size={15} />
+            <span className="hidden sm:inline">Imprimir</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Guía Paso a Paso para Edición de Campos */}
+      {!hideGuide && (
+        <div className="w-full bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50/60 border border-emerald-200 rounded-xl p-3 text-slate-700 shadow-xs print:hidden">
+          <div className="flex items-start gap-2.5">
+            <div className="bg-[#006b33] text-white p-1 rounded-md mt-0.5 shrink-0 shadow-xs">
+              <Sparkles size={14} />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs text-emerald-950">
+                  Guía para Diligenciar y Editar la Declaración Bajo Juramento:
+                </span>
+                <span className="text-[10.5px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  {isEditing ? 'Modo Edición Activado' : 'Modo Lectura'}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] leading-snug">
+                <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                  <span className="font-bold text-emerald-900 block mb-0.5">1. Habilitar Edición:</span>
+                  Haga clic en <strong className="text-amber-900 bg-amber-100 px-1 py-0.5 rounded">«Llenar / Editar Campos»</strong> para desbloquear las opciones y firmas.
                 </div>
-                <div className="space-y-1.5 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-emerald-950">
-                      Guía para Diligenciar y Editar la Declaración Bajo Juramento:
-                    </span>
-                    <span className="text-[10.5px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                      {isEditing ? 'Modo Edición Activado' : 'Modo Lectura'}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] leading-snug">
-                    <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
-                      <span className="font-bold text-emerald-900 block mb-0.5">1. Habilitar Edición:</span>
-                      Haga clic en <strong className="text-amber-900 bg-amber-100 px-1 py-0.5 rounded">«Llenar / Editar Campos»</strong> para desbloquear las opciones y firmas.
-                    </div>
-                    <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
-                      <span className="font-bold text-emerald-900 block mb-0.5">2. Seleccionar Opciones:</span>
-                      Marque las casillas SI/NO de vinculación de trabajadores, deducción de dependientes o medicina prepagada.
-                    </div>
-                    <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
-                      <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar e Imprimir:</span>
-                      Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Datos»</strong> para guardar su selección y luego <strong className="text-slate-900 bg-slate-200 px-1 py-0.5 rounded">«Imprimir»</strong>.
-                    </div>
-                  </div>
+                <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                  <span className="font-bold text-emerald-900 block mb-0.5">2. Seleccionar Opciones:</span>
+                  Marque las casillas SI/NO de vinculación de trabajadores, deducción de dependientes o medicina prepagada.
+                </div>
+                <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
+                  <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar e Imprimir:</span>
+                  Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Datos»</strong> para guardar su selección y luego <strong className="text-slate-900 bg-slate-200 px-1 py-0.5 rounded">«Imprimir»</strong>.
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
-          {/* BANNER OBSERVACIONES PARA EL CONTRATISTA (PENDIENTE DE CORREGIR) */}
-          {!isReviewMode && jurComment && !jurComment.corregido && (
+      {/* BANNER OBSERVACIONES PARA EL CONTRATISTA (PENDIENTE DE CORREGIR) */}
+      {!isReviewMode && jurComment && !jurComment.corregido && (
+        <div className="w-full mb-3 p-3.5 bg-amber-50 border-2 border-amber-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-sm print:hidden">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle size={18} className="text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-black text-[10.5px] uppercase bg-amber-200 text-amber-950 px-2 py-0.5 rounded border border-amber-300">
+                  Observación de Supervisión (Pendiente)
+                </span>
+                <span className="text-[10.5px] text-amber-800 font-semibold">
+                  {jurComment.fecha || 'Reciente'} • {jurComment.autor || 'Supervisora'}
+                </span>
+              </div>
+              <p className="text-xs font-bold text-amber-950 mt-1">
+                "{jurComment.comentario}"
+              </p>
+              <p className="text-[11px] text-amber-900 mt-0.5">
+                Modifique los datos requeridos y presione <strong>"Guardar Datos"</strong> o <strong>"Marcar como Subsanado"</strong> para enviar la corrección.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleMarkCommentAsFixed}
+            className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors cursor-pointer"
+          >
+            <CheckCircle2 size={14} />
+            <span>Marcar como Subsanado</span>
+          </button>
+        </div>
+      )}
+
+      {/* BANNER OBSERVACIONES PARA EL CONTRATISTA (CORRECCIÓN REALIZADA / SUBSANADA) */}
+      {!isReviewMode && jurComment && jurComment.corregido && (
+        <div className="w-full mb-3 p-3.5 bg-emerald-50 border-2 border-emerald-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-emerald-950 shadow-sm print:hidden">
+          <div className="flex items-start gap-2.5">
+            <CheckCircle2 size={18} className="text-emerald-700 shrink-0 mt-0.5" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-black text-[10.5px] uppercase bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded border border-emerald-300">
+                  🟢 Subsanación Realizada
+                </span>
+                <span className="text-[10.5px] text-emerald-800 font-semibold">
+                  Enviado a revisión de supervisión
+                </span>
+              </div>
+              <p className="text-xs font-semibold text-emerald-900 mt-1">
+                Has corregido la observación: <span className="italic font-bold">"{jurComment.comentario}"</span>. Tu documento actualizado está registrado y en espera de validación final por la supervisora.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-lg text-xs font-bold shrink-0">
+            En espera de aval
+          </span>
+        </div>
+      )}
+
+      {/* BANNER MODO REVISIÓN ADMINISTRADORA / SUPERVISORA */}
+      {isReviewMode && (
+        jurComment ? (
+          jurComment.corregido ? (
+            <div className="w-full mb-3 p-3.5 bg-emerald-50 border-2 border-emerald-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-emerald-950 shadow-sm print:hidden">
+              <div className="flex items-start gap-2.5">
+                <CheckCircle2 size={18} className="text-emerald-700 shrink-0 mt-0.5" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-[10.5px] uppercase bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded border border-emerald-300">
+                      🟢 Corrección Realizada por el Contratista
+                    </span>
+                    <span className="text-[10.5px] text-emerald-800 font-semibold">
+                      Listo para Validar
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-emerald-950 mt-1">
+                    Observación atendida: "{jurComment.comentario}"
+                  </p>
+                  <p className="text-[11px] text-emerald-900 mt-0.5">
+                    El contratista ha modificado y marcado como subsanada esta declaración. Verifique los datos y presione <strong>"Validar y Quitar Observación"</strong> si es conforme.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onDeleteComment) {
+                      onDeleteComment('declaracion_juramento');
+                    }
+                  }}
+                  className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  <CheckCircle2 size={14} />
+                  <span>Validar y Quitar Observación</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openCommentModal('declaracion_juramento', 'Declaración Juramento', 'Declaración Bajo Juramento')}
+                  className="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-colors"
+                  title="Editar observación"
+                >
+                  <Edit3 size={13} />
+                </button>
+              </div>
+            </div>
+          ) : (
             <div className="w-full mb-3 p-3.5 bg-amber-50 border-2 border-amber-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-sm print:hidden">
               <div className="flex items-start gap-2.5">
                 <AlertTriangle size={18} className="text-amber-700 shrink-0 mt-0.5" />
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-black text-[10.5px] uppercase bg-amber-200 text-amber-950 px-2 py-0.5 rounded border border-amber-300">
-                      Observación de Supervisión (Pendiente)
+                      ⚠️ Observación Activa (Pendiente de Corrección)
                     </span>
                     <span className="text-[10.5px] text-amber-800 font-semibold">
                       {jurComment.fecha || 'Reciente'} • {jurComment.autor || 'Supervisora'}
@@ -392,162 +537,56 @@ export default function DeclaracionRentaDoc({
                     "{jurComment.comentario}"
                   </p>
                   <p className="text-[11px] text-amber-900 mt-0.5">
-                    Modifique los datos requeridos y presione <strong>"Guardar Datos"</strong> o <strong>"Marcar como Subsanado"</strong> para enviar la corrección.
+                    El contratista aún <strong>NO</strong> ha modificado ni marcado como subsanado este documento.
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleMarkCommentAsFixed}
-                className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs transition-colors cursor-pointer"
-              >
-                <CheckCircle2 size={14} />
-                <span>Marcar como Subsanado</span>
-              </button>
-            </div>
-          )}
-
-          {/* BANNER OBSERVACIONES PARA EL CONTRATISTA (CORRECCIÓN REALIZADA / SUBSANADA) */}
-          {!isReviewMode && jurComment && jurComment.corregido && (
-            <div className="w-full mb-3 p-3.5 bg-emerald-50 border-2 border-emerald-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-emerald-950 shadow-sm print:hidden">
-              <div className="flex items-start gap-2.5">
-                <CheckCircle2 size={18} className="text-emerald-700 shrink-0 mt-0.5" />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-[10.5px] uppercase bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded border border-emerald-300">
-                      🟢 Subsanación Realizada
-                    </span>
-                    <span className="text-[10.5px] text-emerald-800 font-semibold">
-                      Enviado a revisión de supervisión
-                    </span>
-                  </div>
-                  <p className="text-xs font-semibold text-emerald-900 mt-1">
-                    Has corregido la observación: <span className="italic font-bold">"{jurComment.comentario}"</span>. Tu documento actualizado está registrado y en espera de validación final por la supervisora.
-                  </p>
-                </div>
-              </div>
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-lg text-xs font-bold shrink-0">
-                En espera de aval
-              </span>
-            </div>
-          )}
-
-          {/* BANNER MODO REVISIÓN ADMINISTRADORA / SUPERVISORA */}
-          {isReviewMode && (
-            jurComment ? (
-              jurComment.corregido ? (
-                <div className="w-full mb-3 p-3.5 bg-emerald-50 border-2 border-emerald-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-emerald-950 shadow-sm print:hidden">
-                  <div className="flex items-start gap-2.5">
-                    <CheckCircle2 size={18} className="text-emerald-700 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-black text-[10.5px] uppercase bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded border border-emerald-300">
-                          🟢 Corrección Realizada por el Contratista
-                        </span>
-                        <span className="text-[10.5px] text-emerald-800 font-semibold">
-                          Listo para Validar
-                        </span>
-                      </div>
-                      <p className="text-xs font-bold text-emerald-950 mt-1">
-                        Observación atendida: "{jurComment.comentario}"
-                      </p>
-                      <p className="text-[11px] text-emerald-900 mt-0.5">
-                        El contratista ha modificado y marcado como subsanada esta declaración. Verifique los datos y presione <strong>"Validar y Quitar Observación"</strong> si es conforme.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onDeleteComment) {
-                          onDeleteComment('declaracion_juramento');
-                        }
-                      }}
-                      className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                    >
-                      <CheckCircle2 size={14} />
-                      <span>Validar y Quitar Observación</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openCommentModal('declaracion_juramento', 'Declaración Juramento', 'Declaración Bajo Juramento')}
-                      className="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-colors"
-                      title="Editar observación"
-                    >
-                      <Edit3 size={13} />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-full mb-3 p-3.5 bg-amber-50 border-2 border-amber-400 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-sm print:hidden">
-                  <div className="flex items-start gap-2.5">
-                    <AlertTriangle size={18} className="text-amber-700 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-black text-[10.5px] uppercase bg-amber-200 text-amber-950 px-2 py-0.5 rounded border border-amber-300">
-                          ⚠️ Observación Activa (Pendiente de Corrección)
-                        </span>
-                        <span className="text-[10.5px] text-amber-800 font-semibold">
-                          {jurComment.fecha || 'Reciente'} • {jurComment.autor || 'Supervisora'}
-                        </span>
-                      </div>
-                      <p className="text-xs font-bold text-amber-950 mt-1">
-                        "{jurComment.comentario}"
-                      </p>
-                      <p className="text-[11px] text-amber-900 mt-0.5">
-                        El contratista aún <strong>NO</strong> ha modificado ni marcado como subsanado este documento.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => openCommentModal('declaracion_juramento', 'Declaración Juramento', 'Declaración Bajo Juramento')}
-                      className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
-                    >
-                      <Edit3 size={13} />
-                      <span>Editar Observación</span>
-                    </button>
-                  </div>
-                </div>
-              )
-            ) : (
-              <div className="w-full mb-3 p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between text-xs text-amber-950 shadow-xs print:hidden">
-                <div className="flex items-center gap-2 font-bold">
-                  <MessageSquare size={16} className="text-amber-700" />
-                  <span>Modo Revisión: Haga clic en el botón para dejar observaciones y comentarios sobre esta declaración bajo juramento.</span>
-                </div>
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => openCommentModal('declaracion_juramento', 'Declaración Juramento', 'Declaración Bajo Juramento')}
-                  className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow-2xs transition-colors"
+                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
                 >
-                  <MessageSquare size={13} />
-                  <span>Comentar Juramento</span>
+                  <Edit3 size={13} />
+                  <span>Editar Observación</span>
                 </button>
               </div>
-            )
-          )}
-
-          {/* MODAL DE COMENTARIOS */}
-          <FieldCommentModal
-            isOpen={commentModalState.isOpen}
-            fieldId={commentModalState.fieldId}
-            fieldName={commentModalState.fieldName}
-            fieldValuePreview={commentModalState.fieldValuePreview}
-            initialComment={reportData?.comentariosCampos?.[commentModalState.fieldId]}
-            authorName={authorName}
-            onSave={(fId, fName, comm) => {
-              if (onSaveComment) onSaveComment(fId, fName, comm);
-            }}
-            onDelete={(fId) => {
-              if (onDeleteComment) onDeleteComment(fId);
-            }}
-            onClose={() => setCommentModalState(prev => ({ ...prev, isOpen: false }))}
-          />
-        </div>
+            </div>
+          )
+        ) : (
+          <div className="w-full mb-3 p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between text-xs text-amber-950 shadow-xs print:hidden">
+            <div className="flex items-center gap-2 font-bold">
+              <MessageSquare size={16} className="text-amber-700" />
+              <span>Modo Revisión: Haga clic en el botón para dejar observaciones y comentarios sobre esta declaración bajo juramento.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => openCommentModal('declaracion_juramento', 'Declaración Juramento', 'Declaración Bajo Juramento')}
+              className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 shadow-2xs transition-colors"
+            >
+              <MessageSquare size={13} />
+              <span>Comentar Juramento</span>
+            </button>
+          </div>
+        )
       )}
+
+      {/* MODAL DE COMENTARIOS */}
+      <FieldCommentModal
+        isOpen={commentModalState.isOpen}
+        fieldId={commentModalState.fieldId}
+        fieldName={commentModalState.fieldName}
+        fieldValuePreview={commentModalState.fieldValuePreview}
+        initialComment={reportData?.comentariosCampos?.[commentModalState.fieldId]}
+        authorName={authorName}
+        onSave={(fId, fName, comm) => {
+          if (onSaveComment) onSaveComment(fId, fName, comm);
+        }}
+        onDelete={(fId) => {
+          if (onDeleteComment) onDeleteComment(fId);
+        }}
+        onClose={() => setCommentModalState(prev => ({ ...prev, isOpen: false }))}
+      />
 
       {/* DOCUMENT PAGE */}
       <div className="w-full max-w-full overflow-x-auto pb-4 flex justify-start sm:justify-center">
@@ -590,7 +629,7 @@ export default function DeclaracionRentaDoc({
               />
             ) : (
               <div className="whitespace-pre-wrap">
-                {formData.senores.split('\n').map((line, idx) => (
+                {normalizeSenores(formData.senores).split('\n').map((line, idx) => (
                   <div key={idx} className={line.toUpperCase().includes('ALCALD') ? 'font-bold' : ''}>
                     {line}
                   </div>

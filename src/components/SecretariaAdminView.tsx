@@ -937,23 +937,13 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                               Aprobar
                             </button>
                           ) : (
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <button
-                                onClick={() => handleOpenCertModal(item)}
-                                className="px-2.5 py-1 bg-[#006b33] hover:bg-[#005729] text-white rounded font-semibold text-[11px] inline-flex items-center gap-1 shadow-xs"
-                                title="Ver y emitir Certificado de Supervisión oficial"
-                              >
-                                <ShieldCheck size={13} />
-                                Certificado
-                              </button>
-                              <button
-                                onClick={() => handleUpdateStatus(item.id, 'Enviado')}
-                                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-[10px]"
-                                title="Revertir para correcciones"
-                              >
-                                Reabrir
-                              </button>
-                            </div>
+                            <button
+                              onClick={() => handleUpdateStatus(item.id, 'Enviado')}
+                              className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 font-semibold text-[11px] inline-flex items-center gap-1 transition-colors"
+                              title="Revertir para correcciones"
+                            >
+                              Reabrir
+                            </button>
                           )}
                         </td>
                       </tr>

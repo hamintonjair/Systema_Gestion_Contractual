@@ -633,7 +633,7 @@ export const createDefaultDeclaracionRentaData = (report?: ReportData): Declarac
   return {
     reportId: report?.id,
     fecha: `Quibdó, ${fechaFormatted}`,
-    senores: 'ALCALDIA\nCiudad.',
+    senores: 'Señores\nALCALDIA\nCiudad.',
     nombresApellidos: report?.contratistaNombre || 'HAMINTON MENA MENA',
     cedula: report?.contratistaDocumento || '80.772.379',
     expedicionCedula: 'Bogotá D.C',

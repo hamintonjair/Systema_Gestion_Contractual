@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SoporteFiduciariaData, ReportData, createDefaultFiduciariaData, FieldComment } from '../types';
 import { extraerLetrasYNumeroDeValorPagar } from '../utils/numberToWords';
 import { supabaseService } from '../services/supabaseService';
@@ -94,6 +94,13 @@ export default function SoporteFiduciariaDoc({
     return baseData;
   };
 
+  const getIdentityKey = () => {
+    if (data?.id) return `data_${data.id}`;
+    if (reportData) return `rep_${reportData.id || ''}_${reportData.informeNro || ''}_${storageKey || ''}`;
+    return 'default';
+  };
+
+  const loadedKeyRef = useRef<string>(getIdentityKey());
   const [formData, setFormData] = useState<SoporteFiduciariaData>(getInitialData);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -101,6 +108,12 @@ export default function SoporteFiduciariaDoc({
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
 
   useEffect(() => {
+    const currentKey = getIdentityKey();
+    if (loadedKeyRef.current === currentKey && !data) {
+      return;
+    }
+    loadedKeyRef.current = currentKey;
+
     const loadData = async () => {
       let baseData: SoporteFiduciariaData | null = null;
       if (data) {
@@ -126,30 +139,32 @@ export default function SoporteFiduciariaDoc({
         return;
       }
 
-      if (reportData) {
-        const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
+      if (loadedKeyRef.current === currentKey) {
+        if (reportData) {
+          const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
 
-        setFormData({
-          ...baseData,
-          reportId: reportData.id || baseData.reportId,
-          nombresApellidos: reportData.contratistaNombre || baseData.nombresApellidos,
-          cedula: reportData.contratistaDocumento || baseData.cedula,
-          telefono: reportData.contratistaTelefono || baseData.telefono,
-          sumaTotal: `${valorNumeroFormateado},00`,
-          valorLetras: valorLetras,
-          subTotal: valorNumeroFormateado,
-          total: valorNumeroFormateado,
-          totalGeneral: valorNumeroFormateado,
-          descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
-          docSoporteNro: baseData.docSoporteNro || '',
-          fecha: createDefaultFiduciariaData(reportData).fecha,
-        });
-      } else if (baseData) {
-        setFormData(baseData);
+          setFormData({
+            ...baseData,
+            reportId: reportData.id || baseData.reportId,
+            nombresApellidos: reportData.contratistaNombre || baseData.nombresApellidos,
+            cedula: reportData.contratistaDocumento || baseData.cedula,
+            telefono: reportData.contratistaTelefono || baseData.telefono,
+            sumaTotal: `${valorNumeroFormateado},00`,
+            valorLetras: valorLetras,
+            subTotal: valorNumeroFormateado,
+            total: valorNumeroFormateado,
+            totalGeneral: valorNumeroFormateado,
+            descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
+            docSoporteNro: baseData.docSoporteNro || '',
+            fecha: createDefaultFiduciariaData(reportData).fecha,
+          });
+        } else if (baseData) {
+          setFormData(baseData);
+        }
       }
     };
     loadData();
-  }, [data, reportData, storageKey]);
+  }, [data, reportData?.id, reportData?.informeNro, storageKey]);
 
   const handleFieldChange = (field: keyof SoporteFiduciariaData, value: string) => {
     const updated = { ...formData, [field]: value };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CertificadoSupervisionData, ReportData, createDefaultCertificadoData, FieldComment } from '../types';
 import { supabaseService } from '../services/supabaseService';
 import { getDatosLiquidacionPeriodo, limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
@@ -104,7 +104,22 @@ export default function CertificadoSupervisionDoc({
   const [isExportingImage, setIsExportingImage] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
 
+  const getIdentityKey = () => {
+    if (data?.id) return `data_${data.id}`;
+    if (reportData) return `rep_${reportData.id || ''}_${reportData.informeNro || ''}_${storageKey || ''}`;
+    return 'default';
+  };
+
+  const loadedKeyRef = useRef<string>(getIdentityKey());
+
   useEffect(() => {
+    const currentKey = getIdentityKey();
+    // Only re-initialize if the report identity changed or data was explicitly passed
+    if (loadedKeyRef.current === currentKey && !data) {
+      return;
+    }
+    loadedKeyRef.current = currentKey;
+
     let baseData: CertificadoSupervisionData;
     if (data) {
       baseData = data;
@@ -144,7 +159,7 @@ export default function CertificadoSupervisionDoc({
     } else {
       setFormData(baseData);
     }
-  }, [data, reportData, storageKey]);
+  }, [data, reportData?.id, reportData?.informeNro, storageKey]);
 
   // Utilidad para parsear strings monetarios colombianos a números
   const parseColombianCurrency = (val: string | undefined): number => {

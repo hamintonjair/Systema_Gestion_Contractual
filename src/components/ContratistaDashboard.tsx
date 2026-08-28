@@ -241,6 +241,9 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     setLoadingDb(false);
   };
 
+  const reportsListRef = React.useRef(reportsList);
+  reportsListRef.current = reportsList;
+
   useEffect(() => {
     loadContractorData();
 
@@ -252,7 +255,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
       if (e.detail?.tab) {
         setActiveModuleTab(e.detail.tab);
         if (e.detail.informeNro) {
-          const found = reportsList.find(r => String(r.informeNro) === String(e.detail.informeNro));
+          const found = reportsListRef.current.find(r => String(r.informeNro) === String(e.detail.informeNro));
           if (found) {
             if (e.detail.tab === 'supervision') setSelectedCertReport(found);
             if (e.detail.tab === 'fiduciaria') setSelectedFidReport(found);
@@ -267,16 +270,14 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     window.addEventListener('informe_comments_updated', handleDataUpdate);
     window.addEventListener('notificaciones_actualizadas', handleDataUpdate);
     window.addEventListener('switch_contractor_tab', handleSwitchTab);
-    window.addEventListener('focus', handleDataUpdate);
 
     return () => {
       window.removeEventListener('storage', handleDataUpdate);
       window.removeEventListener('informe_comments_updated', handleDataUpdate);
       window.removeEventListener('notificaciones_actualizadas', handleDataUpdate);
       window.removeEventListener('switch_contractor_tab', handleSwitchTab);
-      window.removeEventListener('focus', handleDataUpdate);
     };
-  }, [user.documentoIdentidad, user.id, reportsList]);
+  }, [user.documentoIdentidad, user.id]);
 
   // Guardar / Sincronizar informe en Supabase
   const handleSaveToDatabase = async (report: ReportData) => {

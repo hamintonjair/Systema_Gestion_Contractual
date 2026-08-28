@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AutorizacionDesembolsoData, ReportData, createDefaultAutorizacionDesembolsoData, FieldComment } from '../types';
 import { extraerLetrasYNumeroDeValorPagar, formatearObjetoConPeriodo, formatFechaAnioMesDia } from '../utils/numberToWords';
 import { supabaseService } from '../services/supabaseService';
@@ -104,11 +104,24 @@ export default function AutorizacionDesembolsoDoc({
     return baseData;
   };
 
+  const getIdentityKey = () => {
+    if (data?.id) return `data_${data.id}`;
+    if (reportData) return `rep_${reportData.id || ''}_${reportData.informeNro || ''}_${storageKey || ''}`;
+    return 'default';
+  };
+
+  const loadedKeyRef = useRef<string>(getIdentityKey());
   const [formData, setFormData] = useState<AutorizacionDesembolsoData>(getInitialData);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
 
   useEffect(() => {
+    const currentKey = getIdentityKey();
+    if (loadedKeyRef.current === currentKey && !data) {
+      return;
+    }
+    loadedKeyRef.current = currentKey;
+
     const loadData = async () => {
       let baseData: AutorizacionDesembolsoData | null = null;
       if (data) {
@@ -135,50 +148,50 @@ export default function AutorizacionDesembolsoDoc({
         return;
       }
 
-      if (reportData) {
-        const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
-        const defaultObjeto = formatearObjetoConPeriodo(
-          reportData.objeto || (baseData && baseData.objeto),
-          reportData.fechaAplicacion,
-          reportData.fechaInicio,
-          reportData.fechaTerminacion,
-          reportData.fechaPresentacion,
-          reportData.periodoDesde,
-          reportData.periodoHasta
-        );
+      if (loadedKeyRef.current === currentKey) {
+        if (reportData) {
+          const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
+          const defaultObjeto = formatearObjetoConPeriodo(
+            reportData.objeto || (baseData && baseData.objeto),
+            reportData.fechaAplicacion,
+            reportData.fechaInicio,
+            reportData.fechaTerminacion,
+            reportData.fechaPresentacion,
+            reportData.periodoDesde,
+            reportData.periodoHasta
+          );
 
-        setFormData({
-          ...baseData,
-          reportId: reportData.id || baseData.reportId,
-          fechaExpedicion: formatFechaAnioMesDia(reportData.periodoHasta || reportData.fechaPresentacion) || baseData.fechaExpedicion,
-          consecutivoNro: reportData.informeNro || baseData.consecutivoNro,
-          nombre: reportData.contratistaNombre || baseData.nombre,
-          nitCc: reportData.contratistaDocumento || baseData.nitCc,
-          telefono: reportData.contratistaTelefono || baseData.telefono,
-          contratoNro: reportData.contratoNro || baseData.contratoNro,
-          conceptoNro: reportData.contratoNro || baseData.conceptoNro,
-          objeto: defaultObjeto,
-          valorNumeros: valorNumeroFormateado,
-          subtotal: valorNumeroFormateado,
-          total: valorNumeroFormateado,
-          valorLetras: valorLetras,
-        });
-      } else if (baseData) {
-        setFormData(baseData);
+          setFormData({
+            ...baseData,
+            reportId: reportData.id || baseData.reportId,
+            fechaExpedicion: formatFechaAnioMesDia(reportData.periodoHasta || reportData.fechaPresentacion) || baseData.fechaExpedicion,
+            consecutivoNro: reportData.informeNro || baseData.consecutivoNro,
+            nombre: reportData.contratistaNombre || baseData.nombre,
+            nitCc: reportData.contratistaDocumento || baseData.nitCc,
+            telefono: reportData.contratistaTelefono || baseData.telefono,
+            contratoNro: reportData.contratoNro || baseData.contratoNro,
+            conceptoNro: reportData.contratoNro || baseData.conceptoNro,
+            objeto: defaultObjeto,
+            valorNumeros: valorNumeroFormateado,
+            subtotal: valorNumeroFormateado,
+            total: valorNumeroFormateado,
+            valorLetras: valorLetras,
+          });
+        } else if (baseData) {
+          setFormData(baseData);
+        }
       }
     };
 
     loadData();
-  }, [data, reportData, storageKey]);
-
-  useEffect(() => {
-    if (onChange) {
-      onChange(formData);
-    }
-  }, [formData, onChange]);
+  }, [data, reportData?.id, reportData?.informeNro, storageKey]);
 
   const handleFieldChange = (field: keyof AutorizacionDesembolsoData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    const updated = { ...formData, [field]: value };
+    setFormData(updated);
+    if (onChange) {
+      onChange(updated);
+    }
   };
 
   const desembComment = reportData?.comentariosCampos?.['autorizacion_desembolso'] || 
@@ -391,20 +404,22 @@ export default function AutorizacionDesembolsoDoc({
   };
 
   return (
-    <div className="flex flex-col items-center w-full pb-10">
-      {isEditable && (
-        <div className="w-full max-w-[21.59cm] flex flex-col gap-3 mb-6 print:hidden">
-          <div className="flex justify-between items-center bg-slate-900 text-white p-3 rounded-xl shadow-md border border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="bg-slate-800 p-2 rounded-lg text-emerald-400">
-                <Printer size={18} />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm">Autorización de Desembolso / Documento Equivalente</h3>
-                <p className="text-xs text-slate-300 hidden sm:block">Cuenta de cobro y liquidación de retenciones</p>
-              </div>
-            </div>
-            <div className="flex gap-2 items-center">
+    <div className="w-full max-w-[21.59cm] flex flex-col gap-3 mx-auto pb-10 font-sans">
+      {/* PANEL DE ACCIONES */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-xs print:hidden">
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-[#006b33]"></span>
+          <span className="text-xs font-bold text-slate-800 uppercase tracking-wide font-sans">
+            Autorización de Desembolso / Documento Equivalente
+          </span>
+          <span className="text-[11px] font-mono bg-emerald-100 text-[#006b33] font-bold px-2 py-0.5 rounded border border-emerald-300">
+            {formData.consecutivoNro ? `Consecutivo #${formData.consecutivoNro}` : 'Consecutivo Nro. 1'}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {isEditable && (
+            <>
               <button
                 onClick={() => setIsEditing(!isEditing)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -414,8 +429,9 @@ export default function AutorizacionDesembolsoDoc({
                 }`}
               >
                 {isEditing ? <Check size={14} /> : <Edit3 size={14} />}
-                <span className="hidden sm:inline">{isEditing ? 'Modo Visualización' : 'Llenar / Editar Campos'}</span>
+                <span>{isEditing ? 'Modo Visualización' : 'Llenar / Editar Campos'}</span>
               </button>
+              
               <button
                 onClick={handleSave}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -423,18 +439,21 @@ export default function AutorizacionDesembolsoDoc({
                 }`}
               >
                 {saveSuccess ? <Check size={14} /> : <Save size={14} />}
-                <span className="hidden sm:inline">{saveSuccess ? '¡Guardado con Éxito!' : 'Guardar Datos'}</span>
+                <span>{saveSuccess ? '¡Guardado con Éxito!' : 'Guardar Datos'}</span>
               </button>
-              <button
-                onClick={handleDirectPrint}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition-colors"
-                title="Imprimir Copia Oficial"
-              >
-                <Printer size={14} />
-                <span className="hidden sm:inline">Imprimir</span>
-              </button>
-            </div>
-          </div>
+            </>
+          )}
+
+          <button
+            onClick={handleDirectPrint}
+            className="p-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl transition-all font-bold flex items-center gap-1.5 text-xs shadow-xs"
+            title="Imprimir Copia Oficial"
+          >
+            <Printer size={15} />
+            <span className="hidden sm:inline">Imprimir</span>
+          </button>
+        </div>
+      </div>
 
           {/* Guía Paso a Paso para Edición de Campos */}
           {!hideGuide && (
@@ -627,24 +646,22 @@ export default function AutorizacionDesembolsoDoc({
             )
           )}
 
-          {/* MODAL DE COMENTARIOS */}
-          <FieldCommentModal
-            isOpen={commentModalState.isOpen}
-            fieldId={commentModalState.fieldId}
-            fieldName={commentModalState.fieldName}
-            fieldValuePreview={commentModalState.fieldValuePreview}
-            initialComment={reportData?.comentariosCampos?.[commentModalState.fieldId]}
-            authorName={authorName}
-            onSave={(fId, fName, comm) => {
-              if (onSaveComment) onSaveComment(fId, fName, comm);
-            }}
-            onDelete={(fId) => {
-              if (onDeleteComment) onDeleteComment(fId);
-            }}
-            onClose={() => setCommentModalState(prev => ({ ...prev, isOpen: false }))}
-          />
-        </div>
-      )}
+      {/* MODAL DE COMENTARIOS */}
+      <FieldCommentModal
+        isOpen={commentModalState.isOpen}
+        fieldId={commentModalState.fieldId}
+        fieldName={commentModalState.fieldName}
+        fieldValuePreview={commentModalState.fieldValuePreview}
+        initialComment={reportData?.comentariosCampos?.[commentModalState.fieldId]}
+        authorName={authorName}
+        onSave={(fId, fName, comm) => {
+          if (onSaveComment) onSaveComment(fId, fName, comm);
+        }}
+        onDelete={(fId) => {
+          if (onDeleteComment) onDeleteComment(fId);
+        }}
+        onClose={() => setCommentModalState(prev => ({ ...prev, isOpen: false }))}
+      />
 
       {/* CONTENIDO DEL DOCUMENTO */}
       <div className="w-full max-w-full overflow-x-auto pb-4 flex justify-start sm:justify-center">
