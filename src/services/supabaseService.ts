@@ -1840,26 +1840,29 @@ export const supabaseService = {
       console.warn('Error saving comments to Supabase:', e);
     }
 
-    // Disparar notificación automática si el informe fue devuelto con observaciones
-    if (contractorDoc && newStatus === 'Devuelto') {
-      const obsCount = Object.keys(comments).length;
-      const certComments = Object.values(comments).filter(c => {
+    // Disparar notificación automática instantánea para contratista o supervisora
+    const allCommentsList = Object.values(comments || {});
+    const pendingComments = allCommentsList.filter(c => !c.corregido);
+    const fixedComments = allCommentsList.filter(c => Boolean(c.corregido));
+
+    // 1. Notificación para el Contratista si hay observaciones pendientes
+    if (contractorDoc && (newStatus === 'Devuelto' || pendingComments.length > 0)) {
+      const docNamesSet = new Set<string>();
+      pendingComments.forEach(c => {
         const fn = (c.nombreCampo || c.fieldName || '').toLowerCase();
         const fid = (c.campoId || '').toLowerCase();
-        return fid === 'certificado_supervision' || fid.startsWith('cert_') || fn.includes('certificado') ||
-               fid === 'soporte_fiduciaria' || fid.startsWith('fid_') || fn.includes('fiduciaria') ||
-               fid === 'declaracion_juramento' || fid.startsWith('dec_') || fn.includes('declaración') || fn.includes('juramento') ||
-               fid === 'autorizacion_desembolso' || fid.startsWith('desemb_') || fn.includes('desembolso');
+        if (fid === 'certificado_supervision' || fn.includes('certificado de supervisión')) docNamesSet.add('Certificado de Supervisión');
+        else if (fid === 'soporte_fiduciaria' || fn.includes('fiduciaria') || fn.includes('pagos')) docNamesSet.add('Soporte Fiduciaria / Pagos');
+        else if (fid === 'declaracion_juramento' || fn.includes('declaración') || fn.includes('juramento')) docNamesSet.add('Declaración Bajo Juramento');
+        else if (fid === 'autorizacion_desembolso' || fn.includes('desembolso')) docNamesSet.add('Autorización de Desembolso');
+        else docNamesSet.add('Informe Mensual');
       });
 
-      let titulo = `Informe #${informeNro} Devuelto para Corrección`;
-      let mensaje = `La supervisión ha devuelto el Informe #${informeNro} con ${obsCount} observación(es) por subsanar.`;
+      const docNames = Array.from(docNamesSet).join(', ') || 'Informe Mensual';
+      const firstComm = pendingComments[0]?.comentario || 'Verifique las observaciones en el documento.';
       
-      if (certComments.length > 0) {
-        const names = Array.from(new Set(certComments.map(c => c.nombreCampo || c.fieldName || 'Certificado'))).join(', ');
-        titulo = `Observación en ${names} (Informe #${informeNro})`;
-        mensaje = `La supervisión ha registrado observaciones en ${names} del Informe #${informeNro}: "${certComments[0].comentario}".`;
-      }
+      const titulo = `⚠️ Observación en ${docNames} (Informe #${informeNro})`;
+      const mensaje = `La supervisión ha registrado observaciones en ${docNames} del Informe #${informeNro}: "${firstComm}". Por favor ingrese para realizar la corrección.`;
 
       this.crearNotificacion({
         user_id: contractorDoc,
@@ -1869,7 +1872,40 @@ export const supabaseService = {
         leida: false,
         informe_nro: informeNro,
         report_id: isUuid(reportId) ? reportId : undefined
-      }).catch(err => console.warn('Error creating notification:', err));
+      }).catch(err => console.warn('Error creating contractor notification:', err));
+    }
+
+    // 2. Notificación para la Supervisora si el contratista marcó observaciones como SUBSANADAS
+    if (fixedComments.length > 0) {
+      const fixedDocsSet = new Set<string>();
+      fixedComments.forEach(c => {
+        const fn = (c.nombreCampo || c.fieldName || '').toLowerCase();
+        const fid = (c.campoId || '').toLowerCase();
+        if (fid === 'certificado_supervision' || fn.includes('certificado de supervisión')) fixedDocsSet.add('Certificado de Supervisión');
+        else if (fid === 'soporte_fiduciaria' || fn.includes('fiduciaria') || fn.includes('pagos')) fixedDocsSet.add('Soporte Fiduciaria');
+        else if (fid === 'declaracion_juramento' || fn.includes('declaración') || fn.includes('juramento')) fixedDocsSet.add('Declaración Bajo Juramento');
+        else if (fid === 'autorizacion_desembolso' || fn.includes('desembolso')) fixedDocsSet.add('Autorización de Desembolso');
+        else fixedDocsSet.add('Informe Mensual');
+      });
+
+      const fixedNames = Array.from(fixedDocsSet).join(', ') || 'Documento';
+      const titulo = `🟢 Subsanación Realizada en ${fixedNames} (Informe #${informeNro})`;
+      const mensaje = `El contratista ha corregido y marcado como subsanada la observación en ${fixedNames} del Informe #${informeNro}. Por favor ingrese a validar.`;
+
+      this.crearNotificacion({
+        user_id: 'supervisor',
+        titulo,
+        mensaje,
+        tipo: 'devolucion',
+        leida: false,
+        informe_nro: informeNro,
+        report_id: isUuid(reportId) ? reportId : undefined
+      }).catch(err => console.warn('Error creating supervisor notification:', err));
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('notificaciones_actualizadas'));
+      window.dispatchEvent(new CustomEvent('informe_comments_updated'));
     }
 
     return true;

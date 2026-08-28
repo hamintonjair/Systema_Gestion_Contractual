@@ -1368,9 +1368,19 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenWhatsAppModal(inspectingInforme)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer border border-emerald-400/30"
+                  title="Enviar notificación oficial por WhatsApp al contratista (incluye observaciones de informes y certificados)"
+                >
+                  <MessageSquare size={14} />
+                  <span className="hidden sm:inline">Notificar por WhatsApp</span>
+                </button>
+
                 <button 
                   onClick={() => setInspectingInforme(null)}
-                  className="p-1.5 text-gray-400 hover:text-white rounded-lg"
+                  className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 text-sm font-bold transition-colors"
                   title="Cerrar visor"
                 >
                   ✕
