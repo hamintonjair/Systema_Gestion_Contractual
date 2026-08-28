@@ -552,6 +552,144 @@ export const supabaseService = {
     return { success: true, secretaria: newSec, admin: newAdmin };
   },
 
+  // 4. Actualizar Secretaría y Administrador Oficial
+  async updateSecretariaWithAdmin(
+    secId: string,
+    secData: { nombre: string; codigo: string; nit: string },
+    adminData: { id?: string; nombreCompleto: string; documentoIdentidad: string; email: string; password?: string; cargo?: string; telefono?: string }
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const trimmedNombre = secData.nombre.trim();
+      const trimmedCodigo = secData.codigo.trim();
+      const trimmedNit = secData.nit.trim();
+
+      // 1. Actualizar tabla sec_secretarias en Supabase si es UUID
+      if (isUuid(secId)) {
+        await supabase
+          .from('sec_secretarias')
+          .update({
+            nombre: trimmedNombre,
+            codigo: trimmedCodigo,
+            nit: trimmedNit,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', secId);
+      }
+
+      // 2. Actualizar almacenamiento local de secretarías
+      const storedSecs = localStorage.getItem(STORAGE_SECRETARIAS_KEY);
+      if (storedSecs) {
+        let secs: Secretaria[] = JSON.parse(storedSecs);
+        secs = secs.map(s => s.id === secId || s.codigo === trimmedCodigo ? { ...s, nombre: trimmedNombre, codigo: trimmedCodigo, nit: trimmedNit } : s);
+        localStorage.setItem(STORAGE_SECRETARIAS_KEY, JSON.stringify(secs));
+      }
+
+      // 3. Actualizar administrador en Supabase
+      const adminDoc = adminData.documentoIdentidad.trim().replace(/\./g, '');
+      const adminEmail = adminData.email.trim();
+      const adminPass = adminData.password?.trim();
+
+      if (adminData.id && isUuid(adminData.id)) {
+        await supabase
+          .from('profiles')
+          .update({
+            nombre_completo: adminData.nombreCompleto.trim().toUpperCase(),
+            documento_identidad: adminDoc,
+            email: adminEmail,
+            cargo: adminData.cargo?.trim() || 'Secretaria de Despacho / Supervisora',
+            telefono: adminData.telefono?.trim() || '3100000000',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', adminData.id);
+      }
+
+      if (adminPass) {
+        this.saveUserPassword(adminEmail, adminPass);
+        this.saveUserPassword(adminDoc, adminPass);
+      }
+
+      // 4. Actualizar almacenamiento local de usuarios
+      const storedUsers = localStorage.getItem(STORAGE_USERS_KEY);
+      if (storedUsers) {
+        let customUsers: AuthUser[] = JSON.parse(storedUsers);
+        customUsers = customUsers.map(u => {
+          if (
+            (adminData.id && u.id === adminData.id) || 
+            (u.role === 'secretaria_admin' && (u.secretariaId === secId || u.secretariaCodigo === trimmedCodigo))
+          ) {
+            return {
+              ...u,
+              nombreCompleto: adminData.nombreCompleto.trim().toUpperCase(),
+              documentoIdentidad: adminDoc,
+              email: adminEmail,
+              cargo: adminData.cargo?.trim() || u.cargo,
+              telefono: adminData.telefono?.trim() || u.telefono,
+              password: adminPass || u.password,
+              secretariaNombre: trimmedNombre,
+              secretariaCodigo: trimmedCodigo
+            };
+          }
+          return u;
+        });
+        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(customUsers));
+      }
+
+      return { success: true };
+    } catch (e: any) {
+      console.error('Error al actualizar secretaria:', e);
+      return { success: false, message: e.message || 'Error al actualizar secretaría' };
+    }
+  },
+
+  // 5. Eliminar Secretaría de Despacho (Solo si no tiene registros vinculados)
+  async deleteSecretaria(secId: string, secCodigo: string, secNombre: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const allUsers = await this.getAllUsers();
+      const linkedContractors = allUsers.filter(
+        u => u.role === 'contratista' && (u.secretariaId === secId || u.secretariaCodigo === secCodigo || u.secretariaNombre?.toLowerCase() === secNombre.toLowerCase())
+      );
+
+      const allReports = await this.getInformes();
+      const linkedReports = allReports.filter(
+        r => r.secretariaId === secId || r.secretariaNombre?.toLowerCase() === secNombre.toLowerCase()
+      );
+
+      if (linkedContractors.length > 0 || linkedReports.length > 0) {
+        return {
+          success: false,
+          message: `No se puede eliminar la dependencia. Tiene ${linkedContractors.length} contratista(s) y ${linkedReports.length} informe(s) registrados.`
+        };
+      }
+
+      // Eliminar de Supabase si aplica
+      if (isUuid(secId)) {
+        await supabase.from('sec_secretarias').delete().eq('id', secId);
+        await supabase.from('profiles').delete().eq('secretaria_id', secId);
+      }
+
+      // Actualizar local storage secretarias
+      const storedSecs = localStorage.getItem(STORAGE_SECRETARIAS_KEY);
+      if (storedSecs) {
+        let secs: Secretaria[] = JSON.parse(storedSecs);
+        secs = secs.filter(s => s.id !== secId && s.codigo !== secCodigo);
+        localStorage.setItem(STORAGE_SECRETARIAS_KEY, JSON.stringify(secs));
+      }
+
+      // Actualizar local storage usuarios (remover administrador asignado a esta secretaría)
+      const storedUsers = localStorage.getItem(STORAGE_USERS_KEY);
+      if (storedUsers) {
+        let customUsers: AuthUser[] = JSON.parse(storedUsers);
+        customUsers = customUsers.filter(u => !(u.role === 'secretaria_admin' && (u.secretariaId === secId || u.secretariaCodigo === secCodigo)));
+        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(customUsers));
+      }
+
+      return { success: true, message: 'Dependencia eliminada correctamente.' };
+    } catch (e: any) {
+      console.error('Error al eliminar secretaría:', e);
+      return { success: false, message: e.message || 'Error al eliminar la dependencia.' };
+    }
+  },
+
   // 4. Obtener Contratistas en Tiempo Real de Supabase
   async getContractors(secretariaId?: string): Promise<AuthUser[]> {
     try {

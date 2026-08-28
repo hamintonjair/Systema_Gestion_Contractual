@@ -301,12 +301,18 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
       )
       .subscribe();
 
+    // Polling de respaldo en segundo plano (cada 3 segundos) para sincronización instantánea
+    const pollInterval = setInterval(() => {
+      handleDataUpdate();
+    }, 3000);
+
     return () => {
       window.removeEventListener('storage', handleDataUpdate);
       window.removeEventListener('informe_comments_updated', handleDataUpdate);
       window.removeEventListener('notificaciones_actualizadas', handleDataUpdate);
       window.removeEventListener('switch_contractor_tab', handleSwitchTab);
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
     };
   }, [user.documentoIdentidad, user.id]);
 
