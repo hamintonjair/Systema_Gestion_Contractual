@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, Obligacion, Notificacion } from '../types';
+import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, Obligacion, Notificacion, extractContratoNroOnly } from '../types';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
 import { isMainReportComment } from '../utils/commentUtils';
 
@@ -1163,7 +1163,7 @@ export const supabaseService = {
       }
 
       const validContratistaId = (contratistaId && isUuid(contratistaId)) ? contratistaId : null;
-      const contratoNro = report.contratoNro || user?.contratoNro || '015';
+      const contratoNro = extractContratoNroOnly(report.contratoNro) || extractContratoNroOnly(user?.contratoNro) || '590';
 
       // 2. Normalizar valor numérico y fechas para PostgreSQL
       const cleanNumeric = (val?: string | number): number => {
@@ -1708,8 +1708,10 @@ export const supabaseService = {
           return parseInt(cleaned, 10) || 20029800;
         };
 
+        const cleanContractNroVal = extractContratoNroOnly(report.contratoNro);
         try {
           await supabase.from('contratos').update({
+            ...(cleanContractNroVal ? { contrato_nro: cleanContractNroVal } : {}),
             fecha_inicio: parseDateForContract(report.fechaInicio, '2026-01-15') || '2026-01-15',
             fecha_terminacion: parseDateForContract(report.fechaTerminacion, '2026-07-14') || '2026-07-14',
             plazo_meses: parsePlazoToMeses(report.plazo),

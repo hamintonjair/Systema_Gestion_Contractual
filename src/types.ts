@@ -1,5 +1,12 @@
 import { extraerLetrasYNumeroDeValorPagar, formatearObjetoConPeriodo, formatFechaAnioMesDia, formatFechaFiduciaria } from './utils/numberToWords';
 
+export const extractContratoNroOnly = (str?: string): string => {
+  if (!str) return '';
+  const clean = str.trim();
+  const firstPart = clean.split(/[\s\-\/]+/)[0];
+  return firstPart.replace(/\D/g, '');
+};
+
 export type UserRole = 'super_admin' | 'secretaria_admin' | 'contratista';
 
 export type EstadoInforme = 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Devuelto';
@@ -349,22 +356,52 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
   const valorTotalAPagarCalculado = quitarDecimales(autoLiq?.valorTotalAPagar || valorNumStr);
   const saldoPorPagarCalculado = quitarDecimales(autoLiq?.saldoPorPagar || '18.249.373');
 
-  let mesCalculado = 'julio';
-  if (rep.fechaAplicacion) {
-    const parts = rep.fechaAplicacion.trim().split(' ');
-    if (parts.length > 0) {
-      mesCalculado = parts[0].toLowerCase();
+  const MONTH_NAMES = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+
+  let mesCalculado = 'agosto';
+  let diaCalculado = '31';
+  let anoCalculado = '2026';
+
+  const targetDateStr = rep.fechaPresentacion || rep.periodoHasta || periodoHastaCalculado;
+  if (targetDateStr) {
+    const cleanStr = targetDateStr.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+      const [y, m, d] = cleanStr.split('-');
+      anoCalculado = y;
+      const mIdx = parseInt(m, 10) - 1;
+      if (mIdx >= 0 && mIdx < 12) mesCalculado = MONTH_NAMES[mIdx];
+      diaCalculado = String(parseInt(d, 10));
+    } else if (/^\d{1,2}[/-]\d{1,2}[/-]\d{4}$/.test(cleanStr)) {
+      const [d, m, y] = cleanStr.split(/[/-]/);
+      anoCalculado = y;
+      const mIdx = parseInt(m, 10) - 1;
+      if (mIdx >= 0 && mIdx < 12) mesCalculado = MONTH_NAMES[mIdx];
+      diaCalculado = String(parseInt(d, 10));
     }
+  } else if (rep.fechaAplicacion) {
+    const appLower = rep.fechaAplicacion.trim().toLowerCase();
+    for (const mName of MONTH_NAMES) {
+      if (appLower.includes(mName)) {
+        mesCalculado = mName;
+        break;
+      }
+    }
+    const yearMatch = appLower.match(/\b(20\d{2})\b/);
+    if (yearMatch) anoCalculado = yearMatch[1];
   }
 
-  let diaCalculado = '21';
-  let anoCalculado = '2026';
-  if (periodoHastaCalculado) {
-    const pParts = periodoHastaCalculado.split('/');
-    if (pParts.length >= 3) {
-      diaCalculado = pParts[0];
-      anoCalculado = pParts[2];
-    }
+  let rawContrato = rep.contratoNro || '590';
+  let contratoNumOnly = extractContratoNroOnly(rawContrato) || '590';
+  let contratoYear = '2026';
+  if (rawContrato.includes('-')) {
+    const parts = rawContrato.split('-');
+    if (parts[1] && parts[1].trim().length === 4) contratoYear = parts[1].trim();
+  } else if (rawContrato.includes('/')) {
+    const parts = rawContrato.split('/');
+    if (parts[1] && parts[1].trim().length === 4) contratoYear = parts[1].trim();
   }
 
   return {
@@ -372,8 +409,8 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
     informeNro: rep.informeNro || '1',
     contratistaNombre: rep.contratistaNombre || 'HAMINTON MENA MENA',
     tipoContrato: 'PRESTACION DE SERVICIOS',
-    contratoNro: rep.contratoNro || '025',
-    contratoAno: '2026',
+    contratoNro: contratoNumOnly,
+    contratoAno: contratoYear,
     tipoDocumento: 'C.C.',
     contratistaDocumento: rep.contratistaDocumento || '80.772.379',
     supervisorNombre: rep.supervisorNombre || 'Diana Andrea Mosquera Garcia',
@@ -711,8 +748,8 @@ export const createDefaultAutorizacionDesembolsoData = (report?: ReportData): Au
     direccion: 'BARRIO BUENOS AIRES',
     telefono: rep?.contratistaTelefono || '3124943527',
     concepto: 'PRESTACION DE SERVICIOS',
-    contratoNro: rep?.contratoNro || '283',
-    conceptoNro: rep?.contratoNro || '283',
+    contratoNro: rep?.contratoNro ? rep.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
+    conceptoNro: rep?.contratoNro ? rep.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
     objeto: objetoConPeriodo,
     valorNumeros: valorNumeroFormateado,
     subtotal: valorNumeroFormateado,

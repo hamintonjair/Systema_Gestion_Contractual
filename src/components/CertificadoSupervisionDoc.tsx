@@ -143,12 +143,14 @@ export default function CertificadoSupervisionDoc({
     }
 
     if (reportData) {
+      const liveDefaults = createDefaultCertificadoData(reportData);
       setFormData({
         ...baseData,
         reportId: reportData.id || baseData.reportId,
         contratistaNombre: reportData.contratistaNombre || baseData.contratistaNombre,
         contratistaDocumento: reportData.contratistaDocumento || baseData.contratistaDocumento,
-        contratoNro: reportData.contratoNro || baseData.contratoNro,
+        contratoNro: liveDefaults.contratoNro || baseData.contratoNro,
+        contratoAno: liveDefaults.contratoAno || baseData.contratoAno,
         supervisorNombre: reportData.supervisorNombre || baseData.supervisorNombre,
         objeto: reportData.objeto || baseData.objeto,
         cdpNro: reportData.cdpNro || baseData.cdpNro,
@@ -156,8 +158,12 @@ export default function CertificadoSupervisionDoc({
         fechaInicio: reportData.fechaInicio || baseData.fechaInicio,
         fechaTerminacion: reportData.fechaTerminacion || baseData.fechaTerminacion,
         valorInicial: reportData.valorContrato || baseData.valorInicial,
+        valorTotal: reportData.valorContrato || baseData.valorTotal,
         periodoDesde: reportData.periodoDesde || baseData.periodoDesde,
         periodoHasta: reportData.periodoHasta || baseData.periodoHasta,
+        expedicionDia: liveDefaults.expedicionDia,
+        expedicionMes: liveDefaults.expedicionMes,
+        expedicionAno: liveDefaults.expedicionAno,
       });
     } else {
       setFormData(baseData);
@@ -241,6 +247,10 @@ export default function CertificadoSupervisionDoc({
   const handleFieldChange = (field: keyof CertificadoSupervisionData, value: string) => {
     let formattedVal = value;
     
+    if (field === 'contratoNro') {
+      formattedVal = value.replace(/\D/g, '');
+    }
+
     // Si es adición y el usuario digita números, formatear con separadores de miles
     if (['adicion1', 'adicion2', 'adicion3'].includes(field)) {
       if (value && value !== '-' && /^\d[\d.]*$/.test(value)) {

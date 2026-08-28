@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReportPreview from './ReportPreview';
 import { createPortal } from 'react-dom';
-import { Obligacion, ReportData, Anexo, EstadoInforme, FieldComment } from '../types';
+import { Obligacion, ReportData, Anexo, EstadoInforme, FieldComment, extractContratoNroOnly } from '../types';
 import { 
   Plus, 
   Trash2, 
@@ -114,6 +114,8 @@ export default function ReportEditor({
     let finalValue = value;
     if (field === 'fechaAplicacion' && typeof value === 'string') {
       finalValue = value.toUpperCase();
+    } else if (field === 'contratoNro' && typeof value === 'string') {
+      finalValue = extractContratoNroOnly(value);
     }
 
     const updatedComms = markCommentCorrected(field as string);
@@ -1016,8 +1018,10 @@ export default function ReportEditor({
                   <label className="block font-medium text-gray-700 mb-1">Contrato Nro.</label>
                   <input
                     type="text"
-                    value={data.contratoNro}
+                    inputMode="numeric"
+                    value={extractContratoNroOnly(data.contratoNro)}
                     onChange={(e) => handleChange('contratoNro', e.target.value)}
+                    placeholder="Ej. 590"
                     className={`w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 font-bold ${getFieldHighlightClass('contratoNro')}`}
                   />
                   {renderCommentAlert('contratoNro')}

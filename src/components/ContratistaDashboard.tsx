@@ -115,7 +115,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     if (lastReport) {
       // SEGUNDO INFORME EN ADELANTE: Carga automáticamente todo del último informe guardado
       setNewValorMensual(lastReport.valorMensual || user.valorMensual || '');
-      setNewContratoNro(lastReport.contratoNro || user.contratoNro || '');
+      setNewContratoNro((lastReport.contratoNro || user.contratoNro || '').replace(/\D/g, ''));
       setNewObjeto(lastReport.objeto || user.objetoContrato || '');
       setNewValorContrato(lastReport.valorContrato || user.valorContrato || '');
       setNewCdpNro(lastReport.cdpNro || user.cdpNro || '');
@@ -132,7 +132,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
       // PRIMER INFORME:
       // Campos de contrato específicos: Se cargan únicamente si existen en el perfil 'user', de lo contrario van en blanco ("")
       setNewValorMensual(user.valorMensual || '');
-      setNewContratoNro(user.contratoNro || '');
+      setNewContratoNro((user.contratoNro || '').replace(/\D/g, ''));
       setNewObjeto(user.objetoContrato || '');
       setNewValorContrato(user.valorContrato || '');
       setNewCdpNro(user.cdpNro || '');
@@ -2045,10 +2045,11 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                       <label className="block font-bold text-slate-700 mb-1">Número de Contrato *</label>
                       <input
                         type="text"
+                        inputMode="numeric"
                         required
-                        value={newContratoNro}
-                        onChange={(e) => setNewContratoNro(e.target.value)}
-                        placeholder="Ej. 015 de 2026"
+                        value={newContratoNro ? newContratoNro.replace(/\D/g, '') : ''}
+                        onChange={(e) => setNewContratoNro(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Ej. 590"
                         className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>

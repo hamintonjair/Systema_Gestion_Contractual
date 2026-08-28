@@ -211,7 +211,7 @@ export default function Navbar({
                     {currentUser.contratoNro && (
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="text-slate-400 font-medium">Contrato Activo:</span>
-                        <span className="font-semibold text-emerald-800">#{currentUser.contratoNro} de 2026</span>
+                        <span className="font-semibold text-emerald-800">#{currentUser.contratoNro.replace(/\D/g, '')} de 2026</span>
                       </div>
                     )}
                   </div>

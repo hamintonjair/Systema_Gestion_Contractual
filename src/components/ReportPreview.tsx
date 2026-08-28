@@ -464,8 +464,8 @@ export default function ReportPreview({
                     {renderReviewedTd(
                       'contratoNro',
                       'Número de Contrato',
-                      data.contratoNro,
-                      <span className="font-bold text-xs">{data.contratoNro}</span>,
+                      data.contratoNro ? data.contratoNro.replace(/\D/g, '') : '',
+                      <span className="font-bold text-xs">{data.contratoNro ? data.contratoNro.replace(/\D/g, '') : ''}</span>,
                       '',
                       5
                     )}

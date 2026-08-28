@@ -938,15 +938,17 @@ export default function AutorizacionDesembolsoDoc({
                   {isEditing ? (
                     <input 
                       type="text" 
-                      value={formData.contratoNro || (formData.conceptoNro && formData.conceptoNro !== 'PRESTACION DE SERVICIOS' ? formData.conceptoNro : '283')} 
+                      inputMode="numeric"
+                      value={(formData.contratoNro || formData.conceptoNro || '590').replace(/\D/g, '')} 
                       onChange={(e) => {
-                        handleFieldChange('contratoNro', e.target.value);
-                        handleFieldChange('conceptoNro', e.target.value);
+                        const cleanVal = e.target.value.replace(/\D/g, '');
+                        handleFieldChange('contratoNro', cleanVal);
+                        handleFieldChange('conceptoNro', cleanVal);
                       }} 
                       className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11px]" 
                     />
                   ) : (
-                    <span>{formData.contratoNro || (formData.conceptoNro && formData.conceptoNro !== 'PRESTACION DE SERVICIOS' ? formData.conceptoNro : '283')}</span>
+                    <span>{(formData.contratoNro || formData.conceptoNro || '590').replace(/\D/g, '')}</span>
                   )}
                 </div>
               </div>
