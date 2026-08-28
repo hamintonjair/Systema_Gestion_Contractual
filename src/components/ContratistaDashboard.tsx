@@ -918,13 +918,19 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
               <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-amber-400 text-amber-950 animate-pulse border border-amber-500 shadow-xs">
                 ⚠️ {pendingCommentsByModule.supervision.length} Obs
               </span>
-            ) : (
+            ) : totalAprobados > 0 ? (
               <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                 activeModuleTab === 'supervision' ? 'bg-emerald-800 text-emerald-100' : 'bg-emerald-100 text-emerald-800'
               }`}>
-                {totalAprobados > 0 ? `${totalAprobados} Listo` : 'En trámite'}
+                {totalAprobados} Listo
               </span>
-            )}
+            ) : reportsList.some(r => r.estado === 'Enviado') ? (
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                activeModuleTab === 'supervision' ? 'bg-emerald-800 text-emerald-100' : 'bg-amber-100 text-amber-800'
+              }`}>
+                En trámite
+              </span>
+            ) : null}
           </button>
 
           <button
