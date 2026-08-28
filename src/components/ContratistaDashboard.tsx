@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { AuthUser, ReportData, EstadoInforme, initialMockData, Obligacion, CertificadoSupervisionData, createDefaultCertificadoData, SoporteFiduciariaData, createDefaultFiduciariaData } from '../types';
 import { formatColombianCurrency, formatFechaAplicacion } from '../utils/formatters';
 import { supabaseService } from '../services/supabaseService';
+import { supabase } from '../lib/supabase';
+import { isMainReportComment, isCertificateComment } from '../utils/commentUtils';
 import CertificadoSupervisionDoc from './CertificadoSupervisionDoc';
 import SoporteFiduciariaDoc from './SoporteFiduciariaDoc';
 import DeclaracionRentaDoc from './DeclaracionRentaDoc';
@@ -222,7 +224,11 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           if (rep.estado === 'Borrador') {
             rep.comentariosCampos = {};
           } else if (rep.comentariosCampos && Object.keys(rep.comentariosCampos).length > 0 && rep.estado !== 'Aprobado') {
-            rep.estado = 'Devuelto';
+            const comms = Object.values(rep.comentariosCampos);
+            const pendingMain = comms.filter((c: any) => !c.corregido && isMainReportComment(c));
+            if (pendingMain.length > 0) {
+              rep.estado = 'Devuelto';
+            }
           }
           return rep;
         });
@@ -236,6 +242,11 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     const { validReports } = await supabaseService.cleanupExpiredReports(finalReports, user.documentoIdentidad);
 
     setReportsList(validReports);
+    setSelectedCertReport(prev => prev ? validReports.find(r => String(r.informeNro) === String(prev.informeNro)) || prev : null);
+    setSelectedFidReport(prev => prev ? validReports.find(r => String(r.informeNro) === String(prev.informeNro)) || prev : null);
+    setSelectedJuramentoReport(prev => prev ? validReports.find(r => String(r.informeNro) === String(prev.informeNro)) || prev : null);
+    setSelectedDesembolsoReport(prev => prev ? validReports.find(r => String(r.informeNro) === String(prev.informeNro)) || prev : null);
+
     const maxNro = Math.max(...validReports.map(r => parseInt(r.informeNro || '0', 10)), 0);
     setNewInformeNro((maxNro + 1).toString());
     setLoadingDb(false);
@@ -271,11 +282,31 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     window.addEventListener('notificaciones_actualizadas', handleDataUpdate);
     window.addEventListener('switch_contractor_tab', handleSwitchTab);
 
+    // Suscripción Realtime a cambios en informes y notificaciones para actualización instantánea
+    const channel = supabase
+      .channel(`contractor_realtime_${user.documentoIdentidad || 'guest'}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'informes_mensuales' },
+        () => {
+          handleDataUpdate();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notificaciones' },
+        () => {
+          handleDataUpdate();
+        }
+      )
+      .subscribe();
+
     return () => {
       window.removeEventListener('storage', handleDataUpdate);
       window.removeEventListener('informe_comments_updated', handleDataUpdate);
       window.removeEventListener('notificaciones_actualizadas', handleDataUpdate);
       window.removeEventListener('switch_contractor_tab', handleSwitchTab);
+      supabase.removeChannel(channel);
     };
   }, [user.documentoIdentidad, user.id]);
 
@@ -600,12 +631,13 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
   const totalNotificationsUnseen = totalAprobadosUnseen + allUnseenObservations.length;
   
-  // Informes devueltos con observaciones PENDIENTES por corregir
+  // Informes devueltos con observaciones PENDIENTES directamente en el informe principal (1) por corregir
   const reportsWithPendingObs = reportsList.filter(r => {
     if (r.estado === 'Aprobado') return false;
     const comms = Object.values(r.comentariosCampos || {});
+    const pendingMain = comms.filter((c: any) => !c.corregido && isMainReportComment(c));
     if (comms.length === 0) return r.estado === 'Devuelto';
-    return comms.some((c: any) => !c.corregido);
+    return pendingMain.length > 0;
   });
 
   // Informes devueltos cuyas observaciones ya fueron TODAS corregidas por el contratista
@@ -1205,7 +1237,8 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                             const comms = report.comentariosCampos || {};
                             const commList = Object.values(comms);
                             const pendingComms = commList.filter((c: any) => !c.corregido);
-                            const isDevuelto = report.estado === 'Devuelto' || (commList.length > 0 && report.estado !== 'Aprobado');
+                            const pendingMainComms = pendingComms.filter(isMainReportComment);
+                            const isDevuelto = report.estado === 'Devuelto' || (pendingMainComms.length > 0 && report.estado !== 'Aprobado');
                             const allCorregidos = commList.length > 0 && pendingComms.length === 0;
 
                             if (report.estado === 'Aprobado') {
@@ -1229,7 +1262,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                               return (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-950 border border-amber-400 font-extrabold shadow-xs">
                                   <AlertTriangle size={11} className="text-amber-800 shrink-0" />
-                                  Devuelto ({pendingComms.length} obs. pendiente{pendingComms.length > 1 ? 's' : ''})
+                                  Devuelto ({pendingMainComms.length} obs. pendiente{pendingMainComms.length > 1 ? 's' : ''})
                                 </span>
                               );
                             }
@@ -1284,14 +1317,14 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                           Fecha de Presentación: {report.fechaPresentacion} • Radicación: {report.secretariaNombre}
                         </p>
 
-                        {/* Listado de Casillas Observadas por la Supervisión (Solo PENDIENTES) */}
-                        {report.comentariosCampos && Object.entries(report.comentariosCampos).filter(([_, c]) => !(c as any).corregido).length > 0 && (
+                        {/* Listado de Casillas Observadas por la Supervisión (Solo PENDIENTES del informe principal) */}
+                        {report.comentariosCampos && Object.entries(report.comentariosCampos).filter(([_, c]) => !(c as any).corregido && isMainReportComment(c)).length > 0 && (
                           <div className="pt-1.5 flex items-center gap-1.5 flex-wrap">
                             <span className="text-[10px] font-black uppercase text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">
                               Casillas con observación pendiente:
                             </span>
                             {Object.entries(report.comentariosCampos)
-                              .filter(([_, c]) => !(c as any).corregido)
+                              .filter(([_, c]) => !(c as any).corregido && isMainReportComment(c))
                               .map(([key, comm]) => {
                                 const c = comm as any;
                                 const label = c.nombreCampo || c.fieldName || key;
@@ -1328,8 +1361,9 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                         {/* 1. Botón Editar / Consultar según el estado */}
                         {(() => {
                           const comms = Object.values(report.comentariosCampos || {});
+                          const pendingMainComms = comms.filter((c: any) => !c.corregido && isMainReportComment(c));
                           const hasPendingObs = report.estado !== 'Aprobado' && (
-                            (comms.length > 0 && comms.some((c: any) => !c.corregido)) ||
+                            (pendingMainComms.length > 0) ||
                             (comms.length === 0 && report.estado === 'Devuelto')
                           );
 

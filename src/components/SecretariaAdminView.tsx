@@ -3,6 +3,7 @@ import { AuthUser, InformeSummary, EstadoInforme, ReportData, FieldComment, crea
 import { supabaseService } from '../services/supabaseService';
 import { supabase } from '../lib/supabase';
 import { formatFechaAplicacion, formatDateSlash } from '../utils/formatters';
+import { isMainReportComment } from '../utils/commentUtils';
 import CertificadoSupervisionDoc from './CertificadoSupervisionDoc';
 import SoporteFiduciariaDoc from './SoporteFiduciariaDoc';
 import DeclaracionRentaDoc from './DeclaracionRentaDoc';
@@ -272,34 +273,55 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     setLoading(false);
   };
 
+  const inspectingInformeRef = React.useRef(inspectingInforme);
+  inspectingInformeRef.current = inspectingInforme;
+
   useEffect(() => {
     loadData();
 
-    // 1. Escuchar evento personalizado en tiempo real cuando el contratista radica o reenvía
-    const handleRadicadoEvent = () => {
+    const handleCommentsUpdate = async () => {
       loadData();
+      if (inspectingInformeRef.current?.id) {
+        const fullReport = await supabaseService.getReportById(inspectingInformeRef.current.id);
+        if (fullReport) {
+          setInspectingInforme(fullReport);
+        }
+      }
     };
-    window.addEventListener('informe_radicado_event', handleRadicadoEvent);
 
-    // 2. Suscripción Supabase Realtime a cambios en informes_mensuales
+    // 1. Escuchar eventos personalizados
+    window.addEventListener('informe_radicado_event', loadData);
+    window.addEventListener('informe_comments_updated', handleCommentsUpdate);
+    window.addEventListener('notificaciones_actualizadas', handleCommentsUpdate);
+
+    // 2. Suscripción Supabase Realtime a cambios en informes_mensuales y notificaciones
     const channel = supabase
       .channel('public:informes_mensuales_admin')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'informes_mensuales' },
         () => {
-          loadData();
+          handleCommentsUpdate();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notificaciones' },
+        () => {
+          handleCommentsUpdate();
         }
       )
       .subscribe();
 
     // 3. Polling de respaldo en segundo plano (cada 4 segundos)
     const pollInterval = setInterval(() => {
-      loadData();
+      handleCommentsUpdate();
     }, 4000);
 
     return () => {
-      window.removeEventListener('informe_radicado_event', handleRadicadoEvent);
+      window.removeEventListener('informe_radicado_event', loadData);
+      window.removeEventListener('informe_comments_updated', handleCommentsUpdate);
+      window.removeEventListener('notificaciones_actualizadas', handleCommentsUpdate);
       supabase.removeChannel(channel);
       clearInterval(pollInterval);
     };
@@ -464,10 +486,13 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
       }
     };
 
+    const hasRemainingMain = Object.values(updatedComments).some((c: any) => !c.corregido && isMainReportComment(c));
+    const newStatus: EstadoInforme = hasRemainingMain ? 'Devuelto' : 'Enviado';
+
     const updatedInforme: ReportData = {
       ...inspectingInforme,
       comentariosCampos: updatedComments,
-      estado: 'Devuelto'
+      estado: newStatus
     };
 
     setInspectingInforme(updatedInforme);
@@ -478,14 +503,14 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
       inspectingInforme.informeNro,
       inspectingInforme.contratistaDocumento || '',
       updatedComments,
-      'Devuelto'
+      newStatus
     );
 
     // Actualizar lista en estado local
     setInformes(prev => prev.map(inf => 
       inf.id === inspectingInforme.id || 
       (inf.contratista_documento === inspectingInforme.contratistaDocumento && String(inf.informe_nro) === String(inspectingInforme.informeNro))
-        ? { ...inf, estado: 'Devuelto' }
+        ? { ...inf, estado: newStatus, comentariosCampos: updatedComments }
         : inf
     ));
   };

@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, Obligacion, Notificacion } from '../types';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
+import { isMainReportComment } from '../utils/commentUtils';
 
 const STORAGE_USERS_KEY = 'alcaldia_quibdo_registered_users';
 const STORAGE_PASSWORDS_KEY = 'alcaldia_quibdo_user_passwords';
@@ -1817,6 +1818,18 @@ export const supabaseService = {
     comments: Record<string, FieldComment>,
     newStatus: EstadoInforme = 'Devuelto'
   ): Promise<boolean> {
+    const allCommentsList = Object.values(comments || {});
+    const pendingComments = allCommentsList.filter(c => !c.corregido);
+    const pendingMain = pendingComments.filter(isMainReportComment);
+    const fixedComments = allCommentsList.filter(c => Boolean(c.corregido));
+
+    // Si solo hay observaciones en certificados (2 al 5) y ninguna en el informe principal (1),
+    // se mantiene el estado del informe principal como 'Enviado' para evitar marcarlo como Devuelto en el dashboard.
+    let statusToSave = newStatus;
+    if (newStatus === 'Devuelto' && pendingMain.length === 0 && pendingComments.length > 0) {
+      statusToSave = 'Enviado';
+    }
+
     try {
       if (isUuid(reportId)) {
         const { data: currentReport } = await supabase
@@ -1832,18 +1845,13 @@ export const supabaseService = {
           .from('informes_mensuales')
           .update({ 
             observaciones: newObsWithComments,
-            estado: mapStatusToDb(newStatus) 
+            estado: mapStatusToDb(statusToSave) 
           })
           .eq('id', reportId);
       }
     } catch (e) {
       console.warn('Error saving comments to Supabase:', e);
     }
-
-    // Disparar notificación automática instantánea para contratista o supervisora
-    const allCommentsList = Object.values(comments || {});
-    const pendingComments = allCommentsList.filter(c => !c.corregido);
-    const fixedComments = allCommentsList.filter(c => Boolean(c.corregido));
 
     // 1. Notificación para el Contratista si hay observaciones pendientes
     if (contractorDoc && (newStatus === 'Devuelto' || pendingComments.length > 0)) {
