@@ -12,7 +12,9 @@ import {
   CheckCheck, 
   ChevronRight,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Trash2,
+  X
 } from 'lucide-react';
 
 interface Props {
@@ -78,6 +80,19 @@ export default function NotificationBell({ currentUser, onOpenReport }: Props) {
   const handleMarkAllAsRead = async () => {
     await supabaseService.marcarTodasNotificacionesLeidas(currentUser.id, currentUser.documentoIdentidad);
     setNotifications(prev => prev.map(n => ({ ...n, leida: true })));
+  };
+
+  const handleDeleteNotification = async (e: React.MouseEvent, notif: Notificacion) => {
+    e.stopPropagation();
+    await supabaseService.eliminarNotificacion(notif.id, currentUser.documentoIdentidad, currentUser.id);
+    setNotifications(prev => prev.filter(n => n.id !== notif.id));
+  };
+
+  const handleClearAll = async () => {
+    if (window.confirm('¿Deseas eliminar todas las notificaciones de tu buzón?')) {
+      await supabaseService.limpiarTodasNotificaciones(currentUser.id, currentUser.documentoIdentidad);
+      setNotifications([]);
+    }
   };
 
   const handleItemClick = async (notif: Notificacion) => {
@@ -198,17 +213,31 @@ export default function NotificationBell({ currentUser, onOpenReport }: Props) {
               )}
             </div>
 
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={handleMarkAllAsRead}
-                className="text-[11px] text-emerald-200 hover:text-white font-semibold flex items-center gap-1 transition-colors"
-                title="Marcar todas como leídas"
-              >
-                <CheckCheck size={14} />
-                <span>Leídas</span>
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAllAsRead}
+                  className="text-[11px] text-emerald-200 hover:text-white font-semibold flex items-center gap-1 transition-colors bg-emerald-800/40 hover:bg-emerald-800/80 px-2 py-0.5 rounded-md"
+                  title="Marcar todas como leídas"
+                >
+                  <CheckCheck size={13} />
+                  <span>Leídas</span>
+                </button>
+              )}
+
+              {notifications.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className="text-[11px] text-red-200 hover:text-red-100 font-semibold flex items-center gap-1 transition-colors bg-red-900/40 hover:bg-red-900/80 px-2 py-0.5 rounded-md"
+                  title="Vaciar todas las notificaciones"
+                >
+                  <Trash2 size={12} />
+                  <span>Limpiar</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Filtros */}
@@ -250,7 +279,7 @@ export default function NotificationBell({ currentUser, onOpenReport }: Props) {
                 <div
                   key={n.id}
                   onClick={() => handleItemClick(n)}
-                  className={`p-3 sm:p-3.5 flex items-start gap-3 transition-colors cursor-pointer hover:bg-slate-50 relative ${
+                  className={`p-3 sm:p-3.5 flex items-start gap-3 transition-colors cursor-pointer hover:bg-slate-50 relative group ${
                     !n.leida ? 'bg-emerald-50/40' : 'bg-white'
                   }`}
                 >
@@ -282,17 +311,27 @@ export default function NotificationBell({ currentUser, onOpenReport }: Props) {
                     )}
                   </div>
 
-                  {/* Indicador / Botón Marcar Leída */}
-                  {!n.leida && (
+                  {/* Acciones de la notificación */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!n.leida && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleMarkAsRead(e, n)}
+                        title="Marcar como leída"
+                        className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-emerald-100 rounded-full transition-colors"
+                      >
+                        <Check size={13} />
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={(e) => handleMarkAsRead(e, n)}
-                      title="Marcar como leída"
-                      className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-emerald-100 rounded-full transition-colors shrink-0"
+                      onClick={(e) => handleDeleteNotification(e, n)}
+                      title="Eliminar notificación"
+                      className="p-1 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-80 group-hover:opacity-100"
                     >
-                      <Check size={13} />
+                      <X size={13} />
                     </button>
-                  )}
+                  </div>
                 </div>
               ))
             )}

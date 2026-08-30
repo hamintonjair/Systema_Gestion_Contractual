@@ -2135,9 +2135,26 @@ export const supabaseService = {
         await supabase.from('declaraciones_renta').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
         await supabase.from('autorizaciones_desembolso').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
         await supabase.from('notificaciones').delete().eq('user_id', contractorDoc).eq('informe_nro', informeNro);
+
+        // Limpiar notificaciones en LocalStorage para este contratista e informe
+        if (typeof localStorage !== 'undefined') {
+          const key = `notificaciones_${contractorDoc}`;
+          const saved = localStorage.getItem(key);
+          if (saved) {
+            try {
+              const list: Notificacion[] = JSON.parse(saved);
+              const filtered = list.filter(n => n.informe_nro !== informeNro);
+              localStorage.setItem(key, JSON.stringify(filtered));
+            } catch (e) {}
+          }
+        }
       }
     } catch (err) {
       console.warn('Error deleting report from Supabase:', err);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('notificaciones_actualizadas'));
     }
 
     return true;
@@ -2827,6 +2844,66 @@ export const supabaseService = {
           const updated = list.map(n => ({ ...n, leida: true }));
           localStorage.setItem(key, JSON.stringify(updated));
         } catch (e) {}
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('notificaciones_actualizadas'));
+    }
+    return true;
+  },
+
+  // 26. Eliminar Notificación Individual
+  async eliminarNotificacion(notifId: string, userDoc?: string, userId?: string): Promise<boolean> {
+    try {
+      if (isUuid(notifId)) {
+        await supabase
+          .from('notificaciones')
+          .delete()
+          .eq('id', notifId);
+      }
+    } catch (e) {
+      console.warn('Error deleting notification from Supabase:', e);
+    }
+
+    const keys = [userDoc, userId].filter(Boolean);
+    if (typeof localStorage !== 'undefined') {
+      for (const k of keys) {
+        const storageKey = `notificaciones_${k}`;
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          try {
+            const list: Notificacion[] = JSON.parse(saved);
+            const updated = list.filter(n => n.id !== notifId);
+            localStorage.setItem(storageKey, JSON.stringify(updated));
+          } catch (e) {}
+        }
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('notificaciones_actualizadas'));
+    }
+    return true;
+  },
+
+  // 27. Limpiar Todas las Notificaciones de un Usuario
+  async limpiarTodasNotificaciones(userId?: string, userDoc?: string): Promise<boolean> {
+    const targetIds = [userId, userDoc].filter(Boolean) as string[];
+    if (targetIds.length === 0) return false;
+
+    try {
+      await supabase
+        .from('notificaciones')
+        .delete()
+        .in('user_id', targetIds);
+    } catch (e) {
+      console.warn('Error clearing notifications from Supabase:', e);
+    }
+
+    if (typeof localStorage !== 'undefined') {
+      for (const target of targetIds) {
+        localStorage.removeItem(`notificaciones_${target}`);
       }
     }
 
