@@ -1215,12 +1215,13 @@ export const supabaseService = {
         vigencia: 2026
       };
 
-      // 3. Buscar si ya existe contrato por contratista_id o número de contrato y sincronizar cambios
+      // 3. Buscar si ya existe contrato exclusivamente para este contratista_id y sincronizar cambios
       if (validContratistaId) {
         const { data: existingContract } = await supabase
           .from('contratos')
           .select('id')
           .eq('contratista_id', validContratistaId)
+          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
@@ -1233,21 +1234,7 @@ export const supabaseService = {
         }
       }
 
-      const { data: existingContractNro } = await supabase
-        .from('contratos')
-        .select('id')
-        .eq('contrato_nro', contratoNro)
-        .limit(1)
-        .maybeSingle();
-
-      if (existingContractNro?.id) {
-        await supabase
-          .from('contratos')
-          .update(contractPayload)
-          .eq('id', existingContractNro.id);
-        return existingContractNro.id;
-      }
-
+      // Si no existe contrato para este contratista_id, insertar un nuevo contrato independiente
       const { data: newContract, error: errContract } = await supabase
         .from('contratos')
         .insert([contractPayload])
@@ -2119,28 +2106,35 @@ export const supabaseService = {
         await purgeInformeTables(reportId);
       }
 
-      // 3. Eliminar por número de informe y documento del contratista
-      if (informeNro) {
-        let query = supabase.from('informes_mensuales').select('id, contratista_documento').eq('informe_nro', parseInt(informeNro, 10) || 1);
-        if (contractorDoc) {
-          query = query.eq('contratista_documento', contractorDoc);
-        }
-        const { data: duplicates } = await query;
+      // 3. Eliminar por número de informe y documento del contratista (con aislamiento estricto)
+      if (informeNro && contractorDoc) {
+        // Encontrar contratos que pertenecen exclusivamente a este contratista
+        const { data: userContracts } = await supabase
+          .from('contratos')
+          .select('id, profiles!inner(documento_identidad)')
+          .eq('profiles.documento_identidad', contractorDoc);
 
-        if (duplicates && duplicates.length > 0) {
-          for (const dup of duplicates) {
-            await purgeInformeTables(dup.id);
+        const contractIds = (userContracts || []).map((c: any) => c.id).filter(Boolean);
+        if (contractIds.length > 0) {
+          const { data: duplicates } = await supabase
+            .from('informes_mensuales')
+            .select('id')
+            .in('contrato_id', contractIds)
+            .eq('informe_nro', parseInt(informeNro, 10) || 1);
+
+          if (duplicates && duplicates.length > 0) {
+            for (const dup of duplicates) {
+              await purgeInformeTables(dup.id);
+            }
           }
         }
 
         // Limpiar registros sueltos o vinculados por documento y número de pago/informe
-        if (contractorDoc) {
-          await supabase.from('certificaciones_supervision').delete().eq('contratista_documento', contractorDoc).eq('informe_nro', informeNro);
-          await supabase.from('soportes_fiduciaria').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
-          await supabase.from('declaraciones_renta').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
-          await supabase.from('autorizaciones_desembolso').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
-          await supabase.from('notificaciones').delete().eq('user_id', contractorDoc).eq('informe_nro', informeNro);
-        }
+        await supabase.from('certificaciones_supervision').delete().eq('contratista_documento', contractorDoc).eq('informe_nro', informeNro);
+        await supabase.from('soportes_fiduciaria').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
+        await supabase.from('declaraciones_renta').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
+        await supabase.from('autorizaciones_desembolso').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
+        await supabase.from('notificaciones').delete().eq('user_id', contractorDoc).eq('informe_nro', informeNro);
       }
     } catch (err) {
       console.warn('Error deleting report from Supabase:', err);
@@ -2208,7 +2202,14 @@ export const supabaseService = {
     let cleanedCount = 0;
 
     for (const rep of reports) {
-      const targetDate = parseDate(rep.periodoHasta) || parseDate(rep.fechaPresentacion);
+      // NUNCA eliminar informes en Borrador, Enviados, En Revisión o Rechazados
+      // La política de 7 meses aplica ÚNICAMENTE a informes históricos que ya fueron totalmente 'Aprobados'
+      if (rep.estado !== 'Aprobado') {
+        validReports.push(rep);
+        continue;
+      }
+
+      const targetDate = parseDate(rep.fechaPresentacion) || parseDate(rep.periodoHasta);
       let isExpired = false;
 
       if (targetDate) {
