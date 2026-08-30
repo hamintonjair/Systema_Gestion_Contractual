@@ -159,8 +159,17 @@ export default function CertificadoSupervisionDoc({
         fechaTerminacion: reportData.fechaTerminacion || baseData.fechaTerminacion,
         valorInicial: reportData.valorContrato || baseData.valorInicial,
         valorTotal: reportData.valorContrato || baseData.valorTotal,
-        periodoDesde: reportData.periodoDesde || baseData.periodoDesde,
-        periodoHasta: reportData.periodoHasta || baseData.periodoHasta,
+        periodoDesde: liveDefaults.periodoDesde || reportData.periodoDesde || baseData.periodoDesde,
+        periodoHasta: liveDefaults.periodoHasta || reportData.periodoHasta || baseData.periodoHasta,
+        pagoNro: liveDefaults.pagoNro || baseData.pagoNro,
+        porcentajeEjecucion: liveDefaults.porcentajeEjecucion || baseData.porcentajeEjecucion,
+        valorPagadoAcumulado: liveDefaults.valorPagadoAcumulado || baseData.valorPagadoAcumulado,
+        valorAPagarSinIva: liveDefaults.valorAPagarSinIva || baseData.valorAPagarSinIva,
+        iva: liveDefaults.iva || baseData.iva || '-',
+        valorTotalAPagar: liveDefaults.valorTotalAPagar || baseData.valorTotalAPagar,
+        saldoPorPagar: liveDefaults.saldoPorPagar || baseData.saldoPorPagar,
+        valorRubro: liveDefaults.valorRubro || baseData.valorRubro,
+        valorAvalado: liveDefaults.valorAvalado || baseData.valorAvalado,
         expedicionDia: liveDefaults.expedicionDia,
         expedicionMes: liveDefaults.expedicionMes,
         expedicionAno: liveDefaults.expedicionAno,
@@ -168,7 +177,46 @@ export default function CertificadoSupervisionDoc({
     } else {
       setFormData(baseData);
     }
-  }, [data, reportData?.id, reportData?.informeNro, storageKey]);
+
+    // Cargar asíncronamente desde Supabase si existe registro persistido
+    if (reportData?.id || (reportData?.contratistaDocumento && reportData?.informeNro)) {
+      supabaseService.getCertificadoSupervision(reportData.id, reportData.contratistaDocumento, reportData.informeNro).then(serverCert => {
+        if (serverCert) {
+          setFormData(prev => ({
+            ...prev,
+            ...serverCert,
+          }));
+        }
+      }).catch(err => {
+        console.warn('Error fetching server cert in Doc:', err);
+      });
+    }
+  }, [data, reportData?.id, reportData?.informeNro, reportData?.valorPagar, reportData?.periodoDesde, reportData?.periodoHasta, storageKey]);
+
+  // Listener para sincronización en tiempo real desde la calculadora u otros componentes
+  useEffect(() => {
+    const handleSyncEvent = (e: any) => {
+      if (e?.detail) {
+        setFormData(prev => ({
+          ...prev,
+          ...e.detail
+        }));
+      } else if (reportData) {
+        const live = createDefaultCertificadoData(reportData);
+        setFormData(prev => ({
+          ...prev,
+          ...live
+        }));
+      }
+    };
+
+    window.addEventListener('certificado_updated_event', handleSyncEvent);
+    window.addEventListener('informe_radicado_event', handleSyncEvent);
+    return () => {
+      window.removeEventListener('certificado_updated_event', handleSyncEvent);
+      window.removeEventListener('informe_radicado_event', handleSyncEvent);
+    };
+  }, [reportData]);
 
   // Utilidad para parsear strings monetarios colombianos a números
   const parseColombianCurrency = (val: string | undefined): number => {
@@ -278,46 +326,6 @@ export default function CertificadoSupervisionDoc({
     setHasChanges(true);
     if (onChange) {
       onChange(updated);
-    }
-  };
-
-  // Función para autocalcular y sincronizar la tabla 6 (Liquidación del pago) con el plan de pagos matemático
-  const handleAutoCalcularPlanPagos = () => {
-    const numValTotal = limpiarNumeroMoneda(formData.valorTotal || formData.valorInicial || reportData?.valorContrato || '$ 20.029.800');
-    const fInicio = formData.fechaInicio || reportData?.fechaInicio || '14/01/2026';
-    const fFin = formData.fechaTerminacion || reportData?.fechaTerminacion || '14/07/2026';
-    const nPago = formData.pagoNro || reportData?.informeNro || '1';
-
-    if (numValTotal > 0 && fInicio && fFin) {
-      const valMensual = reportData?.valorMensual ? limpiarNumeroMoneda(reportData.valorMensual) : undefined;
-      const autoLiq = getDatosLiquidacionPeriodo({
-        valor_total_contrato: numValTotal,
-        valor_mensual: valMensual,
-        fecha_inicio: fInicio,
-        fecha_fin: fFin,
-      }, nPago);
-
-      if (autoLiq) {
-        const updated: CertificadoSupervisionData = {
-          ...formData,
-          pagoNro: autoLiq.pagoNro,
-          periodoDesde: autoLiq.periodoDesde,
-          periodoHasta: autoLiq.periodoHasta,
-          porcentajeEjecucion: autoLiq.porcentajeEjecucion,
-          valorPagadoAcumulado: autoLiq.valorPagadoAcumulado,
-          valorAPagarSinIva: autoLiq.valorAPagarSinIva,
-          iva: autoLiq.iva,
-          valorTotalAPagar: autoLiq.valorTotalAPagar,
-          saldoPorPagar: autoLiq.saldoPorPagar,
-          valorRubro: autoLiq.valorAPagarSinIva,
-          valorAvalado: `$ ${autoLiq.valorTotalAPagar}`,
-        };
-        setFormData(updated);
-        setHasChanges(true);
-        if (onChange) onChange(updated);
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 2000);
-      }
     }
   };
 
@@ -677,17 +685,6 @@ export default function CertificadoSupervisionDoc({
         <div className="flex items-center gap-2 flex-wrap">
           {isEditable && (
             <button
-              onClick={handleAutoCalcularPlanPagos}
-              className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
-              title="Calcular automáticamente fechas, días base 30, porcentaje de ejecución y saldo a pagar de este período"
-            >
-              <Calculator size={14} className="text-[#006b33]" />
-              <span>Autocalcular Liquidación</span>
-            </button>
-          )}
-
-          {isEditable && (
-            <button
               onClick={() => setIsEditing(!isEditing)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors ${
                 isEditing 
@@ -750,8 +747,8 @@ export default function CertificadoSupervisionDoc({
                   Haga clic en <strong className="text-amber-900 bg-amber-100 px-1 py-0.5 rounded">«Llenar / Editar Campos»</strong> para habilitar las casillas editables del documento (resaltadas en amarillo suave).
                 </div>
                 <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
-                  <span className="font-bold text-emerald-900 block mb-0.5">2. Calcular o Modificar:</span>
-                  Use <strong className="text-emerald-900 bg-emerald-100 px-1 py-0.5 rounded">«Autocalcular Liquidación»</strong> para autocompletar días y saldos, o ajuste los rubros, fechas y firmas directamente.
+                  <span className="font-bold text-emerald-900 block mb-0.5">2. Diligenciar o Ajustar:</span>
+                  Modifique directamente los valores, rubros presupuestales, fechas o firmas que requiera para este desembolso.
                 </div>
                 <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
                   <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar e Imprimir:</span>

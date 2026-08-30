@@ -6,7 +6,7 @@ import ReportEditor from './components/ReportEditor';
 import ReportPreview from './components/ReportPreview';
 import SecretariaAdminView from './components/SecretariaAdminView';
 import SuperAdminView from './components/SuperAdminView';
-import { AuthUser, DEMO_USERS, ReportData, InformeSummary, initialMockData } from './types';
+import { AuthUser, DEMO_USERS, ReportData, InformeSummary, initialMockData, createDefaultCertificadoData } from './types';
 import { supabaseService } from './services/supabaseService';
 import { exportInformeToPDF } from './utils/pdfGenerator';
 import { formatFechaAplicacion, formatDateSlash } from './utils/formatters';
@@ -207,6 +207,23 @@ export default function App() {
     
     const result = await supabaseService.saveFullInforme(reportToSave, currentUser || undefined);
     setIsSaving(false);
+
+    // Sincronizar el Certificado de Supervisión correspondiente
+    try {
+      const liveCert = createDefaultCertificadoData(reportToSave);
+      const docKey = reportToSave.contratistaDocumento || '';
+      const nroKey = reportToSave.informeNro || '1';
+      localStorage.setItem(`cert_data_${docKey}_${nroKey}`, JSON.stringify(liveCert));
+      localStorage.setItem(`cert_data_${nroKey}`, JSON.stringify(liveCert));
+      if (result.id || reportToSave.id) {
+        localStorage.setItem(`cert_data_${result.id || reportToSave.id}_${nroKey}`, JSON.stringify(liveCert));
+      }
+      supabaseService.saveCertificadoSupervision(liveCert, result.id || reportToSave.id).catch(() => {});
+      window.dispatchEvent(new CustomEvent('certificado_updated_event', { detail: liveCert }));
+    } catch (e) {
+      console.warn('Error sincronizando certificado en guardado:', e);
+    }
+
     if (result.success) {
       setHasUnsavedChanges(false);
       setActiveReportData(prev => ({

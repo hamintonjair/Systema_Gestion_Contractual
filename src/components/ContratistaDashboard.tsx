@@ -1002,7 +1002,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 {activeModuleTab === 'desembolso' && 'Instrucciones: ¿Cómo diligenciar y editar la Autorización de Desembolso?'}
               </p>
               <p className="text-[11.5px] text-emerald-200/90 mt-0.5">
-                <span className="font-semibold text-white">Paso 1:</span> Clic en <strong className="text-amber-300 bg-emerald-900/80 px-1.5 py-0.5 rounded border border-amber-400/40">«Llenar / Editar Campos»</strong> ➔ <span className="font-semibold text-white">Paso 2:</span> Modifique los campos resaltados {activeModuleTab === 'supervision' ? '(o presione «Autocalcular Liquidación»)' : ''} ➔ <span className="font-semibold text-white">Paso 3:</span> Clic en <strong className="text-emerald-300 bg-emerald-900/80 px-1.5 py-0.5 rounded border border-emerald-400/40">«Guardar Cambios»</strong>.
+                <span className="font-semibold text-white">Paso 1:</span> Clic en <strong className="text-amber-300 bg-emerald-900/80 px-1.5 py-0.5 rounded border border-amber-400/40">«Llenar / Editar Campos»</strong> ➔ <span className="font-semibold text-white">Paso 2:</span> Modifique los campos resaltados si necesita ajustar datos ➔ <span className="font-semibold text-white">Paso 3:</span> Clic en <strong className="text-emerald-300 bg-emerald-900/80 px-1.5 py-0.5 rounded border border-emerald-400/40">«Guardar Cambios»</strong>.
               </p>
             </div>
           </div>

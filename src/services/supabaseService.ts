@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, Obligacion, Notificacion, extractContratoNroOnly } from '../types';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
 import { isMainReportComment } from '../utils/commentUtils';
+import { limpiarNumeroMoneda, formatearNumeroTablaCol } from '../utils/paymentPlanUtils';
 
 const STORAGE_USERS_KEY = 'alcaldia_quibdo_registered_users';
 const STORAGE_PASSWORDS_KEY = 'alcaldia_quibdo_user_passwords';
@@ -1754,14 +1755,16 @@ export const supabaseService = {
       const cleanObsText = report.observaciones !== undefined && report.observaciones !== null ? report.observaciones : '';
       const fullObsPayload = buildObservacionesWithComments(cleanObsText, report.comentariosCampos, report.valorPagar);
 
+      const parsedValorPagar = limpiarNumeroMoneda(report.valorPagar) || 3338300;
+
       const informePayload: any = {
         informe_nro: parseInt(report.informeNro, 10) || 1,
         tipo_informe: report.tipoInforme || 'Mensual',
         fecha_presentacion: parseDateForPg(report.fechaPresentacion, new Date().toISOString().split('T')[0]),
         periodo_desde: parseDateForPg(report.periodoDesde, '2026-07-01'),
         periodo_hasta: parseDateForPg(report.periodoHasta, '2026-07-31'),
-        valor_adicion: cleanNumeric(report.valorAdicion, 0),
-        valor_pagar_certificado: cleanNumeric(report.valorPagar, 3338300),
+        valor_adicion: limpiarNumeroMoneda(report.valorAdicion),
+        valor_pagar_certificado: parsedValorPagar,
         modificaciones_contrato: report.modificaciones || 'N/A',
         observaciones: fullObsPayload,
         estado: mapStatusToDb(report.estado || 'Enviado'),
@@ -1941,6 +1944,14 @@ export const supabaseService = {
           localStorage.setItem(`alcaldia_quibdo_report_${contractorDoc}_${report.informeNro}`, JSON.stringify(updatedReportWithDb));
         }
         localStorage.setItem(`alcaldia_quibdo_report_${report.informeNro}`, JSON.stringify(updatedReportWithDb));
+      }
+
+      // Sincronizar automáticamente el Certificado de Supervisión en Supabase
+      try {
+        const certDataToSync = createDefaultCertificadoData(updatedReportWithDb);
+        await this.saveCertificadoSupervision(certDataToSync, informeId);
+      } catch (certSyncErr) {
+        console.warn('Error syncing certificado supervision in saveFullInforme:', certSyncErr);
       }
 
       return { success: true, id: informeId || `local-${Date.now()}` };
@@ -2226,21 +2237,21 @@ export const supabaseService = {
     informeId?: string,
     supervisorId?: string
   ): Promise<{ success: boolean; id?: string; error?: string }> {
-    const cleanNumeric = (val?: string | number, defaultVal: number = 0): number => {
-      if (typeof val === 'number') return val;
-      if (!val || val === '-') return defaultVal;
-      const cleaned = val.toString().split(',')[0].replace(/[^0-9]/g, '');
-      return parseInt(cleaned, 10) || defaultVal;
-    };
-
     const docKey = certData.contratistaDocumento || '';
-    const pagoNroStr = certData.pagoNro || '1';
+    const cleanDoc = docKey.replace(/[^0-9]/g, '');
+    const pagoNroStr = String(certData.pagoNro || '1');
 
-    // 1. Guardar copia en LocalStorage inmediatamente
+    // 1. Guardar copia en LocalStorage inmediatamente con todas las variantes de clave
     if (typeof localStorage !== 'undefined') {
       const storageKey = `cert_data_${docKey}_${pagoNroStr}`;
       localStorage.setItem(storageKey, JSON.stringify(certData));
+      if (cleanDoc) {
+        localStorage.setItem(`cert_data_${cleanDoc}_${pagoNroStr}`, JSON.stringify(certData));
+      }
       localStorage.setItem(`cert_data_${pagoNroStr}`, JSON.stringify(certData));
+      if (informeId) {
+        localStorage.setItem(`cert_data_${informeId}_${pagoNroStr}`, JSON.stringify(certData));
+      }
     }
 
     try {
@@ -2248,12 +2259,12 @@ export const supabaseService = {
       let contratoId: string | null = null;
 
       // Si no tenemos UUID de informe, buscar si existe informe por documento y número de pago
-      if (!resolvedInformeId && docKey) {
+      if (!resolvedInformeId && (docKey || cleanDoc)) {
         const { data: rep } = await supabase
           .from('informes_mensuales')
           .select('id, contrato_id, contratos!inner(id, profiles!inner(documento_identidad))')
           .eq('informe_nro', parseInt(pagoNroStr, 10) || 1)
-          .eq('contratos.profiles.documento_identidad', docKey)
+          .or(`contratos.profiles.documento_identidad.eq.${docKey},contratos.profiles.documento_identidad.eq.${cleanDoc}`)
           .limit(1)
           .maybeSingle();
 
@@ -2263,13 +2274,17 @@ export const supabaseService = {
         }
       }
 
+      const numTotalAPagar = limpiarNumeroMoneda(certData.valorTotalAPagar || certData.valorAPagarSinIva || certData.valorAvalado);
+      const numTotalContrato = limpiarNumeroMoneda(certData.valorTotal || certData.valorInicial);
+      const numSaldoPorPagar = limpiarNumeroMoneda(certData.saldoPorPagar);
+
       const payload: any = {
-        contratista_documento: docKey,
+        contratista_documento: cleanDoc || docKey,
         pago_nro: pagoNroStr,
         periodo_certificado: `${certData.periodoDesde || ''} - ${certData.periodoHasta || ''}`,
-        valor_autorizado_pago: cleanNumeric(certData.valorTotalAPagar || certData.valorAvalado),
-        valor_total_contrato: cleanNumeric(certData.valorTotal || certData.valorInicial),
-        saldo_por_pagar: cleanNumeric(certData.saldoPorPagar),
+        valor_autorizado_pago: numTotalAPagar,
+        valor_total_contrato: numTotalContrato,
+        saldo_por_pagar: numSaldoPorPagar,
         porcentaje_ejecucion: certData.porcentajeEjecucion || '',
         observaciones_supervision: certData.objeto || '',
         observaciones_liquidacion: certData.observacionesLiquidacion || '',
@@ -2303,11 +2318,11 @@ export const supabaseService = {
         if (existingCert?.id) existingId = existingCert.id;
       }
 
-      if (!existingId && docKey) {
+      if (!existingId && (docKey || cleanDoc)) {
         const { data: existingByDoc } = await supabase
           .from('certificaciones_supervision')
           .select('id')
-          .eq('contratista_documento', docKey)
+          .or(`contratista_documento.eq.${docKey},contratista_documento.eq.${cleanDoc}`)
           .eq('pago_nro', pagoNroStr)
           .limit(1)
           .maybeSingle();
@@ -2353,22 +2368,25 @@ export const supabaseService = {
           .limit(1)
           .maybeSingle();
 
-        if (!error && data?.datos_formulario) {
-          return data.datos_formulario as CertificadoSupervisionData;
+        if (!error && data) {
+          const form = data.datos_formulario ? (data.datos_formulario as CertificadoSupervisionData) : null;
+          if (form) return form;
         }
       }
 
+      const cleanDoc = (docIdentidad || '').replace(/[^0-9]/g, '');
       if (docIdentidad && pagoNro) {
         const { data, error } = await supabase
           .from('certificaciones_supervision')
           .select('*')
-          .eq('contratista_documento', docIdentidad)
-          .eq('pago_nro', pagoNro)
+          .or(`contratista_documento.eq.${docIdentidad},contratista_documento.eq.${cleanDoc}`)
+          .eq('pago_nro', String(pagoNro))
           .limit(1)
           .maybeSingle();
 
-        if (!error && data?.datos_formulario) {
-          return data.datos_formulario as CertificadoSupervisionData;
+        if (!error && data) {
+          const form = data.datos_formulario ? (data.datos_formulario as CertificadoSupervisionData) : null;
+          if (form) return form;
         }
       }
     } catch (e) {
@@ -2377,8 +2395,11 @@ export const supabaseService = {
 
     // Fallback a LocalStorage
     if (typeof localStorage !== 'undefined') {
+      const cleanDoc = (docIdentidad || '').replace(/[^0-9]/g, '');
       const key = `cert_data_${docIdentidad || ''}_${pagoNro || '1'}`;
-      const saved = localStorage.getItem(key) || (pagoNro ? localStorage.getItem(`cert_data_${pagoNro}`) : null);
+      const saved = localStorage.getItem(key) || 
+        (cleanDoc ? localStorage.getItem(`cert_data_${cleanDoc}_${pagoNro || '1'}`) : null) ||
+        (pagoNro ? localStorage.getItem(`cert_data_${pagoNro}`) : null);
       if (saved) {
         try {
           return JSON.parse(saved);

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReportPreview from './ReportPreview';
 import { createPortal } from 'react-dom';
-import { Obligacion, ReportData, Anexo, EstadoInforme, FieldComment, extractContratoNroOnly } from '../types';
+import { Obligacion, ReportData, Anexo, EstadoInforme, FieldComment, extractContratoNroOnly, createDefaultCertificadoData } from '../types';
 import { 
   Plus, 
   Trash2, 
@@ -26,11 +26,16 @@ import {
   MessageSquare,
   Camera,
   Layers,
+  Calculator,
+  Hash,
   X
 } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService';
 import imageCompression from 'browser-image-compression';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
+import { calcularLiquidacionEstatal, generarPlanDePagos, calcularDiasComerciales, formatearMonedaCol, formatearNumeroTablaCol, limpiarNumeroMoneda, LiquidacionDetalladaResult } from '../utils/paymentPlanUtils';
+import { convertirNumeroALetras } from '../utils/numberToWords';
+import CalculadoraLiquidacion from './CalculadoraLiquidacion';
 import DatePickerInput from './DatePickerInput';
 
 interface Props {
@@ -108,6 +113,137 @@ export default function ReportEditor({
     });
 
     return modified ? commentsMap : undefined;
+  };
+
+  // Pagos acumulados anteriores basados en certificados previos o en el plan de pagos matemático
+  const pagosPreviosCalculados = useMemo(() => {
+    let pagosPrevios = 0;
+    try {
+      const numInf = parseInt(data.informeNro || '1', 10);
+      if (numInf > 1) {
+        // 1. Intentar sumar los valores pagados de certificados anteriores en localStorage
+        let sumaDesdeStorage = 0;
+        let encontradosEnStorage = 0;
+        const docKey = data.contratistaDocumento || '';
+
+        for (let p = 1; p < numInf; p++) {
+          const rawCert = localStorage.getItem(`cert_data_${docKey}_${p}`) || 
+                          localStorage.getItem(`cert_data_${p}`) ||
+                          (data.id ? localStorage.getItem(`cert_data_${data.id}_${p}`) : null);
+          if (rawCert) {
+            try {
+              const parsed = JSON.parse(rawCert);
+              const val = limpiarNumeroMoneda(parsed.valorAPagarSinIva || parsed.valorTotalAPagar || parsed.valorAvalado);
+              if (val > 0) {
+                sumaDesdeStorage += val;
+                encontradosEnStorage++;
+              }
+            } catch {
+              // Ignorar error de parsing
+            }
+          }
+        }
+
+        if (encontradosEnStorage === (numInf - 1) && sumaDesdeStorage > 0) {
+          return sumaDesdeStorage;
+        }
+
+        // 2. Si no están en storage, usar el plan de pagos matemático comercial
+        if (data.fechaInicio && data.fechaTerminacion) {
+          const plan = generarPlanDePagos({
+            valor_total_contrato: data.valorContrato || '$ 16.200.000',
+            valor_mensual: data.valorMensual || '$ 3.600.000',
+            fecha_inicio: data.fechaInicio,
+            fecha_fin: data.fechaTerminacion,
+          });
+          const targetIdx = Math.min(numInf - 1, plan.length - 1);
+          if (targetIdx > 0 && plan[targetIdx - 1]) {
+            pagosPrevios = plan[targetIdx - 1].valor_acumulado;
+          }
+        }
+      }
+    } catch {
+      pagosPrevios = 0;
+    }
+    return pagosPrevios;
+  }, [data.informeNro, data.fechaInicio, data.fechaTerminacion, data.valorContrato, data.valorMensual, data.contratistaDocumento, data.id]);
+
+  // Cálculo dinámico en tiempo real bajo norma comercial colombiana (meses de 30 días)
+  const liquidacionDinamica = useMemo(() => {
+    const vTotal = data.valorContrato || '$ 16.200.000';
+    let vMensual = data.valorMensual || '';
+    
+    // Si el valor mensual no está configurado o tiene el valor de muestra ($ 3.338.300) que no coincide con el contrato actual
+    if ((!vMensual || vMensual === '$ 3.338.300') && data.valorContrato) {
+      const vTotalNum = limpiarNumeroMoneda(data.valorContrato);
+      if (vTotalNum === 16200000) {
+        vMensual = '$ 3.600.000';
+      } else if (data.fechaInicio && data.fechaTerminacion) {
+        const diasTotales = calcularDiasComerciales(data.fechaInicio, data.fechaTerminacion);
+        if (diasTotales > 0) {
+          const meses = diasTotales / 30;
+          vMensual = formatearMonedaCol(Math.round(vTotalNum / meses));
+        }
+      }
+    }
+    const fInicio = data.periodoDesde || data.fechaInicio || '13/08/2026';
+    const fFin = data.periodoHasta || data.fechaTerminacion || '31/08/2026';
+
+    return calcularLiquidacionEstatal({
+      valorTotalContrato: vTotal,
+      valorMensual: vMensual || undefined,
+      fechaInicioPago: fInicio,
+      fechaFinPago: fFin,
+      pagosAcumuladosAnteriores: pagosPreviosCalculados,
+      fechaFinContrato: data.fechaTerminacion || undefined,
+    });
+  }, [data.valorContrato, data.valorMensual, data.periodoDesde, data.periodoHasta, data.fechaInicio, data.fechaTerminacion, pagosPreviosCalculados]);
+
+  const handleAplicarLiquidacionCalculada = (resOverride?: LiquidacionDetalladaResult, textoOverride?: string) => {
+    const res = resOverride || liquidacionDinamica;
+    if (!res) return;
+    const formattedStr = textoOverride || `${convertirNumeroALetras(res.valorAPagarSinIva).toUpperCase()} ($${res.valorAPagarTabla})`;
+    
+    // 1. Actualizar el informe en el estado
+    handleChange('valorPagar', formattedStr);
+
+    // 2. Construir y guardar inmediatamente en LocalStorage y Supabase el Certificado sincronizado
+    try {
+      const nextData: ReportData = {
+        ...data,
+        valorPagar: formattedStr,
+      };
+      const liveCert = createDefaultCertificadoData(nextData);
+      liveCert.valorRubro = res.valorAPagarTabla;
+      liveCert.valorAPagarSinIva = res.valorAPagarTabla;
+      liveCert.valorTotalAPagar = res.valorAPagarTabla;
+      liveCert.porcentajeEjecucion = res.porcentajeEjecucionFormateado || `${res.porcentajeEjecucion.toFixed(2).replace('.', ',')} %`;
+      liveCert.valorPagadoAcumulado = res.pagosAcumuladosFormateado ? res.pagosAcumuladosFormateado.replace('$', '').trim() : '0';
+      liveCert.saldoPorPagar = res.saldoPorPagarTabla;
+      liveCert.valorAvalado = `$ ${res.valorAPagarTabla}`;
+      liveCert.pagoNro = String(data.informeNro || '1');
+      liveCert.periodoDesde = data.periodoDesde || res.fechaInicioPago || '13/08/2026';
+      liveCert.periodoHasta = data.periodoHasta || res.fechaFinPago || '31/08/2026';
+
+      const docKey = data.contratistaDocumento || '';
+      const nroKey = data.informeNro || '1';
+      localStorage.setItem(`cert_data_${docKey}_${nroKey}`, JSON.stringify(liveCert));
+      localStorage.setItem(`cert_data_${nroKey}`, JSON.stringify(liveCert));
+      if (data.id) {
+        localStorage.setItem(`cert_data_${data.id}_${nroKey}`, JSON.stringify(liveCert));
+      }
+
+      // Sincronizar con Supabase en background
+      supabaseService.saveCertificadoSupervision(liveCert, data.id).catch(e => {
+        console.warn('Error sincronizando certificado con Supabase:', e);
+      });
+
+      // Disparar evento para actualizar instantáneamente las vistas
+      window.dispatchEvent(new CustomEvent('certificado_updated_event', { detail: liveCert }));
+      window.dispatchEvent(new CustomEvent('informe_radicado_event'));
+    } catch (e) {
+      console.warn('Error al sincronizar certificado en localStorage:', e);
+    }
   };
 
   const handleChange = (field: keyof ReportData, value: any) => {
@@ -413,9 +549,9 @@ export default function ReportEditor({
   const renderNewReportBadge = (fieldKey: string) => {
     if (isNewReportPendingSave && isFieldToUpdateInNewReport(fieldKey) && !data.comentariosCampos?.[fieldKey]) {
       return (
-        <span className="text-[10px] font-bold text-sky-800 bg-sky-100/90 px-1.5 py-0.5 rounded border border-sky-300 inline-flex items-center gap-1 shrink-0">
-          <Sparkles size={10} className="text-sky-600" />
-          Campo a actualizar
+        <span className="text-[9px] leading-tight font-bold text-sky-800 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-300 inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap shadow-2xs">
+          <Sparkles size={9} className="text-sky-600" />
+          Actualizar
         </span>
       );
     }
@@ -826,13 +962,23 @@ export default function ReportEditor({
                   {renderCommentAlert('tipoInforme_final')}
                 </div>
 
+                {/* Informe Nro. Resaltado */}
                 <div>
-                  <label className="block font-medium text-gray-700 mb-1">Informe Nro.</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-gray-900 flex items-center gap-1">
+                      <Hash size={13} className="text-emerald-700" />
+                      <span>Informe Nro.</span>
+                    </label>
+                    <span className="text-[9px] font-extrabold text-emerald-900 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+                      N° Consecutivo
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={data.informeNro}
                     onChange={(e) => handleChange('informeNro', e.target.value)}
-                    className={`w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 font-bold ${getFieldHighlightClass('informeNro')}`}
+                    placeholder="Ej. 1"
+                    className={`w-full border-2 border-emerald-500 bg-emerald-50/50 text-emerald-950 font-black text-sm rounded p-1.5 focus:ring-2 focus:ring-emerald-500 focus:bg-white shadow-2xs transition-all ${getFieldHighlightClass('informeNro')}`}
                   />
                   {renderCommentAlert('informeNro')}
                 </div>
@@ -856,7 +1002,7 @@ export default function ReportEditor({
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block font-medium text-gray-700">
+                    <label className="block font-medium text-gray-700 truncate">
                       Fecha Aplicación Formato
                     </label>
                     {renderNewReportBadge('fechaAplicacion')}
@@ -1229,6 +1375,20 @@ export default function ReportEditor({
                 </div>
               </div>
             </div>
+
+            {/* Componente CalculadoraLiquidacion con Algoritmo Dinámico Norma Comercial 30 Días */}
+            <CalculadoraLiquidacion
+              valorTotalContrato={data.valorContrato || '$ 16.200.000'}
+              valorMensual={liquidacionDinamica.valorMensualFormateado || data.valorMensual || '$ 3.600.000'}
+              fechaInicioPago={data.periodoDesde || data.fechaInicio || '13/08/2026'}
+              fechaFinPago={data.periodoHasta || data.fechaTerminacion || '31/08/2026'}
+              pagosAcumuladosAnteriores={pagosPreviosCalculados}
+              informeNro={data.informeNro || '1'}
+              fechaFinContrato={data.fechaTerminacion}
+              onAplicar={(res, texto) => handleAplicarLiquidacionCalculada(res, texto)}
+              permitirEdicionDirecta={false}
+              titulo="Calculadora de Liquidación Contractual del Período (Norma 30 Días)"
+            />
 
           </div>
         )}
@@ -1778,10 +1938,43 @@ export default function ReportEditor({
             <div className={`p-4 rounded-lg border shadow-xs space-y-3 ${
               data.comentariosCampos?.['valorPagar'] ? 'bg-amber-50/80 border-amber-400 ring-1 ring-amber-300' : 'bg-white border-gray-200'
             }`}>
-              <h3 className="font-bold text-xs text-gray-800 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-gray-100">
-                <FileSignature size={14} className="text-emerald-700" />
-                Certificación del Valor a Pagar
-              </h3>
+              <div className="flex items-center justify-between pb-2 border-b border-gray-100 flex-wrap gap-2">
+                <h3 className="font-bold text-xs text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileSignature size={14} className="text-emerald-700" />
+                  Certificación del Valor a Pagar
+                </h3>
+                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300">
+                  Norma 30 Días: ${liquidacionDinamica.valorAPagarTabla}
+                </span>
+              </div>
+
+              <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-lg space-y-2 text-xs">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="text-emerald-950">
+                    <span className="font-bold">Liquidación Calculada:</span>{' '}
+                    <strong className="text-emerald-800 font-mono text-sm">${liquidacionDinamica.valorAPagarTabla}</strong>
+                    <span className="text-[11px] text-emerald-800 ml-1">
+                      ({liquidacionDinamica.diasLiquidados} días a {formatearMonedaCol(liquidacionDinamica.valorDiario)}/día)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAplicarLiquidacionCalculada}
+                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                    title="Insertar automáticamente en letras y números en el recuadro"
+                  >
+                    <Sparkles size={13} />
+                    <span>Autocompletar en Letras y Números</span>
+                  </button>
+                </div>
+                <div className="text-[10px] text-gray-600 flex items-center gap-3 flex-wrap">
+                  <span><strong>% Ejecución:</strong> {liquidacionDinamica.porcentajeEjecucionFormatted}</span>
+                  <span>•</span>
+                  <span><strong>Saldo Restante:</strong> {formatearMonedaCol(liquidacionDinamica.saldoPorPagar)}</span>
+                  <span>•</span>
+                  <span><strong>Período:</strong> {liquidacionDinamica.fechaInicioPeriodo} - {liquidacionDinamica.fechaFinPeriodo}</span>
+                </div>
+              </div>
 
               <div className="text-xs">
                 <div className="flex items-center justify-between mb-1">

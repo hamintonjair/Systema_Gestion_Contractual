@@ -328,8 +328,8 @@ export interface CertificadoSupervisionData {
 
 export const createDefaultCertificadoData = (report?: ReportData): CertificadoSupervisionData => {
   const rep = report || initialMockData;
-  const matchNum = rep.valorPagar ? rep.valorPagar.match(/\$?([\d.,]+)/) : null;
-  const valorNumStr = matchNum ? matchNum[1] : '1.780.426,67';
+  const { valorNumeroFormateado } = extraerLetrasYNumeroDeValorPagar(rep.valorPagar);
+  const valorNumStr = valorNumeroFormateado || '2.160.000';
 
   // Cálculo automático del plan financiero y liquidación de pago si hay datos contractuales
   let autoLiq: any = null;
@@ -344,7 +344,7 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
       valor_mensual: valMensual,
       fecha_inicio: fInicio,
       fecha_fin: fFin,
-    }, rep.informeNro || '1');
+    }, rep.informeNro || '1', rep.periodoDesde, rep.periodoHasta);
   }
 
   const pagoNroCalculado = autoLiq?.pagoNro || rep.informeNro || '1';
