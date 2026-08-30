@@ -540,6 +540,8 @@ export default function ReportEditor({
       k === 'tipoinforme_final' ||
       k === 'fechapresentacion' ||
       k === 'valorpagar' ||
+      k === 'supervisordocumento' ||
+      k === 'supervisornombre' ||
       k.includes('actividades') ||
       k.includes('descripcion') ||
       k.includes('descrip')
@@ -1107,7 +1109,10 @@ export default function ReportEditor({
                 </div>
 
                 <div className="col-span-2 pt-2 border-t border-gray-100">
-                  <label className="block font-medium text-gray-700 mb-1">Supervisor(a) del Contrato</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-medium text-gray-700">Supervisor(a) del Contrato</label>
+                    {renderNewReportBadge('supervisorNombre')}
+                  </div>
                   <input
                     type="text"
                     value={data.supervisorNombre}
@@ -1118,12 +1123,16 @@ export default function ReportEditor({
                 </div>
 
                 <div>
-                  <label className="block font-medium text-gray-700 mb-1">C.C. Supervisor</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-medium text-gray-700">C.C. Supervisor</label>
+                    {renderNewReportBadge('supervisorDocumento')}
+                  </div>
                   <input
                     type="text"
                     value={data.supervisorDocumento}
                     onChange={(e) => handleChange('supervisorDocumento', e.target.value)}
-                    className={`w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 ${getFieldHighlightClass('supervisorDocumento')}`}
+                    placeholder="Ej. 35.602.521"
+                    className={`w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 font-medium ${getFieldHighlightClass('supervisorDocumento')}`}
                   />
                   {renderCommentAlert('supervisorDocumento')}
                 </div>
