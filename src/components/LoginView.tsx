@@ -16,6 +16,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import QuibdoLogo from './QuibdoLogo';
+import Footer from './Footer';
 
 interface Props {
   onLoginSuccess: (user: AuthUser) => void;
@@ -358,9 +359,7 @@ export default function LoginView({ onLoginSuccess }: Props) {
       </main>
 
       {/* Pie de Página */}
-      <footer className="border-t border-emerald-950 bg-black/40 py-3 px-6 text-center text-[11px] text-slate-400 relative z-10">
-        República de Colombia • Departamento del Chocó • Alcaldía Municipal de Quibdó • NIT 891680011-0
-      </footer>
+      <Footer />
 
     </div>
   );

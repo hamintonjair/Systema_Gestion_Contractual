@@ -11,6 +11,7 @@ import AutorizacionDesembolsoDoc from './AutorizacionDesembolsoDoc';
 import ReportPreview from './ReportPreview';
 import CertificadoSupervisionModal from './CertificadoSupervisionModal';
 import WhatsAppNotifyModal from './WhatsAppNotifyModal';
+import Footer from './Footer';
 import { WhatsAppNotificationPayload } from '../utils/whatsappNotifier';
 import { 
   Building2, 
@@ -2231,6 +2232,11 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
           </div>
         </div>
       )}
+
+      {/* Pie de Página */}
+      <div className="mt-12">
+        <Footer />
+      </div>
 
     </div>
   );

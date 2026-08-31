@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Secretaria, AuthUser, InformeSummary } from '../types';
 import { supabaseService } from '../services/supabaseService';
+import Footer from './Footer';
 import { 
   ShieldCheck, 
   Building2, 
@@ -1318,6 +1319,11 @@ export default function SuperAdminView({ user }: Props) {
           </div>
         </div>
       )}
+
+      {/* Pie de Página */}
+      <div className="mt-12">
+        <Footer />
+      </div>
 
     </div>
   );

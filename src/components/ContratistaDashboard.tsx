@@ -8,6 +8,8 @@ import CertificadoSupervisionDoc from './CertificadoSupervisionDoc';
 import SoporteFiduciariaDoc from './SoporteFiduciariaDoc';
 import DeclaracionRentaDoc from './DeclaracionRentaDoc';
 import AutorizacionDesembolsoDoc from './AutorizacionDesembolsoDoc';
+import { OrdenDocumentosGuia } from './OrdenDocumentosGuia';
+import Footer from './Footer';
 import ValidationAlertModal from './ValidationAlertModal';
 import { validateReportForRadicacion, RadicacionValidationError } from '../utils/validationUtils';
 import { 
@@ -42,7 +44,8 @@ import {
   Sparkles,
   Award,
   X,
-  Loader2
+  Loader2,
+  ListOrdered
 } from 'lucide-react';
 
 interface Props {
@@ -51,7 +54,7 @@ interface Props {
   onDirectPrint: (report: ReportData) => void;
 }
 
-export type ContratistaModuleTab = 'informe' | 'supervision' | 'fiduciaria' | 'juramento' | 'desembolso';
+export type ContratistaModuleTab = 'informe' | 'supervision' | 'fiduciaria' | 'juramento' | 'desembolso' | 'orden';
 
 export default function ContratistaDashboard({ user, onOpenReportEditor, onDirectPrint }: Props) {
   const [activeModuleTab, setActiveModuleTab] = useState<ContratistaModuleTab>('informe');
@@ -1041,11 +1044,26 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
             )}
           </button>
 
+          <button
+            onClick={() => setActiveModuleTab('orden')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
+              activeModuleTab === 'orden'
+                ? 'bg-[#006b33] text-white shadow-md'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <ListOrdered size={16} className={activeModuleTab === 'orden' ? 'text-amber-400' : 'text-[#006b33]'} />
+            <span>6. Orden de Documentos</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-amber-400 text-amber-950">
+              Guía
+            </span>
+          </button>
+
         </div>
       </div>
 
       {/* Guía Rápida de Edición de Módulos Contractuales */}
-      {activeModuleTab !== 'informe' && (
+      {activeModuleTab !== 'informe' && activeModuleTab !== 'orden' && (
         <div className="bg-gradient-to-r from-emerald-950 via-[#004d25] to-emerald-900 text-white px-4 py-3 rounded-2xl shadow-sm border border-emerald-700/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-start sm:items-center gap-2.5">
             <div className="bg-amber-400 text-slate-950 p-1.5 rounded-lg shrink-0 font-bold mt-0.5 sm:mt-0">
@@ -2058,6 +2076,13 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
         </div>
       )}
 
+      {/* VISTA DEL MÓDULO 6: ORDEN DE DOCUMENTOS PARA CUENTA DE COBRO */}
+      {activeModuleTab === 'orden' && (
+        <div className="animate-in fade-in duration-200">
+          <OrdenDocumentosGuia />
+        </div>
+      )}
+
       {/* Modal para Crear Nuevo Informe */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
@@ -2456,6 +2481,11 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           </div>
         </div>
       )}
+
+      {/* Pie de Página */}
+      <div className="mt-12">
+        <Footer />
+      </div>
 
     </div>
   );
