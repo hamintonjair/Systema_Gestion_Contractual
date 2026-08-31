@@ -1,8 +1,9 @@
 import { supabase } from '../lib/supabase';
-import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, Obligacion, Notificacion, extractContratoNroOnly } from '../types';
+import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData, Obligacion, Notificacion, extractContratoNroOnly } from '../types';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
 import { isMainReportComment } from '../utils/commentUtils';
 import { limpiarNumeroMoneda, formatearNumeroTablaCol } from '../utils/paymentPlanUtils';
+import { convertirNumeroALetras } from '../utils/numberToWords';
 
 const STORAGE_USERS_KEY = 'alcaldia_quibdo_registered_users';
 const STORAGE_PASSWORDS_KEY = 'alcaldia_quibdo_user_passwords';
@@ -138,31 +139,33 @@ const parseObservacionesAndComments = (rawObs?: string): { cleanObs: string; com
   let comments: Record<string, FieldComment> = {};
   let valorPagarText: string | undefined;
 
-  const commDelimiter = '\n\n__COMMENTS_JSON__:';
-  if (current.includes(commDelimiter)) {
-    const parts = current.split(commDelimiter);
+  // 1. Extraer __VALOR_PAGAR__: si existe
+  if (current.includes('__VALOR_PAGAR__:')) {
+    const parts = current.split('__VALOR_PAGAR__:');
     current = parts[0] || '';
     if (parts[1]) {
+      const rawVp = parts[1].split('__COMMENTS_JSON__:')[0].trim();
       try {
-        comments = JSON.parse(parts[1]);
-      } catch (e) {}
-    }
-  }
-
-  const vpDelimiter = '\n\n__VALOR_PAGAR__:';
-  if (current.includes(vpDelimiter)) {
-    const parts = current.split(vpDelimiter);
-    current = parts[0] || '';
-    if (parts[1]) {
-      try {
-        valorPagarText = decodeURIComponent(parts[1]);
+        valorPagarText = decodeURIComponent(rawVp);
       } catch (e) {
-        valorPagarText = parts[1];
+        valorPagarText = rawVp;
       }
     }
   }
 
-  return { cleanObs: current, comments, valorPagarText };
+  // 2. Extraer __COMMENTS_JSON__: si existe
+  if (current.includes('__COMMENTS_JSON__:')) {
+    const parts = current.split('__COMMENTS_JSON__:');
+    current = parts[0] || '';
+    if (parts[1]) {
+      const rawComm = parts[1].split('__VALOR_PAGAR__:')[0].trim();
+      try {
+        comments = JSON.parse(rawComm);
+      } catch (e) {}
+    }
+  }
+
+  return { cleanObs: current.trim(), comments, valorPagarText };
 };
 
 const buildObservacionesWithComments = (cleanObs: string, comments?: Record<string, FieldComment>, valorPagarText?: string): string => {
@@ -1431,9 +1434,21 @@ export const supabaseService = {
         const storedData = getStoredReportData(docIdentidad, infNumStr);
         const { obsWithFotos, allAnexos } = associateFotosToObligaciones(obs, anx, storedData?.obligaciones);
 
-        const finalValorPagar = valorPagarText || storedData?.valorPagar || (row.valor_pagar_certificado 
-          ? (typeof row.valor_pagar_certificado === 'string' && isNaN(Number(row.valor_pagar_certificado)) ? row.valor_pagar_certificado : `$ ${Number(row.valor_pagar_certificado).toLocaleString('es-CO')}`) 
-          : '$ 3.338.300');
+        const numCert = row.valor_pagar_certificado ? Number(row.valor_pagar_certificado) : 0;
+        let finalValorPagar = '';
+        if (numCert > 0) {
+          const rawLetters = valorPagarText ? valorPagarText.replace(/\([^)]*\)/g, '').replace(/\$\s*[\d.,]+/g, '').trim() : '';
+          const finalLetters = (rawLetters && rawLetters.length > 5 && /[a-zA-Z]/.test(rawLetters)) 
+            ? (rawLetters.toUpperCase().includes('PESOS') ? rawLetters.toUpperCase() : `${rawLetters.toUpperCase()} PESOS M/CTE`)
+            : convertirNumeroALetras(numCert);
+          finalValorPagar = `${finalLetters} ($${numCert.toLocaleString('es-CO')})`;
+        } else if (valorPagarText) {
+          finalValorPagar = valorPagarText;
+        } else if (storedData?.valorPagar) {
+          finalValorPagar = storedData.valorPagar;
+        } else {
+          finalValorPagar = '$ 2.160.000';
+        }
 
         return {
           id: row.id,
@@ -1589,9 +1604,21 @@ export const supabaseService = {
             const storedData = getStoredReportData(docIdentidad, infNumStr);
             const { obsWithFotos, allAnexos } = associateFotosToObligaciones(obs, anx, storedData?.obligaciones);
 
-            const finalValorPagar = valorPagarText || storedData?.valorPagar || (row.valor_pagar_certificado
-              ? (typeof row.valor_pagar_certificado === 'string' && isNaN(Number(row.valor_pagar_certificado)) ? row.valor_pagar_certificado : `$ ${Number(row.valor_pagar_certificado).toLocaleString('es-CO')}`)
-              : '$ 3.338.300');
+            const numCert = row.valor_pagar_certificado ? Number(row.valor_pagar_certificado) : 0;
+            let finalValorPagar = '';
+            if (numCert > 0) {
+              const rawLetters = valorPagarText ? valorPagarText.replace(/\([^)]*\)/g, '').replace(/\$\s*[\d.,]+/g, '').trim() : '';
+              const finalLetters = (rawLetters && rawLetters.length > 5 && /[a-zA-Z]/.test(rawLetters)) 
+                ? (rawLetters.toUpperCase().includes('PESOS') ? rawLetters.toUpperCase() : `${rawLetters.toUpperCase()} PESOS M/CTE`)
+                : convertirNumeroALetras(numCert);
+              finalValorPagar = `${finalLetters} ($${numCert.toLocaleString('es-CO')})`;
+            } else if (valorPagarText) {
+              finalValorPagar = valorPagarText;
+            } else if (storedData?.valorPagar) {
+              finalValorPagar = storedData.valorPagar;
+            } else {
+              finalValorPagar = '$ 2.160.000';
+            }
 
             return {
               id: row.id,
@@ -1627,9 +1654,11 @@ export const supabaseService = {
               fechaTerminacion: formatDateSlash(row.contratos?.fecha_terminacion || '14/07/2026'),
               modificaciones: row.modificaciones_contrato || 'N/A',
               observaciones: cleanObs,
+              rawObservacionesDb: row.observaciones || '',
               obligaciones: obsWithFotos,
               anexos: allAnexos,
               valorPagar: finalValorPagar,
+              valorPagarCertificado: row.valor_pagar_certificado || (numCert ? String(numCert) : ''),
               estado: finalState,
               comentariosCampos: finalComments,
               syncedToDb: true,
@@ -1933,12 +1962,18 @@ export const supabaseService = {
         localStorage.setItem(`alcaldia_quibdo_report_${report.informeNro}`, JSON.stringify(updatedReportWithDb));
       }
 
-      // Sincronizar automáticamente el Certificado de Supervisión en Supabase
+      // Sincronizar automáticamente Certificado de Supervisión, Soporte Fiduciaria y Autorización de Desembolso en Supabase
       try {
         const certDataToSync = createDefaultCertificadoData(updatedReportWithDb);
-        await this.saveCertificadoSupervision(certDataToSync, informeId);
+        await this.saveCertificadoSupervision(certDataToSync, informeId, undefined, contratoId);
+
+        const fidDataToSync = createDefaultFiduciariaData(updatedReportWithDb);
+        await this.saveSoporteFiduciaria(informeId, fidDataToSync, contractorDoc, String(report.informeNro || '1'), contratoId);
+
+        const desembolsoDataToSync = createDefaultAutorizacionDesembolsoData(updatedReportWithDb);
+        await this.saveAutorizacionDesembolso(informeId, desembolsoDataToSync, contractorDoc, String(report.informeNro || '1'), contratoId);
       } catch (certSyncErr) {
-        console.warn('Error syncing certificado supervision in saveFullInforme:', certSyncErr);
+        console.warn('Error syncing certificados/soportes in saveFullInforme:', certSyncErr);
       }
 
       return { success: true, id: informeId || `local-${Date.now()}` };
@@ -2253,7 +2288,8 @@ export const supabaseService = {
   async saveCertificadoSupervision(
     certData: CertificadoSupervisionData, 
     informeId?: string,
-    supervisorId?: string
+    supervisorId?: string,
+    contratoIdParam?: string
   ): Promise<{ success: boolean; id?: string; error?: string }> {
     const docKey = certData.contratistaDocumento || '';
     const cleanDoc = docKey.replace(/[^0-9]/g, '');
@@ -2274,7 +2310,20 @@ export const supabaseService = {
 
     try {
       let resolvedInformeId = (informeId && isUuid(informeId)) ? informeId : null;
-      let contratoId: string | null = null;
+      let contratoId: string | null = (contratoIdParam && isUuid(contratoIdParam)) ? contratoIdParam : null;
+
+      // Si tenemos informeId pero no contratoId, consultar contrato_id desde informes_mensuales
+      if (resolvedInformeId && !contratoId) {
+        const { data: rep } = await supabase
+          .from('informes_mensuales')
+          .select('contrato_id')
+          .eq('id', resolvedInformeId)
+          .limit(1)
+          .maybeSingle();
+        if (rep?.contrato_id && isUuid(rep.contrato_id)) {
+          contratoId = rep.contrato_id;
+        }
+      }
 
       // Si no tenemos UUID de informe, buscar si existe informe por documento y número de pago
       if (!resolvedInformeId && (docKey || cleanDoc)) {
@@ -2288,7 +2337,9 @@ export const supabaseService = {
 
         if (rep?.id && isUuid(rep.id)) {
           resolvedInformeId = rep.id;
-          contratoId = (rep as any).contrato_id;
+          if (!contratoId && (rep as any).contrato_id) {
+            contratoId = (rep as any).contrato_id;
+          }
         }
       }
 
@@ -2433,38 +2484,119 @@ export const supabaseService = {
     informeId: string,
     data: any,
     docKey?: string,
-    pagoNroStr?: string
+    pagoNroStr?: string,
+    contratoIdStr?: string
   ): Promise<{ success: boolean; id?: string }> {
     try {
-      let resolvedInformeId = informeId;
-      if (!isUuid(informeId)) {
-        resolvedInformeId = ''; // local mode
+      const docKeyToUse = docKey || data?.cedula || data?.nitCc || data?.contratistaDocumento || '';
+      const cleanDoc = docKeyToUse ? docKeyToUse.replace(/[^0-9]/g, '') : '';
+      const nroStr = pagoNroStr || String(data?.pagoNro || data?.consecutivoNro || '1');
+
+      // 1. Guardar copia en LocalStorage inmediatamente
+      if (typeof localStorage !== 'undefined' && data) {
+        if (docKeyToUse) {
+          localStorage.setItem(`fid_data_${docKeyToUse}_${nroStr}`, JSON.stringify(data));
+        }
+        if (cleanDoc) {
+          localStorage.setItem(`fid_data_${cleanDoc}_${nroStr}`, JSON.stringify(data));
+        }
+        localStorage.setItem(`fid_data_${nroStr}`, JSON.stringify(data));
+        if (informeId) {
+          localStorage.setItem(`fid_data_${informeId}_${nroStr}`, JSON.stringify(data));
+        }
+      }
+
+      let resolvedInformeId = (informeId && isUuid(informeId)) ? informeId : '';
+      let contratoId: string | null = (contratoIdStr && isUuid(contratoIdStr)) ? contratoIdStr : null;
+
+      if (!resolvedInformeId && (docKeyToUse || cleanDoc)) {
+        const { data: rep } = await supabase
+          .from('informes_mensuales')
+          .select('id, contrato_id, contratos!inner(id, profiles!inner(documento_identidad))')
+          .eq('informe_nro', parseInt(nroStr, 10) || 1)
+          .or(`contratos.profiles.documento_identidad.eq.${docKeyToUse},contratos.profiles.documento_identidad.eq.${cleanDoc}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (rep?.id && isUuid(rep.id)) {
+          resolvedInformeId = rep.id;
+          if (!contratoId && (rep as any).contrato_id) {
+            contratoId = (rep as any).contrato_id;
+          }
+        }
+      }
+
+      if (resolvedInformeId && !contratoId) {
+        const { data: rep } = await supabase
+          .from('informes_mensuales')
+          .select('contrato_id')
+          .eq('id', resolvedInformeId)
+          .limit(1)
+          .maybeSingle();
+        if (rep?.contrato_id && isUuid(rep.contrato_id)) {
+          contratoId = rep.contrato_id;
+        }
+      }
+
+      if (typeof data === 'object' && data !== null) {
+        if (resolvedInformeId) data.reportId = resolvedInformeId;
+        if (contratoId) data.contratoId = contratoId;
       }
 
       const payload: any = {
+        contratista_documento: cleanDoc || docKeyToUse,
+        pago_nro: nroStr,
         datos_formulario: data,
         fecha_actualizacion: new Date().toISOString()
       };
 
-      if (docKey) payload.contratista_documento = docKey;
-      if (pagoNroStr) payload.pago_nro = pagoNroStr;
-      if (resolvedInformeId) payload.informe_id = resolvedInformeId;
+      if (resolvedInformeId && isUuid(resolvedInformeId)) {
+        payload.informe_id = resolvedInformeId;
+      }
+      if (contratoId && isUuid(contratoId)) {
+        payload.contrato_id = contratoId;
+      }
 
       let existingId: string | null = null;
       if (resolvedInformeId) {
-        const { data: existingFid } = await supabase.from('soportes_fiduciaria').select('id').eq('informe_id', resolvedInformeId).limit(1).maybeSingle();
+        const { data: existingFid } = await supabase
+          .from('soportes_fiduciaria')
+          .select('id')
+          .eq('informe_id', resolvedInformeId)
+          .limit(1)
+          .maybeSingle();
         if (existingFid?.id) existingId = existingFid.id;
       }
-      if (!existingId && docKey) {
-        const { data: existingByDoc } = await supabase.from('soportes_fiduciaria').select('id').eq('contratista_documento', docKey).eq('pago_nro', pagoNroStr).limit(1).maybeSingle();
+
+      if (!existingId && (docKeyToUse || cleanDoc)) {
+        const { data: existingByDoc } = await supabase
+          .from('soportes_fiduciaria')
+          .select('id')
+          .or(`contratista_documento.eq.${docKeyToUse},contratista_documento.eq.${cleanDoc}`)
+          .eq('pago_nro', nroStr)
+          .limit(1)
+          .maybeSingle();
         if (existingByDoc?.id) existingId = existingByDoc.id;
       }
 
       if (existingId) {
-        await supabase.from('soportes_fiduciaria').update(payload).eq('id', existingId);
+        const { error: updateErr } = await supabase
+          .from('soportes_fiduciaria')
+          .update(payload)
+          .eq('id', existingId);
+        if (updateErr) {
+          console.warn('Supabase update soportes_fiduciaria error:', updateErr);
+        }
         return { success: true, id: existingId };
       } else {
-        const { data: inserted } = await supabase.from('soportes_fiduciaria').insert([payload]).select('id').maybeSingle();
+        const { data: inserted, error: insertErr } = await supabase
+          .from('soportes_fiduciaria')
+          .insert([payload])
+          .select('id')
+          .maybeSingle();
+        if (insertErr) {
+          console.warn('Supabase insert soportes_fiduciaria error:', insertErr);
+        }
         return { success: true, id: inserted?.id };
       }
     } catch (e: any) {
@@ -2481,37 +2613,69 @@ export const supabaseService = {
   ): Promise<any | null> {
     try {
       if (informeId && isUuid(informeId)) {
-        const { data, error } = await supabase.from('soportes_fiduciaria').select('*').eq('informe_id', informeId).limit(1).maybeSingle();
+        const { data, error } = await supabase
+          .from('soportes_fiduciaria')
+          .select('*')
+          .eq('informe_id', informeId)
+          .limit(1)
+          .maybeSingle();
         if (!error && data?.datos_formulario) return data.datos_formulario;
       }
       if (docIdentidad && pagoNro) {
-        const { data, error } = await supabase.from('soportes_fiduciaria').select('*').eq('contratista_documento', docIdentidad).eq('pago_nro', pagoNro).limit(1).maybeSingle();
+        const cleanDoc = docIdentidad.replace(/[^0-9]/g, '');
+        const { data, error } = await supabase
+          .from('soportes_fiduciaria')
+          .select('*')
+          .or(`contratista_documento.eq.${docIdentidad},contratista_documento.eq.${cleanDoc}`)
+          .eq('pago_nro', pagoNro)
+          .limit(1)
+          .maybeSingle();
         if (!error && data?.datos_formulario) return data.datos_formulario;
       }
     } catch (e) {
       console.warn('Error fetching soporte fiduciaria:', e);
     }
-    
+
     if (typeof localStorage !== 'undefined') {
-      const key = `fid_data_${docIdentidad || ''}_${pagoNro || '1'}`;
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        try { return JSON.parse(saved); } catch (e) {}
+      const cleanDoc = docIdentidad ? docIdentidad.replace(/[^0-9]/g, '') : '';
+      const keysToTry = [
+        `fid_data_${docIdentidad || ''}_${pagoNro || '1'}`,
+        `fid_data_${cleanDoc}_${pagoNro || '1'}`,
+        `fid_data_${informeId || ''}_${pagoNro || '1'}`,
+        `fid_data_${pagoNro || '1'}`
+      ];
+      for (const k of keysToTry) {
+        const saved = localStorage.getItem(k);
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) {}
+        }
       }
     }
     return null;
   },
+
   // 17. Guardar Declaracion Renta
   async saveDeclaracionRenta(
     informeId: string,
     data: any,
     docKey?: string,
-    pagoNroStr?: string
+    pagoNroStr?: string,
+    contratoIdStr?: string
   ): Promise<{ success: boolean; id?: string }> {
     try {
-      let resolvedInformeId = informeId;
-      if (!isUuid(informeId)) {
-        resolvedInformeId = ''; // local mode
+      let resolvedInformeId = (informeId && isUuid(informeId)) ? informeId : '';
+      let contratoId: string | null = (contratoIdStr && isUuid(contratoIdStr)) ? contratoIdStr : null;
+
+      if (resolvedInformeId && !contratoId) {
+        const { data: rep } = await supabase
+          .from('informes_mensuales')
+          .select('contrato_id')
+          .eq('id', resolvedInformeId)
+          .limit(1)
+          .maybeSingle();
+        if (rep?.contrato_id && isUuid(rep.contrato_id)) {
+          contratoId = rep.contrato_id;
+        }
       }
 
       const payload: any = {
@@ -2522,6 +2686,7 @@ export const supabaseService = {
       if (docKey) payload.contratista_documento = docKey;
       if (pagoNroStr) payload.pago_nro = pagoNroStr;
       if (resolvedInformeId) payload.informe_id = resolvedInformeId;
+      if (contratoId) payload.contrato_id = contratoId;
 
       let existingId: string | null = null;
       if (resolvedInformeId) {
@@ -2575,43 +2740,122 @@ export const supabaseService = {
     return null;
   },
 
-  // 19. Guardar Autorizacion de Desembolso
+  // 19. Guardar Autorización de Desembolso
   async saveAutorizacionDesembolso(
     informeId: string,
     data: any,
     docKey?: string,
-    pagoNroStr?: string
+    pagoNroStr?: string,
+    contratoIdStr?: string
   ): Promise<{ success: boolean; id?: string }> {
     try {
-      let resolvedInformeId = informeId;
-      if (!isUuid(informeId)) {
-        resolvedInformeId = ''; // local mode
+      const docKeyToUse = docKey || data?.nitCc || data?.contratistaDocumento || '';
+      const cleanDoc = docKeyToUse ? docKeyToUse.replace(/[^0-9]/g, '') : '';
+      const nroStr = pagoNroStr || String(data?.consecutivoNro || data?.pagoNro || '1');
+
+      // 1. Guardar copia en LocalStorage inmediatamente con todas las variantes de clave
+      if (typeof localStorage !== 'undefined' && data) {
+        if (docKeyToUse) {
+          localStorage.setItem(`desembolso_${docKeyToUse}_${nroStr}`, JSON.stringify(data));
+        }
+        if (cleanDoc) {
+          localStorage.setItem(`desembolso_${cleanDoc}_${nroStr}`, JSON.stringify(data));
+        }
+        localStorage.setItem(`desembolso_${nroStr}`, JSON.stringify(data));
+        if (informeId) {
+          localStorage.setItem(`desembolso_${informeId}_${nroStr}`, JSON.stringify(data));
+        }
+      }
+
+      let resolvedInformeId = (informeId && isUuid(informeId)) ? informeId : '';
+      let contratoId: string | null = (contratoIdStr && isUuid(contratoIdStr)) ? contratoIdStr : null;
+
+      // Buscar si existe informe en DB por documento y número de pago
+      if (!resolvedInformeId && (docKeyToUse || cleanDoc)) {
+        const { data: rep } = await supabase
+          .from('informes_mensuales')
+          .select('id, contrato_id, contratos!inner(id, profiles!inner(documento_identidad))')
+          .eq('informe_nro', parseInt(nroStr, 10) || 1)
+          .or(`contratos.profiles.documento_identidad.eq.${docKeyToUse},contratos.profiles.documento_identidad.eq.${cleanDoc}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (rep?.id && isUuid(rep.id)) {
+          resolvedInformeId = rep.id;
+          if (!contratoId && (rep as any).contrato_id) {
+            contratoId = (rep as any).contrato_id;
+          }
+        }
+      }
+
+      if (resolvedInformeId && !contratoId) {
+        const { data: rep } = await supabase
+          .from('informes_mensuales')
+          .select('contrato_id')
+          .eq('id', resolvedInformeId)
+          .limit(1)
+          .maybeSingle();
+        if (rep?.contrato_id && isUuid(rep.contrato_id)) {
+          contratoId = rep.contrato_id;
+        }
+      }
+
+      if (typeof data === 'object' && data !== null) {
+        if (resolvedInformeId) data.reportId = resolvedInformeId;
+        if (contratoId) data.contratoId = contratoId;
       }
 
       const payload: any = {
+        contratista_documento: cleanDoc || docKeyToUse,
+        pago_nro: nroStr,
         datos_formulario: data,
         fecha_actualizacion: new Date().toISOString()
       };
 
-      if (docKey) payload.contratista_documento = docKey;
-      if (pagoNroStr) payload.pago_nro = pagoNroStr;
-      if (resolvedInformeId) payload.informe_id = resolvedInformeId;
+      if (resolvedInformeId && isUuid(resolvedInformeId)) {
+        payload.informe_id = resolvedInformeId;
+      }
 
       let existingId: string | null = null;
       if (resolvedInformeId) {
-        const { data: existingDoc } = await supabase.from('autorizaciones_desembolso').select('id').eq('informe_id', resolvedInformeId).limit(1).maybeSingle();
+        const { data: existingDoc } = await supabase
+          .from('autorizaciones_desembolso')
+          .select('id')
+          .eq('informe_id', resolvedInformeId)
+          .limit(1)
+          .maybeSingle();
         if (existingDoc?.id) existingId = existingDoc.id;
       }
-      if (!existingId && docKey) {
-        const { data: existingByDoc } = await supabase.from('autorizaciones_desembolso').select('id').eq('contratista_documento', docKey).eq('pago_nro', pagoNroStr).limit(1).maybeSingle();
+
+      if (!existingId && (docKeyToUse || cleanDoc)) {
+        const { data: existingByDoc } = await supabase
+          .from('autorizaciones_desembolso')
+          .select('id')
+          .or(`contratista_documento.eq.${docKeyToUse},contratista_documento.eq.${cleanDoc}`)
+          .eq('pago_nro', nroStr)
+          .limit(1)
+          .maybeSingle();
         if (existingByDoc?.id) existingId = existingByDoc.id;
       }
 
       if (existingId) {
-        await supabase.from('autorizaciones_desembolso').update(payload).eq('id', existingId);
+        const { error: updateErr } = await supabase
+          .from('autorizaciones_desembolso')
+          .update(payload)
+          .eq('id', existingId);
+        if (updateErr) {
+          console.warn('Supabase update autorizaciones_desembolso error:', updateErr);
+        }
         return { success: true, id: existingId };
       } else {
-        const { data: inserted } = await supabase.from('autorizaciones_desembolso').insert([payload]).select('id').maybeSingle();
+        const { data: inserted, error: insertErr } = await supabase
+          .from('autorizaciones_desembolso')
+          .insert([payload])
+          .select('id')
+          .maybeSingle();
+        if (insertErr) {
+          console.warn('Supabase insert autorizaciones_desembolso error:', insertErr);
+        }
         return { success: true, id: inserted?.id };
       }
     } catch (e: any) {
@@ -2620,7 +2864,7 @@ export const supabaseService = {
     }
   },
 
-  // 20. Obtener Autorizacion de Desembolso
+  // 20. Obtener Autorización de Desembolso
   async getAutorizacionDesembolso(
     informeId?: string,
     docIdentidad?: string,
@@ -2628,22 +2872,42 @@ export const supabaseService = {
   ): Promise<any | null> {
     try {
       if (informeId && isUuid(informeId)) {
-        const { data, error } = await supabase.from('autorizaciones_desembolso').select('*').eq('informe_id', informeId).limit(1).maybeSingle();
+        const { data, error } = await supabase
+          .from('autorizaciones_desembolso')
+          .select('*')
+          .eq('informe_id', informeId)
+          .limit(1)
+          .maybeSingle();
         if (!error && data?.datos_formulario) return data.datos_formulario;
       }
       if (docIdentidad && pagoNro) {
-        const { data, error } = await supabase.from('autorizaciones_desembolso').select('*').eq('contratista_documento', docIdentidad).eq('pago_nro', pagoNro).limit(1).maybeSingle();
+        const cleanDoc = docIdentidad.replace(/[^0-9]/g, '');
+        const { data, error } = await supabase
+          .from('autorizaciones_desembolso')
+          .select('*')
+          .or(`contratista_documento.eq.${docIdentidad},contratista_documento.eq.${cleanDoc}`)
+          .eq('pago_nro', pagoNro)
+          .limit(1)
+          .maybeSingle();
         if (!error && data?.datos_formulario) return data.datos_formulario;
       }
     } catch (e) {
       console.warn('Error fetching autorizacion desembolso:', e);
     }
-    
+
     if (typeof localStorage !== 'undefined') {
-      const key = `desembolso_${docIdentidad || ''}_${pagoNro || '1'}`;
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        try { return JSON.parse(saved); } catch (e) {}
+      const cleanDoc = docIdentidad ? docIdentidad.replace(/[^0-9]/g, '') : '';
+      const keysToTry = [
+        `desembolso_${docIdentidad || ''}_${pagoNro || '1'}`,
+        `desembolso_${cleanDoc}_${pagoNro || '1'}`,
+        `desembolso_${informeId || ''}_${pagoNro || '1'}`,
+        `desembolso_${pagoNro || '1'}`
+      ];
+      for (const k of keysToTry) {
+        const saved = localStorage.getItem(k);
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) {}
+        }
       }
     }
     return null;

@@ -1,4 +1,4 @@
-import { extraerLetrasYNumeroDeValorPagar, formatearObjetoConPeriodo, formatFechaAnioMesDia, formatFechaFiduciaria } from './utils/numberToWords';
+import { extraerLetrasYNumeroDeValorPagar, formatearObjetoConPeriodo, formatFechaAnioMesDia, formatFechaFiduciaria, obtenerValoresMonetariosReporte } from './utils/numberToWords';
 
 export const extractContratoNroOnly = (str?: string): string => {
   if (!str) return '';
@@ -228,8 +228,10 @@ export interface ReportData {
   modificaciones: string;
   obligaciones: Obligacion[];
   observaciones: string;
+  rawObservacionesDb?: string;
   anexos: Anexo[];
   valorPagar: string;
+  valorPagarCertificado?: string | number;
   comentariosCampos?: Record<string, FieldComment>;
 }
 
@@ -352,8 +354,8 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
   const periodoHastaCalculado = autoLiq?.periodoHasta || (rep.periodoHasta ? formatDateSlash(rep.periodoHasta) : '31/01/2026');
   const porcentajeEjecucionCalculado = autoLiq?.porcentajeEjecucion || '8,89 %';
   const valorPagadoAcumuladoCalculado = quitarDecimales(autoLiq?.valorPagadoAcumulado || '0');
-  const valorAPagarSinIvaCalculado = quitarDecimales(autoLiq?.valorAPagarSinIva || valorNumStr);
-  const valorTotalAPagarCalculado = quitarDecimales(autoLiq?.valorTotalAPagar || valorNumStr);
+  const valorAPagarSinIvaCalculado = valorNumStr || quitarDecimales(autoLiq?.valorAPagarSinIva || '2.160.000');
+  const valorTotalAPagarCalculado = valorNumStr || quitarDecimales(autoLiq?.valorTotalAPagar || '2.160.000');
   const saldoPorPagarCalculado = quitarDecimales(autoLiq?.saldoPorPagar || '18.249.373');
 
   const MONTH_NAMES = [
@@ -626,7 +628,7 @@ export interface SoporteFiduciariaData {
 
 export const createDefaultFiduciariaData = (report?: ReportData): SoporteFiduciariaData => {
   const rep = report || initialMockData;
-  const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(rep.valorPagar);
+  const { valorNumeroFormateado, sumaTotalConCentavos, valorLetras } = obtenerValoresMonetariosReporte(rep);
   const fechaFiduciaria = formatFechaFiduciaria(rep);
 
   return {
@@ -638,7 +640,7 @@ export const createDefaultFiduciariaData = (report?: ReportData): SoporteFiducia
     cedula: rep.contratistaDocumento || '80.772.379',
     direccion: 'Barrio buenos aires',
     telefono: rep.contratistaTelefono || '3124943527',
-    sumaTotal: `${valorNumeroFormateado},00`,
+    sumaTotal: sumaTotalConCentavos,
     valorLetras: valorLetras,
     cantidad: '1',
     descripcionBienServicio: rep.objeto || 'Prestar los servicios de apoyo a la gestión para adelantar, acompañar y desarrollar las acciones que se llevan acabo en la secretaria de inclusión y cohesión social del municipio de Quibdó.',
@@ -721,7 +723,7 @@ export interface AutorizacionDesembolsoData {
 
 export const createDefaultAutorizacionDesembolsoData = (report?: ReportData): AutorizacionDesembolsoData => {
   const rep = report || initialMockData;
-  const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(rep.valorPagar);
+  const { valorNumeroFormateado, valorLetras } = obtenerValoresMonetariosReporte(rep);
   const objetoConPeriodo = formatearObjetoConPeriodo(
     rep?.objeto,
     rep?.fechaAplicacion,

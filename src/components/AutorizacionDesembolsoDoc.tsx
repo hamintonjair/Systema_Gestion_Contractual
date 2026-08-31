@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AutorizacionDesembolsoData, ReportData, createDefaultAutorizacionDesembolsoData, FieldComment } from '../types';
-import { extraerLetrasYNumeroDeValorPagar, formatearObjetoConPeriodo, formatFechaAnioMesDia } from '../utils/numberToWords';
+import { obtenerValoresMonetariosReporte, convertirNumeroALetras, formatearObjetoConPeriodo, formatFechaAnioMesDia } from '../utils/numberToWords';
+import { limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
 import { supabaseService } from '../services/supabaseService';
 import { openWhatsAppForCertificate } from '../utils/whatsappNotifier';
 import FieldCommentModal from './FieldCommentModal';
@@ -8,6 +9,7 @@ import { Printer, Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, Ch
 import QuibdoLogo from './QuibdoLogo';
 
 interface Props {
+  key?: React.Key;
   data?: AutorizacionDesembolsoData;
   reportData?: ReportData;
   onChange?: (updated: AutorizacionDesembolsoData) => void;
@@ -43,6 +45,8 @@ export default function AutorizacionDesembolsoDoc({
     fieldValuePreview?: string;
   }>({ isOpen: false, fieldId: '', fieldName: '' });
 
+  const fidComment: FieldComment | undefined = reportData?.comentariosCampos?.autorizacion_desembolso;
+
   const openCommentModal = (fieldId: string, fieldName: string, val?: string) => {
     if (isReviewMode && onSaveComment) {
       setCommentModalState({
@@ -73,7 +77,7 @@ export default function AutorizacionDesembolsoDoc({
     }
     
     if (reportData) {
-      const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
+      const { valorNumeroFormateado, valorLetras } = obtenerValoresMonetariosReporte(reportData);
       const defaultObjeto = formatearObjetoConPeriodo(
         reportData.objeto || (baseData && baseData.objeto),
         reportData.fechaAplicacion,
@@ -84,16 +88,19 @@ export default function AutorizacionDesembolsoDoc({
         reportData.periodoHasta
       );
 
+      const rawExp = reportData.periodoHasta || reportData.fechaPresentacion || '2026-07-14';
+      const defaultFechaExp = formatFechaAnioMesDia(rawExp);
+
       return {
         ...baseData,
         reportId: reportData.id || baseData.reportId,
-        fechaExpedicion: formatFechaAnioMesDia(reportData.periodoHasta || reportData.fechaPresentacion) || baseData.fechaExpedicion,
-        consecutivoNro: reportData.informeNro || baseData.consecutivoNro,
+        fechaExpedicion: defaultFechaExp,
+        consecutivoNro: reportData.informeNro || baseData.consecutivoNro || '1',
         nombre: reportData.contratistaNombre || baseData.nombre,
         nitCc: reportData.contratistaDocumento || baseData.nitCc,
         telefono: reportData.contratistaTelefono || baseData.telefono,
-        contratoNro: reportData.contratoNro || baseData.contratoNro,
-        conceptoNro: reportData.contratoNro || baseData.conceptoNro,
+        contratoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.contratoNro || '590'),
+        conceptoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.conceptoNro || '590'),
         objeto: defaultObjeto,
         valorNumeros: valorNumeroFormateado,
         subtotal: valorNumeroFormateado,
@@ -107,11 +114,11 @@ export default function AutorizacionDesembolsoDoc({
 
   const getIdentityKey = () => {
     if (data?.id) return `data_${data.id}`;
-    if (reportData) return `rep_${reportData.id || ''}_${reportData.informeNro || ''}_${storageKey || ''}`;
+    if (reportData) return `rep_${reportData.id || ''}_${reportData.informeNro || ''}_${reportData.periodoDesde || ''}_${reportData.periodoHasta || ''}_${storageKey || ''}`;
     return 'default';
   };
 
-  const loadedKeyRef = useRef<string>(getIdentityKey());
+  const loadedKeyRef = useRef<string>('');
   const [formData, setFormData] = useState<AutorizacionDesembolsoData>(getInitialData);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
@@ -153,7 +160,7 @@ export default function AutorizacionDesembolsoDoc({
 
       if (loadedKeyRef.current === currentKey) {
         if (reportData) {
-          const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
+          const { valorNumeroFormateado, valorLetras } = obtenerValoresMonetariosReporte(reportData);
           const defaultObjeto = formatearObjetoConPeriodo(
             reportData.objeto || (baseData && baseData.objeto),
             reportData.fechaAplicacion,
@@ -164,16 +171,19 @@ export default function AutorizacionDesembolsoDoc({
             reportData.periodoHasta
           );
 
+          const rawExp = reportData.periodoHasta || reportData.fechaPresentacion || '2026-07-14';
+          const defaultFechaExp = formatFechaAnioMesDia(rawExp);
+
           setFormData({
             ...baseData,
             reportId: reportData.id || baseData.reportId,
-            fechaExpedicion: formatFechaAnioMesDia(reportData.periodoHasta || reportData.fechaPresentacion) || baseData.fechaExpedicion,
-            consecutivoNro: reportData.informeNro || baseData.consecutivoNro,
+            fechaExpedicion: defaultFechaExp,
+            consecutivoNro: reportData.informeNro || baseData.consecutivoNro || '1',
             nombre: reportData.contratistaNombre || baseData.nombre,
             nitCc: reportData.contratistaDocumento || baseData.nitCc,
             telefono: reportData.contratistaTelefono || baseData.telefono,
-            contratoNro: reportData.contratoNro || baseData.contratoNro,
-            conceptoNro: reportData.contratoNro || baseData.conceptoNro,
+            contratoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.contratoNro || '590'),
+            conceptoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.conceptoNro || '590'),
             objeto: defaultObjeto,
             valorNumeros: valorNumeroFormateado,
             subtotal: valorNumeroFormateado,
@@ -187,10 +197,41 @@ export default function AutorizacionDesembolsoDoc({
     };
 
     loadData();
-  }, [data, reportData?.id, reportData?.informeNro, storageKey]);
+  }, [data, reportData?.id, reportData?.informeNro, reportData?.valorPagar, reportData?.valorContrato, reportData?.valorMensual, reportData?.periodoDesde, reportData?.periodoHasta, reportData?.fechaPresentacion, storageKey]);
+
+  useEffect(() => {
+    const handleSyncEvent = (e: any) => {
+      if (e?.detail) {
+        setFormData(prev => ({
+          ...prev,
+          ...e.detail
+        }));
+      }
+    };
+    window.addEventListener('desembolso_updated_event', handleSyncEvent);
+    return () => window.removeEventListener('desembolso_updated_event', handleSyncEvent);
+  }, []);
 
   const handleFieldChange = (field: keyof AutorizacionDesembolsoData, value: any) => {
-    const updated = { ...formData, [field]: value };
+    let updated = { ...formData, [field]: value };
+
+    // Sincronización inteligente si se edita el valor numérico en el formulario
+    if (field === 'valorNumeros' || field === 'subtotal' || field === 'total') {
+      const num = limpiarNumeroMoneda(value);
+      if (num > 0) {
+        const letras = convertirNumeroALetras(num);
+        const formateado = new Intl.NumberFormat('es-CO').format(num);
+        updated = {
+          ...updated,
+          [field]: value,
+          valorNumeros: field === 'valorNumeros' ? value : formateado,
+          subtotal: field === 'subtotal' ? value : formateado,
+          total: field === 'total' ? value : formateado,
+          valorLetras: letras,
+        };
+      }
+    }
+
     setFormData(updated);
     setHasChanges(true);
     if (onChange) {
@@ -258,7 +299,8 @@ export default function AutorizacionDesembolsoDoc({
       reportData?.id || '',
       formData,
       formData.nitCc || reportData?.contratistaDocumento,
-      reportData?.informeNro?.toString() || '1'
+      reportData?.informeNro?.toString() || '1',
+      reportData?.contratoId
     );
 
     if (desembComment && !desembComment.corregido) {

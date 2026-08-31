@@ -1,3 +1,5 @@
+import { limpiarNumeroMoneda, getDatosLiquidacionPeriodo } from './paymentPlanUtils';
+
 /**
  * Utilidad para conversión de números a letras en español (formato moneda colombiana Pesos M/CTE)
  * y extracción automática de valor en letras y números desde la certificación del informe.
@@ -137,16 +139,26 @@ export interface ValorPagarExtraido {
 }
 
 /**
- * Extrae tanto el valor en números formateado (ej: "1.557.873") como
- * el texto en letras (ej: "UN MILLÓN QUINIENTOS CINCUENTA Y SIETE MIL...")
- * a partir de lo registrado en "Monto Certificado" (report.valorPagar).
+ * Extrae tanto el valor en números formateado (ej: "1.557.873", "2.160.000") como
+ * el texto en letras (ej: "DOS MILLONES CIENTO SESENTA MIL PESOS M/CTE")
+ * a partir de lo registrado en "Monto Certificado" (report.valorPagar) desde la Base de Datos.
  */
 export function extraerLetrasYNumeroDeValorPagar(rawValorPagar?: string): ValorPagarExtraido {
-  const raw = (rawValorPagar || '').trim();
+  let raw = (rawValorPagar || '').trim();
+
+  // Limpiar etiquetas de almacenamiento si vienen en bruto
+  if (raw.includes('__VALOR_PAGAR__:')) {
+    raw = raw.replace(/^.*__VALOR_PAGAR__:/, '').trim();
+  }
+  if (raw.includes('%20') || raw.includes('%24') || raw.includes('%C3') || raw.includes('%2F')) {
+    try {
+      raw = decodeURIComponent(raw);
+    } catch (e) {}
+  }
 
   // 1. Extraer número
   let valorNumerico = 0;
-  let valorNumeroFormateado = '1.557.873';
+  let valorNumeroFormateado = '2.160.000';
 
   const matchParentesis = raw.match(/\(\s*\$?\s*([\d.,]+)\s*\)/);
   const matchDolar = raw.match(/\$\s*([\d.,]+)/);
@@ -182,14 +194,14 @@ export function extraerLetrasYNumeroDeValorPagar(rawValorPagar?: string): ValorP
   }
 
   if (valorNumerico === 0) {
-    valorNumerico = 1557873;
-    valorNumeroFormateado = '1.557.873';
+    valorNumerico = 2160000;
+    valorNumeroFormateado = '2.160.000';
   }
 
   // 2. Extraer texto en letras
   let letras = raw
-    .replace(/\([^)]*\)/g, '')     // Quitar lo que esté dentro de paréntesis como ($1.557.873)
-    .replace(/\$\s*[\d.,]+/g, '')  // Quitar montos tipo $ 1.557.873
+    .replace(/\([^)]*\)/g, '')     // Quitar lo que esté dentro de paréntesis como ($2.160.000)
+    .replace(/\$\s*[\d.,]+/g, '')  // Quitar montos tipo $ 2.160.000
     .trim();
 
   // Limpiar puntuaciones residuales
@@ -213,6 +225,99 @@ export function extraerLetrasYNumeroDeValorPagar(rawValorPagar?: string): ValorP
     valorNumerico,
     valorNumeroFormateado,
     valorLetras: letrasGeneradas,
+  };
+}
+
+export interface ValoresMonetariosCalculados {
+  valorNumerico: number;
+  valorNumeroFormateado: string;
+  sumaTotalConCentavos: string;
+  valorLetras: string;
+}
+
+/**
+ * Determina y resuelve con precisión los valores numéricos y en letras correspondientes a un informe
+ * obteniéndolos directamente de lo registrado en la base de datos (report.valorPagar).
+ */
+export function obtenerValoresMonetariosReporte(report?: {
+  valorPagar?: string;
+  valorContrato?: string;
+  valorMensual?: string;
+  fechaInicio?: string;
+  fechaTerminacion?: string;
+  informeNro?: string;
+  periodoDesde?: string;
+  periodoHasta?: string;
+}): ValoresMonetariosCalculados {
+  if (!report) {
+    return {
+      valorNumerico: 2160000,
+      valorNumeroFormateado: '2.160.000',
+      sumaTotalConCentavos: '2.160.000,00',
+      valorLetras: 'DOS MILLONES CIENTO SESENTA MIL PESOS M/CTE',
+    };
+  }
+
+  // 1. Extraer directamente del valor registrado en el informe de la Base de Datos
+  const extracted = extraerLetrasYNumeroDeValorPagar(report.valorPagar);
+
+  let finalNum = 0;
+  let finalFormateado = '';
+  let finalLetras = '';
+
+  // Si el informe tiene un valor registrado en la BD (valorPagar), usarlo directamente
+  if (report.valorPagar && extracted.valorNumerico > 0) {
+    finalNum = extracted.valorNumerico;
+    finalFormateado = extracted.valorNumeroFormateado;
+    finalLetras = extracted.valorLetras;
+  } else {
+    // Fallback únicamente si el informe no tiene valorPagar registrado
+    const numValTotal = limpiarNumeroMoneda(report.valorContrato || '');
+    const valMensual = report.valorMensual ? limpiarNumeroMoneda(report.valorMensual) : undefined;
+    const fInicio = report.fechaInicio || report.periodoDesde || '13/08/2026';
+    const fFin = report.fechaTerminacion || report.periodoHasta || '31/12/2026';
+
+    let autoLiq: any = null;
+    let numAutoLiq = 0;
+    if ((numValTotal > 0 || (valMensual && valMensual > 0)) && (report.periodoDesde || report.informeNro)) {
+      try {
+        autoLiq = getDatosLiquidacionPeriodo({
+          valor_total_contrato: numValTotal > 0 ? numValTotal : (valMensual ? valMensual * 5 : 16200000),
+          valor_mensual: valMensual,
+          fecha_inicio: fInicio,
+          fecha_fin: fFin,
+        }, report.informeNro || '1', report.periodoDesde, report.periodoHasta);
+
+        if (autoLiq?.valorAPagarSinIva) {
+          numAutoLiq = limpiarNumeroMoneda(autoLiq.valorAPagarSinIva);
+        }
+      } catch (e) {
+        console.warn('Error calculando liquidación periodo:', e);
+      }
+    }
+
+    if (numAutoLiq > 0) {
+      finalNum = numAutoLiq;
+      finalFormateado = autoLiq?.valorAPagarTabla || new Intl.NumberFormat('es-CO').format(numAutoLiq);
+      finalLetras = convertirNumeroALetras(numAutoLiq);
+    } else if (valMensual && valMensual > 0) {
+      finalNum = valMensual;
+      finalFormateado = new Intl.NumberFormat('es-CO').format(valMensual);
+      finalLetras = convertirNumeroALetras(valMensual);
+    }
+  }
+
+  if (finalNum <= 0) {
+    finalNum = 2160000;
+    finalFormateado = '2.160.000';
+    finalLetras = 'DOS MILLONES CIENTO SESENTA MIL PESOS M/CTE';
+  }
+
+  return {
+    valorNumerico: finalNum,
+    valorNumeroFormateado: finalFormateado,
+    sumaTotalConCentavos: `${finalFormateado},00`,
+    valorLetras: finalLetras,
   };
 }
 
@@ -272,61 +377,67 @@ export function formatFechaAnioMesDia(rawDate?: string): string {
 }
 
 /**
- * Formatea la fecha para el Soporte Fiduciaria tomando estrictamente SOLO EL DÍA
- * del campo "Período Hasta" (ej. "14 de julio de 2026").
+ * Formatea la fecha para el Soporte Fiduciaria extrayendo día, mes y año
+ * directamente del campo "Período Hasta" (o "Fecha Presentación" / "Período Desde")
+ * correspondiente al informe seleccionado (ej. "31 de agosto de 2026", "30 de septiembre de 2026").
  */
 export function formatFechaFiduciaria(rep?: any): string {
   if (!rep) return '14 de julio de 2026';
-  let fiduDia = '14';
-  let fiduMes = 'julio';
+
+  const targetDateStr = rep.periodoHasta || rep.fechaPresentacion || rep.periodoDesde;
+  
+  let fiduDia = '31';
+  let fiduMes = 'agosto';
   let fiduAno = '2026';
 
-  // Extraer el DÍA de periodoHasta obligatoriamente
-  if (rep.periodoHasta) {
-    const pTrim = rep.periodoHasta.trim();
-    const parts = pTrim.split(/[\/-]/);
-    if (parts.length >= 3) {
-      if (parts[0].length === 4) {
-        fiduDia = parseInt(parts[2], 10).toString();
-      } else {
-        fiduDia = parseInt(parts[0], 10).toString();
+  if (targetDateStr) {
+    const s = String(targetDateStr).trim();
+
+    // 1. Formato DD/MM/YYYY o DD-MM-YYYY o DD/MM/YY
+    const matchDMY = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](20\d{2}|\d{2})$/);
+    if (matchDMY) {
+      fiduDia = String(parseInt(matchDMY[1], 10));
+      const mIdx = parseInt(matchDMY[2], 10) - 1;
+      if (mIdx >= 0 && mIdx < 12) {
+        fiduMes = NOMBRES_MESES_ESP[mIdx].toLowerCase();
       }
-    } else {
-      const match = pTrim.match(/^(\d{1,2})/);
-      if (match) fiduDia = parseInt(match[1], 10).toString();
+      fiduAno = matchDMY[3].length === 2 ? `20${matchDMY[3]}` : matchDMY[3];
+      return `${fiduDia} de ${fiduMes} de ${fiduAno}`;
     }
-  } else if (rep.fechaPresentacion) {
-    const parts = rep.fechaPresentacion.trim().split(/[\/-]/);
-    if (parts.length >= 3) {
-      if (parts[0].length === 4) fiduDia = parseInt(parts[2], 10).toString();
-      else fiduDia = parseInt(parts[0], 10).toString();
+
+    // 2. Formato ISO YYYY-MM-DD
+    const matchYMD = s.match(/^(20\d{2})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+    if (matchYMD) {
+      fiduAno = matchYMD[1];
+      const mIdx = parseInt(matchYMD[2], 10) - 1;
+      if (mIdx >= 0 && mIdx < 12) {
+        fiduMes = NOMBRES_MESES_ESP[mIdx].toLowerCase();
+      }
+      fiduDia = String(parseInt(matchYMD[3], 10));
+      return `${fiduDia} de ${fiduMes} de ${fiduAno}`;
+    }
+
+    // 3. Formato texto "31 de agosto de 2026"
+    const matchText = s.match(/(\d{1,2})\s+de\s+([a-zA-ZáéíóúÁÉÍÓÚ]+)\s+de\s+(20\d{2})/i);
+    if (matchText) {
+      fiduDia = String(parseInt(matchText[1], 10));
+      fiduMes = matchText[2].toLowerCase();
+      fiduAno = matchText[3];
+      return `${fiduDia} de ${fiduMes} de ${fiduAno}`;
     }
   }
 
+  // 4. Si solo hay fechaAplicacion (ej: "AGOSTO DE 2026")
   if (rep.fechaAplicacion) {
-    const parts = rep.fechaAplicacion.trim().split(/\s+/);
-    if (parts.length > 0) {
-      fiduMes = parts[0].toLowerCase();
-      const lastPart = parts[parts.length - 1];
-      if (/^20\d{2}$/.test(lastPart)) {
-        fiduAno = lastPart;
+    const appUpper = rep.fechaAplicacion.trim().toUpperCase();
+    for (let i = 0; i < NOMBRES_MESES_ESP.length; i++) {
+      if (appUpper.includes(NOMBRES_MESES_ESP[i])) {
+        fiduMes = NOMBRES_MESES_ESP[i].toLowerCase();
+        break;
       }
     }
-  } else if (rep.periodoHasta) {
-    const parts = rep.periodoHasta.trim().split(/[\/-]/);
-    if (parts.length >= 3) {
-      let mIdx = 0;
-      if (parts[0].length === 4) {
-        mIdx = parseInt(parts[1], 10) - 1;
-        fiduAno = parts[0];
-      } else {
-        mIdx = parseInt(parts[1], 10) - 1;
-        fiduAno = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
-      }
-      if (mIdx >= 0 && mIdx < NOMBRES_MESES_ESP.length) {
-        fiduMes = NOMBRES_MESES_ESP[mIdx].toLowerCase();
-      }
-    }
+    const yearMatch = appUpper.match(/\b(20\d{2})\b/);
+    if (yearMatch) fiduAno = yearMatch[1];
   }
 
   return `${fiduDia} de ${fiduMes} de ${fiduAno}`;

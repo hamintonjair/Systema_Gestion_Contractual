@@ -39,6 +39,7 @@ export interface CalculadoraLiquidacionProps {
   onAplicar?: (resultado: LiquidacionDetalladaResult, textoCertificado: string) => void;
   className?: string;
   titulo?: string;
+  textoBoton?: string;
   modoCompacto?: boolean;
   permitirEdicionDirecta?: boolean;
 }
@@ -55,6 +56,7 @@ export default function CalculadoraLiquidacion({
   onAplicar,
   className = '',
   titulo = 'Liquidación del Período (Norma 30 Días)',
+  textoBoton,
   modoCompacto = false,
   permitirEdicionDirecta = false,
 }: CalculadoraLiquidacionProps) {
@@ -295,12 +297,12 @@ VALORES FINAL PARA CERTIFICADO DE SUPERVISIÓN:
             {aplicado ? (
               <>
                 <Check size={13} className="text-amber-300" />
-                <span>¡Aplicado al Valor a Pagar del Informe!</span>
+                <span>¡Aplicado al Valor a Pagar de los Documentos!</span>
               </>
             ) : (
               <>
                 <Sparkles size={13} />
-                <span>Aplicar al Certificado (${liquidacion.valorAPagarTabla})</span>
+                <span>{textoBoton || `Aplicar al Certificado (${liquidacion.valorAPagarTabla})`}</span>
               </>
             )}
           </button>

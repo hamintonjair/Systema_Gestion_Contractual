@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SoporteFiduciariaData, ReportData, createDefaultFiduciariaData, FieldComment } from '../types';
-import { extraerLetrasYNumeroDeValorPagar } from '../utils/numberToWords';
+import { obtenerValoresMonetariosReporte, convertirNumeroALetras, formatFechaFiduciaria } from '../utils/numberToWords';
+import { limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
 import { supabaseService } from '../services/supabaseService';
 import { openWhatsAppForCertificate } from '../utils/whatsappNotifier';
 import FieldCommentModal from './FieldCommentModal';
@@ -9,6 +10,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
 interface Props {
+  key?: React.Key;
   data?: SoporteFiduciariaData;
   reportData?: ReportData;
   onChange?: (updated: SoporteFiduciariaData) => void;
@@ -74,7 +76,7 @@ export default function SoporteFiduciariaDoc({
     }
 
     if (reportData) {
-      const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
+      const { valorNumeroFormateado, sumaTotalConCentavos, valorLetras } = obtenerValoresMonetariosReporte(reportData);
 
       return {
         ...baseData,
@@ -82,14 +84,14 @@ export default function SoporteFiduciariaDoc({
         nombresApellidos: reportData.contratistaNombre || baseData.nombresApellidos,
         cedula: reportData.contratistaDocumento || baseData.cedula,
         telefono: reportData.contratistaTelefono || baseData.telefono,
-        sumaTotal: `${valorNumeroFormateado},00`,
+        sumaTotal: sumaTotalConCentavos,
         valorLetras: valorLetras,
         subTotal: valorNumeroFormateado,
         total: valorNumeroFormateado,
         totalGeneral: valorNumeroFormateado,
         descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
-        docSoporteNro: baseData.docSoporteNro || '',
-        fecha: createDefaultFiduciariaData(reportData).fecha,
+        docSoporteNro: reportData.informeNro || baseData.docSoporteNro || '1',
+        fecha: formatFechaFiduciaria(reportData),
       };
     }
     return baseData;
@@ -97,11 +99,11 @@ export default function SoporteFiduciariaDoc({
 
   const getIdentityKey = () => {
     if (data?.id) return `data_${data.id}`;
-    if (reportData) return `rep_${reportData.id || ''}_${reportData.informeNro || ''}_${storageKey || ''}`;
+    if (reportData) return `rep_${reportData.id || ''}_${reportData.informeNro || ''}_${reportData.periodoDesde || ''}_${reportData.periodoHasta || ''}_${storageKey || ''}`;
     return 'default';
   };
 
-  const loadedKeyRef = useRef<string>(getIdentityKey());
+  const loadedKeyRef = useRef<string>('');
   const [formData, setFormData] = useState<SoporteFiduciariaData>(getInitialData);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -144,7 +146,7 @@ export default function SoporteFiduciariaDoc({
 
       if (loadedKeyRef.current === currentKey) {
         if (reportData) {
-          const { valorNumeroFormateado, valorLetras } = extraerLetrasYNumeroDeValorPagar(reportData.valorPagar);
+          const { valorNumeroFormateado, sumaTotalConCentavos, valorLetras } = obtenerValoresMonetariosReporte(reportData);
 
           setFormData({
             ...baseData,
@@ -152,14 +154,14 @@ export default function SoporteFiduciariaDoc({
             nombresApellidos: reportData.contratistaNombre || baseData.nombresApellidos,
             cedula: reportData.contratistaDocumento || baseData.cedula,
             telefono: reportData.contratistaTelefono || baseData.telefono,
-            sumaTotal: `${valorNumeroFormateado},00`,
+            sumaTotal: sumaTotalConCentavos,
             valorLetras: valorLetras,
             subTotal: valorNumeroFormateado,
             total: valorNumeroFormateado,
             totalGeneral: valorNumeroFormateado,
             descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
-            docSoporteNro: baseData.docSoporteNro || '',
-            fecha: createDefaultFiduciariaData(reportData).fecha,
+            docSoporteNro: reportData.informeNro || baseData.docSoporteNro || '1',
+            fecha: formatFechaFiduciaria(reportData),
           });
         } else if (baseData) {
           setFormData(baseData);
@@ -167,10 +169,41 @@ export default function SoporteFiduciariaDoc({
       }
     };
     loadData();
-  }, [data, reportData?.id, reportData?.informeNro, storageKey]);
+  }, [data, reportData?.id, reportData?.informeNro, reportData?.valorPagar, reportData?.valorContrato, reportData?.valorMensual, reportData?.periodoDesde, reportData?.periodoHasta, reportData?.fechaPresentacion, storageKey]);
+
+  useEffect(() => {
+    const handleSyncEvent = (e: any) => {
+      if (e?.detail) {
+        setFormData(prev => ({
+          ...prev,
+          ...e.detail
+        }));
+      }
+    };
+    window.addEventListener('fiduciaria_updated_event', handleSyncEvent);
+    return () => window.removeEventListener('fiduciaria_updated_event', handleSyncEvent);
+  }, []);
 
   const handleFieldChange = (field: keyof SoporteFiduciariaData, value: string) => {
-    const updated = { ...formData, [field]: value };
+    let updated = { ...formData, [field]: value };
+
+    // Sincronización inteligente de valores si se edita subTotal o total
+    if (field === 'subTotal' || field === 'total' || field === 'totalGeneral') {
+      const num = limpiarNumeroMoneda(value);
+      if (num > 0) {
+        const letras = convertirNumeroALetras(num);
+        const formateado = new Intl.NumberFormat('es-CO').format(num);
+        updated = {
+          ...updated,
+          [field]: value,
+          total: field === 'subTotal' ? value : updated.total,
+          totalGeneral: field === 'subTotal' ? value : updated.totalGeneral,
+          sumaTotal: `${formateado},00`,
+          valorLetras: letras,
+        };
+      }
+    }
+
     setFormData(updated);
     setHasChanges(true);
     if (onChange) {
@@ -236,7 +269,8 @@ export default function SoporteFiduciariaDoc({
       reportData?.id || '',
       formData,
       formData.cedula,
-      reportData?.informeNro?.toString() || '1'
+      reportData?.informeNro?.toString() || '1',
+      reportData?.contratoId
     );
 
     if (fidComment && !fidComment.corregido) {

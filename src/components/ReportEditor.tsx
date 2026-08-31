@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ReportPreview from './ReportPreview';
 import { createPortal } from 'react-dom';
-import { Obligacion, ReportData, Anexo, EstadoInforme, FieldComment, extractContratoNroOnly, createDefaultCertificadoData } from '../types';
+import { Obligacion, ReportData, Anexo, EstadoInforme, FieldComment, extractContratoNroOnly, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData } from '../types';
 import { 
   Plus, 
   Trash2, 
@@ -233,13 +233,37 @@ export default function ReportEditor({
         localStorage.setItem(`cert_data_${data.id}_${nroKey}`, JSON.stringify(liveCert));
       }
 
-      // Sincronizar con Supabase en background
-      supabaseService.saveCertificadoSupervision(liveCert, data.id).catch(e => {
+      // Sincronizar Certificado de Supervisión con Supabase en background
+      supabaseService.saveCertificadoSupervision(liveCert, data.id, undefined, data.contratoId).catch(e => {
         console.warn('Error sincronizando certificado con Supabase:', e);
       });
 
-      // Disparar evento para actualizar instantáneamente las vistas
+      // 3. Construir y guardar Soporte Fiduciaria (soportes_fiduciaria)
+      const liveFid = createDefaultFiduciariaData(nextData);
+      localStorage.setItem(`fid_data_${docKey}_${nroKey}`, JSON.stringify(liveFid));
+      localStorage.setItem(`fid_data_${nroKey}`, JSON.stringify(liveFid));
+      if (data.id) {
+        localStorage.setItem(`fid_data_${data.id}_${nroKey}`, JSON.stringify(liveFid));
+      }
+      supabaseService.saveSoporteFiduciaria(data.id || '', liveFid, docKey, String(nroKey), data.contratoId).catch(e => {
+        console.warn('Error sincronizando soporte fiduciaria con Supabase:', e);
+      });
+
+      // 4. Construir y guardar Autorización de Desembolso (autorizaciones_desembolso)
+      const liveDesembolso = createDefaultAutorizacionDesembolsoData(nextData);
+      localStorage.setItem(`desembolso_${docKey}_${nroKey}`, JSON.stringify(liveDesembolso));
+      localStorage.setItem(`desembolso_${nroKey}`, JSON.stringify(liveDesembolso));
+      if (data.id) {
+        localStorage.setItem(`desembolso_${data.id}_${nroKey}`, JSON.stringify(liveDesembolso));
+      }
+      supabaseService.saveAutorizacionDesembolso(data.id || '', liveDesembolso, docKey, String(nroKey), data.contratoId).catch(e => {
+        console.warn('Error sincronizando autorización de desembolso con Supabase:', e);
+      });
+
+      // Disparar eventos para actualizar instantáneamente las tres vistas
       window.dispatchEvent(new CustomEvent('certificado_updated_event', { detail: liveCert }));
+      window.dispatchEvent(new CustomEvent('fiduciaria_updated_event', { detail: liveFid }));
+      window.dispatchEvent(new CustomEvent('desembolso_updated_event', { detail: liveDesembolso }));
       window.dispatchEvent(new CustomEvent('informe_radicado_event'));
     } catch (e) {
       console.warn('Error al sincronizar certificado en localStorage:', e);

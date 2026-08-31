@@ -12,6 +12,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
 interface Props {
+  key?: React.Key;
   data?: CertificadoSupervisionData;
   reportData?: ReportData;
   onChange?: (updated: CertificadoSupervisionData) => void;
@@ -112,7 +113,7 @@ export default function CertificadoSupervisionDoc({
     return 'default';
   };
 
-  const loadedKeyRef = useRef<string>(getIdentityKey());
+  const loadedKeyRef = useRef<string>('');
 
   useEffect(() => {
     const currentKey = getIdentityKey();

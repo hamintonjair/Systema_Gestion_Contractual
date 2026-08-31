@@ -56,10 +56,54 @@ export type ContratistaModuleTab = 'informe' | 'supervision' | 'fiduciaria' | 'j
 export default function ContratistaDashboard({ user, onOpenReportEditor, onDirectPrint }: Props) {
   const [activeModuleTab, setActiveModuleTab] = useState<ContratistaModuleTab>('informe');
   const [reportsList, setReportsList] = useState<ReportData[]>([]);
-  const [selectedCertReport, setSelectedCertReport] = useState<ReportData | null>(null);
-  const [selectedFidReport, setSelectedFidReport] = useState<ReportData | null>(null);
-  const [selectedJuramentoReport, setSelectedJuramentoReport] = useState<ReportData | null>(null);
-  const [selectedDesembolsoReport, setSelectedDesembolsoReport] = useState<ReportData | null>(null);
+
+  // Estados de ID seleccionados en los selectors de los módulos
+  const [selectedCertInformeId, setSelectedCertInformeId] = useState<string>('');
+  const [selectedFidInformeId, setSelectedFidInformeId] = useState<string>('');
+  const [selectedJuramentoInformeId, setSelectedJuramentoInformeId] = useState<string>('');
+  const [selectedDesembolsoInformeId, setSelectedDesembolsoInformeId] = useState<string>('');
+
+  // Derivación reactiva del objeto de informe seleccionado para cada documento
+  const selectedCertReport = useMemo(() => {
+    if (!reportsList || reportsList.length === 0) return null;
+    return (
+      reportsList.find(inf => inf.id && inf.id === selectedCertInformeId) ||
+      reportsList.find(inf => String(inf.informeNro) === selectedCertInformeId) ||
+      reportsList[0] ||
+      null
+    );
+  }, [reportsList, selectedCertInformeId]);
+
+  const selectedFidReport = useMemo(() => {
+    if (!reportsList || reportsList.length === 0) return null;
+    return (
+      reportsList.find(inf => inf.id && inf.id === selectedFidInformeId) ||
+      reportsList.find(inf => String(inf.informeNro) === selectedFidInformeId) ||
+      reportsList[0] ||
+      null
+    );
+  }, [reportsList, selectedFidInformeId]);
+
+  const selectedJuramentoReport = useMemo(() => {
+    if (!reportsList || reportsList.length === 0) return null;
+    return (
+      reportsList.find(inf => inf.id && inf.id === selectedJuramentoInformeId) ||
+      reportsList.find(inf => String(inf.informeNro) === selectedJuramentoInformeId) ||
+      reportsList[0] ||
+      null
+    );
+  }, [reportsList, selectedJuramentoInformeId]);
+
+  const selectedDesembolsoReport = useMemo(() => {
+    if (!reportsList || reportsList.length === 0) return null;
+    return (
+      reportsList.find(inf => inf.id && inf.id === selectedDesembolsoInformeId) ||
+      reportsList.find(inf => String(inf.informeNro) === selectedDesembolsoInformeId) ||
+      reportsList[0] ||
+      null
+    );
+  }, [reportsList, selectedDesembolsoInformeId]);
+
   const [loadingDb, setLoadingDb] = useState(true);
   const [savingReportId, setSavingReportId] = useState<string | null>(null);
   const [successSavedId, setSuccessSavedId] = useState<string | null>(null);
@@ -67,6 +111,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreatingReport, setIsCreatingReport] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<ReportData | null>(null);
+  const [isDeletingReport, setIsDeletingReport] = useState(false);
   const [newInformeNro, setNewInformeNro] = useState('1');
   const [newPeriodoDesde, setNewPeriodoDesde] = useState('');
   const [newPeriodoHasta, setNewPeriodoHasta] = useState('');
@@ -242,10 +287,18 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     const { validReports } = await supabaseService.cleanupExpiredReports(finalReports, user.documentoIdentidad);
 
     setReportsList(validReports);
-    setSelectedCertReport(prev => prev ? validReports.find(r => String(r.informeNro) === String(prev.informeNro)) || prev : null);
-    setSelectedFidReport(prev => prev ? validReports.find(r => String(r.informeNro) === String(prev.informeNro)) || prev : null);
-    setSelectedJuramentoReport(prev => prev ? validReports.find(r => String(r.informeNro) === String(prev.informeNro)) || prev : null);
-    setSelectedDesembolsoReport(prev => prev ? validReports.find(r => String(r.informeNro) === String(prev.informeNro)) || prev : null);
+    if (validReports.length > 0) {
+      const matchId = (prevId: string) => {
+        if (!prevId) return validReports[0].id || String(validReports[0].informeNro);
+        const found = validReports.find(r => r.id === prevId || String(r.informeNro) === prevId);
+        return found ? (found.id || String(found.informeNro)) : (validReports[0].id || String(validReports[0].informeNro));
+      };
+
+      setSelectedCertInformeId(prev => matchId(prev));
+      setSelectedFidInformeId(prev => matchId(prev));
+      setSelectedJuramentoInformeId(prev => matchId(prev));
+      setSelectedDesembolsoInformeId(prev => matchId(prev));
+    }
 
     const maxNro = Math.max(...validReports.map(r => parseInt(r.informeNro || '0', 10)), 0);
     setNewInformeNro((maxNro + 1).toString());
@@ -268,10 +321,11 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
         if (e.detail.informeNro) {
           const found = reportsListRef.current.find(r => String(r.informeNro) === String(e.detail.informeNro));
           if (found) {
-            if (e.detail.tab === 'supervision') setSelectedCertReport(found);
-            if (e.detail.tab === 'fiduciaria') setSelectedFidReport(found);
-            if (e.detail.tab === 'juramento') setSelectedJuramentoReport(found);
-            if (e.detail.tab === 'desembolso') setSelectedDesembolsoReport(found);
+            const targetId = found.id || String(found.informeNro);
+            if (e.detail.tab === 'supervision') setSelectedCertInformeId(targetId);
+            if (e.detail.tab === 'fiduciaria') setSelectedFidInformeId(targetId);
+            if (e.detail.tab === 'juramento') setSelectedJuramentoInformeId(targetId);
+            if (e.detail.tab === 'desembolso') setSelectedDesembolsoInformeId(targetId);
           }
         }
       }
@@ -526,6 +580,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
   const confirmDeleteReport = async () => {
     if (!reportToDelete) return;
+    setIsDeletingReport(true);
     setLoadingDb(true);
     try {
       // 1. Eliminar completamente el informe de Supabase, tablas vinculadas (obligaciones, anexos, certificaciones, notificaciones) y archivos de Storage
@@ -549,6 +604,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     } catch (e) {
       console.warn('Error al eliminar informe:', e);
     } finally {
+      setIsDeletingReport(false);
       setLoadingDb(false);
     }
   };
@@ -787,10 +843,11 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                                 onClick={() => {
                                   setShowNotificationsMenu(false);
                                   setActiveModuleTab(obs.moduleTab);
-                                  if (obs.moduleTab === 'supervision') setSelectedCertReport(obs.report);
-                                  if (obs.moduleTab === 'fiduciaria') setSelectedFidReport(obs.report);
-                                  if (obs.moduleTab === 'juramento') setSelectedJuramentoReport(obs.report);
-                                  if (obs.moduleTab === 'desembolso') setSelectedDesembolsoReport(obs.report);
+                                  const targetId = obs.report.id || String(obs.report.informeNro);
+                                  if (obs.moduleTab === 'supervision') setSelectedCertInformeId(targetId);
+                                  if (obs.moduleTab === 'fiduciaria') setSelectedFidInformeId(targetId);
+                                  if (obs.moduleTab === 'juramento') setSelectedJuramentoInformeId(targetId);
+                                  if (obs.moduleTab === 'desembolso') setSelectedDesembolsoInformeId(targetId);
                                   if (obs.moduleTab === 'informe') handleInterceptOpenReport(obs.report);
                                 }}
                                 className="w-full py-1.5 px-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-colors"
@@ -1527,15 +1584,32 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs w-full sm:w-auto min-w-0">
                   <span className="font-bold text-slate-700 shrink-0">Seleccionar Informe para Certificado:</span>
                   <select
-                    value={(selectedCertReport || reportsList[0])?.informeNro}
+                    value={selectedCertInformeId || selectedCertReport?.id || String(selectedCertReport?.informeNro) || ''}
                     onChange={(e) => {
-                      const found = reportsList.find(r => String(r.informeNro) === e.target.value);
-                      if (found) setSelectedCertReport(found);
+                      const val = e.target.value;
+                      setSelectedCertInformeId(val);
+                      const selected = reportsList.find(r => r.id === val || String(r.informeNro) === val);
+                      console.log('📜 [Selección Manual] Certificado Supervisión - Datos del Informe:', {
+                        id: selected?.id,
+                        informeNro: selected?.informeNro,
+                        camposDB: {
+                          valor_pagar_certificado: selected?.valorPagarCertificado,
+                          observaciones_raw: selected?.rawObservacionesDb,
+                        },
+                        datosMapeados: {
+                          periodoDesde: selected?.periodoDesde,
+                          periodoHasta: selected?.periodoHasta,
+                          valorPagar: selected?.valorPagar,
+                          observacionesLimpias: selected?.observaciones,
+                          contratoNro: selected?.contratoNro,
+                        },
+                        dtoCompleto: selected
+                      });
                     }}
                     className="w-full sm:w-auto max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none truncate"
                   >
                     {reportsList.map(r => (
-                      <option key={r.id || r.informeNro} value={r.informeNro}>
+                      <option key={r.id || r.informeNro} value={r.id || String(r.informeNro)}>
                         Informe #{r.informeNro} ({r.tipoInforme}) - Estado: {r.estado || 'Enviado'}
                       </option>
                     ))}
@@ -1587,8 +1661,9 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           {/* DOCUMENTO OFICIAL CERTIFICADO DE SUPERVISIÓN */}
           <div className="bg-slate-100 p-2 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center w-full max-w-full overflow-x-auto scrollbar-thin">
             <CertificadoSupervisionDoc
+              key={`cert_${selectedCertReport?.id || selectedCertReport?.informeNro || '1'}`}
               reportData={selectedCertReport || reportsList[0] || initialMockData}
-              storageKey={`cert_data_${user.documentoIdentidad || ''}_${(selectedCertReport || reportsList[0])?.informeNro || '1'}`}
+              storageKey={`cert_data_${user.documentoIdentidad || ''}_${selectedCertReport?.informeNro || '1'}`}
               isEditable={true}
             />
           </div>
@@ -1627,15 +1702,32 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs w-full sm:w-auto min-w-0">
                   <span className="font-bold text-slate-700 shrink-0">Seleccionar Informe para Soporte:</span>
                   <select
-                    value={(selectedFidReport || reportsList[0])?.informeNro}
+                    value={selectedFidInformeId || selectedFidReport?.id || String(selectedFidReport?.informeNro) || ''}
                     onChange={(e) => {
-                      const found = reportsList.find(r => String(r.informeNro) === e.target.value);
-                      if (found) setSelectedFidReport(found);
+                      const val = e.target.value;
+                      setSelectedFidInformeId(val);
+                      const selected = reportsList.find(r => r.id === val || String(r.informeNro) === val);
+                      console.log('🏦 [Selección Manual] Soporte Fiduciaria - Datos del Informe:', {
+                        id: selected?.id,
+                        informeNro: selected?.informeNro,
+                        camposDB: {
+                          valor_pagar_certificado: selected?.valorPagarCertificado,
+                          observaciones_raw: selected?.rawObservacionesDb,
+                        },
+                        datosMapeados: {
+                          periodoDesde: selected?.periodoDesde,
+                          periodoHasta: selected?.periodoHasta,
+                          valorPagar: selected?.valorPagar,
+                          observacionesLimpias: selected?.observaciones,
+                          contratoNro: selected?.contratoNro,
+                        },
+                        dtoCompleto: selected
+                      });
                     }}
                     className="w-full sm:w-auto max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none truncate"
                   >
                     {reportsList.map(r => (
-                      <option key={r.id || r.informeNro} value={r.informeNro}>
+                      <option key={r.id || r.informeNro} value={r.id || String(r.informeNro)}>
                         Informe #{r.informeNro} ({r.tipoInforme}) - Estado: {r.estado || 'Enviado'}
                       </option>
                     ))}
@@ -1687,8 +1779,9 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           {/* DOCUMENTO OFICIAL SOPORTE FIDUCIARIA */}
           <div className="bg-slate-100 p-2 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center w-full max-w-full overflow-x-auto scrollbar-thin">
             <SoporteFiduciariaDoc
+              key={`fid_${selectedFidReport?.id || selectedFidReport?.informeNro || '1'}`}
               reportData={selectedFidReport || reportsList[0] || initialMockData}
-              storageKey={`fid_data_${user.documentoIdentidad || ''}_${(selectedFidReport || reportsList[0])?.informeNro || '1'}`}
+              storageKey={`fid_data_${user.documentoIdentidad || ''}_${selectedFidReport?.informeNro || '1'}`}
               isEditable={true}
             />
           </div>
@@ -1769,15 +1862,32 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs w-full sm:w-auto min-w-0">
                   <span className="font-bold text-slate-700 shrink-0">Seleccionar Informe para Soporte:</span>
                   <select
-                    value={(selectedJuramentoReport || reportsList[0])?.informeNro}
+                    value={selectedJuramentoInformeId || selectedJuramentoReport?.id || String(selectedJuramentoReport?.informeNro) || ''}
                     onChange={(e) => {
-                      const found = reportsList.find(r => String(r.informeNro) === e.target.value);
-                      if (found) setSelectedJuramentoReport(found);
+                      const val = e.target.value;
+                      setSelectedJuramentoInformeId(val);
+                      const selected = reportsList.find(r => r.id === val || String(r.informeNro) === val);
+                      console.log('⚖️ [Selección Manual] Declaración Juramentada - Datos del Informe:', {
+                        id: selected?.id,
+                        informeNro: selected?.informeNro,
+                        camposDB: {
+                          valor_pagar_certificado: selected?.valorPagarCertificado,
+                          observaciones_raw: selected?.rawObservacionesDb,
+                        },
+                        datosMapeados: {
+                          periodoDesde: selected?.periodoDesde,
+                          periodoHasta: selected?.periodoHasta,
+                          valorPagar: selected?.valorPagar,
+                          observacionesLimpias: selected?.observaciones,
+                          contratoNro: selected?.contratoNro,
+                        },
+                        dtoCompleto: selected
+                      });
                     }}
                     className="w-full sm:w-auto max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none truncate"
                   >
                     {reportsList.map(r => (
-                      <option key={r.id || r.informeNro} value={r.informeNro}>
+                      <option key={r.id || r.informeNro} value={r.id || String(r.informeNro)}>
                         Informe #{r.informeNro} ({r.tipoInforme}) - Estado: {r.estado || 'Enviado'}
                       </option>
                     ))}
@@ -1825,8 +1935,9 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           {/* DOCUMENTO OFICIAL DECLARACIÓN RENTA */}
           <div className="bg-slate-100 p-2 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center w-full max-w-full overflow-x-auto scrollbar-thin">
             <DeclaracionRentaDoc
+              key={`dec_${selectedJuramentoReport?.id || selectedJuramentoReport?.informeNro || '1'}`}
               reportData={selectedJuramentoReport || reportsList[0] || initialMockData}
-              storageKey={`dec_renta_${user.documentoIdentidad || ''}_${(selectedJuramentoReport || reportsList[0])?.informeNro || '1'}`}
+              storageKey={`dec_renta_${user.documentoIdentidad || ''}_${selectedJuramentoReport?.informeNro || '1'}`}
               isEditable={true}
             />
           </div>
@@ -1865,15 +1976,32 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs w-full sm:w-auto min-w-0">
                   <span className="font-bold text-slate-700 shrink-0">Seleccionar Informe para Desembolso:</span>
                   <select
-                    value={(selectedDesembolsoReport || reportsList[0])?.informeNro}
+                    value={selectedDesembolsoInformeId || selectedDesembolsoReport?.id || String(selectedDesembolsoReport?.informeNro) || ''}
                     onChange={(e) => {
-                      const found = reportsList.find(r => String(r.informeNro) === e.target.value);
-                      if (found) setSelectedDesembolsoReport(found);
+                      const val = e.target.value;
+                      setSelectedDesembolsoInformeId(val);
+                      const selected = reportsList.find(r => r.id === val || String(r.informeNro) === val);
+                      console.log('💵 [Selección Manual] Autorización Desembolso - Datos del Informe:', {
+                        id: selected?.id,
+                        informeNro: selected?.informeNro,
+                        camposDB: {
+                          valor_pagar_certificado: selected?.valorPagarCertificado,
+                          observaciones_raw: selected?.rawObservacionesDb,
+                        },
+                        datosMapeados: {
+                          periodoDesde: selected?.periodoDesde,
+                          periodoHasta: selected?.periodoHasta,
+                          valorPagar: selected?.valorPagar,
+                          observacionesLimpias: selected?.observaciones,
+                          contratoNro: selected?.contratoNro,
+                        },
+                        dtoCompleto: selected
+                      });
                     }}
                     className="w-full sm:w-auto max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none truncate"
                   >
                     {reportsList.map(r => (
-                      <option key={r.id || r.informeNro} value={r.informeNro}>
+                      <option key={r.id || r.informeNro} value={r.id || String(r.informeNro)}>
                         Informe #{r.informeNro} ({r.tipoInforme}) - Estado: {r.estado || 'Enviado'}
                       </option>
                     ))}
@@ -1921,8 +2049,9 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           {/* DOCUMENTO OFICIAL AUTORIZACION DESEMBOLSO */}
           <div className="bg-slate-100 p-2 sm:p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col items-center w-full max-w-full overflow-x-auto scrollbar-thin">
             <AutorizacionDesembolsoDoc
+              key={`des_${selectedDesembolsoReport?.id || selectedDesembolsoReport?.informeNro || '1'}`}
               reportData={selectedDesembolsoReport || reportsList[0] || initialMockData}
-              storageKey={`desembolso_${user.documentoIdentidad || ''}_${(selectedDesembolsoReport || reportsList[0])?.informeNro || '1'}`}
+              storageKey={`desembolso_${user.documentoIdentidad || ''}_${selectedDesembolsoReport?.informeNro || '1'}`}
               isEditable={true}
             />
           </div>
@@ -2281,21 +2410,47 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
               ¿Estás seguro de que deseas eliminar este informe de la base de datos y de tu lista? Esta acción es irreversible.
             </p>
 
+            {isDeletingReport && (
+              <div className="mb-5 p-3 bg-red-50/80 border border-red-200/80 rounded-xl space-y-2 animate-in fade-in">
+                <div className="flex items-center justify-between text-xs text-red-700 font-semibold">
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 size={14} className="animate-spin text-red-600" />
+                    Eliminando informe y registros de Supabase...
+                  </span>
+                  <span className="text-[10px] text-red-500 uppercase tracking-wider">Procesando</span>
+                </div>
+                <div className="w-full bg-red-100/70 rounded-full h-2 overflow-hidden">
+                  <div className="bg-gradient-to-r from-red-500 via-rose-500 to-red-600 h-2 rounded-full animate-pulse w-full"></div>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
+                disabled={isDeletingReport}
                 onClick={() => setReportToDelete(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-colors"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-800 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed"
               >
                 Cancelar
               </button>
               <button
                 type="button"
+                disabled={isDeletingReport}
                 onClick={confirmDeleteReport}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer disabled:cursor-not-allowed"
               >
-                <Trash2 size={14} />
-                Sí, Eliminar de la Base de Datos
+                {isDeletingReport ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    Sí, Eliminar de la Base de Datos
+                  </>
+                )}
               </button>
             </div>
           </div>

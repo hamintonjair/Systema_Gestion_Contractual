@@ -6,6 +6,7 @@ import FieldCommentModal from './FieldCommentModal';
 import { Printer, Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface DeclaracionRentaDocProps {
+  key?: React.Key;
   data?: DeclaracionRentaData;
   reportData?: ReportData;
   onChange?: (updated: DeclaracionRentaData) => void;
@@ -65,7 +66,7 @@ export default function DeclaracionRentaDoc({
     return 'default';
   };
 
-  const loadedKeyRef = useRef<string>(getIdentityKey());
+  const loadedKeyRef = useRef<string>('');
   const [formData, setFormData] = useState<DeclaracionRentaData>(() => {
     let initial: DeclaracionRentaData;
     if (data) initial = data;
@@ -123,7 +124,7 @@ export default function DeclaracionRentaDoc({
       }
     };
     loadData();
-  }, [data, reportData?.id, reportData?.informeNro, storageKey]);
+  }, [data, reportData?.id, reportData?.informeNro, reportData?.periodoHasta, reportData?.fechaPresentacion, storageKey]);
 
   const handleFieldChange = (field: keyof DeclaracionRentaData, value: string | boolean) => {
     const updated = { ...formData, [field]: value };

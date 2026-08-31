@@ -6,7 +6,7 @@ import ReportEditor from './components/ReportEditor';
 import ReportPreview from './components/ReportPreview';
 import SecretariaAdminView from './components/SecretariaAdminView';
 import SuperAdminView from './components/SuperAdminView';
-import { AuthUser, DEMO_USERS, ReportData, InformeSummary, initialMockData, createDefaultCertificadoData } from './types';
+import { AuthUser, DEMO_USERS, ReportData, InformeSummary, initialMockData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData } from './types';
 import { supabaseService } from './services/supabaseService';
 import { exportInformeToPDF } from './utils/pdfGenerator';
 import { formatFechaAplicacion, formatDateSlash } from './utils/formatters';
@@ -208,20 +208,45 @@ export default function App() {
     const result = await supabaseService.saveFullInforme(reportToSave, currentUser || undefined);
     setIsSaving(false);
 
-    // Sincronizar el Certificado de Supervisión correspondiente
+    // Sincronizar Certificado de Supervisión, Soporte Fiduciaria y Autorización de Desembolso
     try {
-      const liveCert = createDefaultCertificadoData(reportToSave);
-      const docKey = reportToSave.contratistaDocumento || '';
-      const nroKey = reportToSave.informeNro || '1';
+      const resolvedId = result.id || reportToSave.id;
+      const savedReportWithId: ReportData = {
+        ...reportToSave,
+        id: resolvedId
+      };
+      
+      const liveCert = createDefaultCertificadoData(savedReportWithId);
+      const liveFid = createDefaultFiduciariaData(savedReportWithId);
+      const liveDesembolso = createDefaultAutorizacionDesembolsoData(savedReportWithId);
+
+      const docKey = savedReportWithId.contratistaDocumento || '';
+      const nroKey = savedReportWithId.informeNro || '1';
+
       localStorage.setItem(`cert_data_${docKey}_${nroKey}`, JSON.stringify(liveCert));
       localStorage.setItem(`cert_data_${nroKey}`, JSON.stringify(liveCert));
-      if (result.id || reportToSave.id) {
-        localStorage.setItem(`cert_data_${result.id || reportToSave.id}_${nroKey}`, JSON.stringify(liveCert));
+
+      localStorage.setItem(`fid_data_${docKey}_${nroKey}`, JSON.stringify(liveFid));
+      localStorage.setItem(`fid_data_${nroKey}`, JSON.stringify(liveFid));
+
+      localStorage.setItem(`desembolso_${docKey}_${nroKey}`, JSON.stringify(liveDesembolso));
+      localStorage.setItem(`desembolso_${nroKey}`, JSON.stringify(liveDesembolso));
+
+      if (resolvedId) {
+        localStorage.setItem(`cert_data_${resolvedId}_${nroKey}`, JSON.stringify(liveCert));
+        localStorage.setItem(`fid_data_${resolvedId}_${nroKey}`, JSON.stringify(liveFid));
+        localStorage.setItem(`desembolso_${resolvedId}_${nroKey}`, JSON.stringify(liveDesembolso));
       }
-      supabaseService.saveCertificadoSupervision(liveCert, result.id || reportToSave.id).catch(() => {});
+
+      supabaseService.saveCertificadoSupervision(liveCert, resolvedId, undefined, savedReportWithId.contratoId).catch(() => {});
+      supabaseService.saveSoporteFiduciaria(resolvedId || '', liveFid, docKey, String(nroKey), savedReportWithId.contratoId).catch(() => {});
+      supabaseService.saveAutorizacionDesembolso(resolvedId || '', liveDesembolso, docKey, String(nroKey), savedReportWithId.contratoId).catch(() => {});
+
       window.dispatchEvent(new CustomEvent('certificado_updated_event', { detail: liveCert }));
+      window.dispatchEvent(new CustomEvent('fiduciaria_updated_event', { detail: liveFid }));
+      window.dispatchEvent(new CustomEvent('desembolso_updated_event', { detail: liveDesembolso }));
     } catch (e) {
-      console.warn('Error sincronizando certificado en guardado:', e);
+      console.warn('Error sincronizando certificados en guardado:', e);
     }
 
     if (result.success) {
