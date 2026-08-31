@@ -61,7 +61,12 @@ export const exportInformeToPDF = async (options: PDFExportOptions): Promise<boo
     console.error('Error al generar PDF con html2pdf:', error);
     // Fallback suave a impresión nativa del navegador
     try {
-      window.print();
+      const oldTitle = document.title;
+      document.title = "Formato Informe De Cumplimiento";
+      setTimeout(() => {
+        window.print();
+        document.title = oldTitle;
+      }, 50);
     } catch (e) {
       console.warn('Error en fallback de impresión:', e);
     }
@@ -77,7 +82,12 @@ export const exportInformeToPDF = async (options: PDFExportOptions): Promise<boo
  */
 export const printInformeNative = () => {
   try {
-    window.print();
+    const oldTitle = document.title;
+    document.title = "Formato Informe De Cumplimiento";
+    setTimeout(() => {
+      window.print();
+      document.title = oldTitle;
+    }, 50);
   } catch (e) {
     console.warn('Error en printInformeNative:', e);
   } finally {

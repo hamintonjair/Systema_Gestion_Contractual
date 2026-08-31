@@ -156,7 +156,16 @@ export default function App() {
 
   const handlePrint = () => {
     try {
-      window.print();
+      const oldTitle = document.title;
+      if (currentView === 'editor') {
+        document.title = "Formato Informe De Cumplimiento";
+      }
+      setTimeout(() => {
+        window.print();
+        if (currentView === 'editor') {
+          document.title = oldTitle;
+        }
+      }, 50);
     } catch (e) {
       console.warn('Error al invocar window.print():', e);
     } finally {
@@ -182,7 +191,16 @@ export default function App() {
     } catch (e) {
       showToast('Abriendo ventana de impresión...');
       try {
-        window.print();
+        const oldTitle = document.title;
+        if (currentView === 'editor') {
+          document.title = "Formato Informe De Cumplimiento";
+        }
+        setTimeout(() => {
+          window.print();
+          if (currentView === 'editor') {
+            document.title = oldTitle;
+          }
+        }, 50);
       } catch (err) {
         console.warn('Error en print fallback:', err);
       }
@@ -408,7 +426,12 @@ export default function App() {
   const handlePrintFromAdmin = async (informe: InformeSummary) => {
     await handleSelectInformeToView(informe);
     setTimeout(() => {
-      window.print();
+      const oldTitle = document.title;
+      document.title = "Formato Informe De Cumplimiento";
+      setTimeout(() => {
+        window.print();
+        document.title = oldTitle;
+      }, 50);
     }, 400);
   };
 
