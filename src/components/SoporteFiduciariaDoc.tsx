@@ -495,8 +495,7 @@ export default function SoporteFiduciariaDoc({
         heightLeft -= pageHeight;
       }
 
-      const docSuffix = formData.docSoporteNro ? `_Doc_${formData.docSoporteNro}` : '';
-      pdf.save(`Documento_Soporte_Fiduciaria_${formData.nombresApellidos.replace(/\s+/g, '_')}${docSuffix}.pdf`);
+      pdf.save(`Documento Soporte Fiduciaria.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
@@ -542,8 +541,7 @@ export default function SoporteFiduciariaDoc({
       const imgData = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = imgData;
-      const docSuffix = formData.docSoporteNro ? `_Doc_${formData.docSoporteNro}` : '';
-      link.download = `Documento_Soporte_Fiduciaria_${formData.nombresApellidos.replace(/\s+/g, '_')}${docSuffix}.png`;
+      link.download = `Documento Soporte Fiduciaria.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

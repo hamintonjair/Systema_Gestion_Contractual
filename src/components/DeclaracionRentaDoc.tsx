@@ -282,7 +282,7 @@ export default function DeclaracionRentaDoc({
         <html lang="es">
           <head>
             <meta charset="utf-8">
-            <title>Declaración de Renta</title>
+            <title>Certificado Bajo Juramento Alcaldia</title>
             ${styles}
             <style>
               @page {

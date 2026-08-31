@@ -14,19 +14,21 @@ export const exportInformeToPDF = async (options: PDFExportOptions): Promise<boo
   
   if (!element) {
     console.warn('Elemento #informe-printable-document no está visible o montado. Usando impresión nativa.');
+    const oldTitle = document.title;
+    document.title = "Formato Informe De Cumplimiento";
     window.print();
+    document.title = oldTitle;
     return false;
   }
 
-  const cleanName = options.contratistaNombre 
-    ? options.contratistaNombre.trim().replace(/[^a border-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_').toUpperCase() 
-    : 'CONTRATISTA';
-  const contratoStr = options.contratoNro ? `_CONTRATO_${options.contratoNro}` : '';
-  const filename = `INFORME_${options.informeNro}${contratoStr}_${cleanName}.pdf`;
+  const filename = `Formato Informe De Cumplimiento.pdf`;
 
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   if (isMobile) {
+    const oldTitle = document.title;
+    document.title = "Formato Informe De Cumplimiento";
     window.print();
+    document.title = oldTitle;
     return true;
   }
 

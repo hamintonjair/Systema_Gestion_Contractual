@@ -391,7 +391,7 @@ export default function AutorizacionDesembolsoDoc({
         <html lang="es">
           <head>
             <meta charset="utf-8">
-            <title>Autorización de Desembolso</title>
+            <title>Autorizacion De Desembolso Y Equivalente A La Factura</title>
             ${styles}
             <style>
               @page {

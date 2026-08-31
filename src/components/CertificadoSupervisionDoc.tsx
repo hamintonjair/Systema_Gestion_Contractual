@@ -511,10 +511,7 @@ export default function CertificadoSupervisionDoc({
       return;
     }
 
-    const cleanName = formData.contratistaNombre
-      ? formData.contratistaNombre.trim().replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_').toUpperCase()
-      : 'CONTRATISTA';
-    const filename = `CERTIFICADO_SUPERVISION_PAGO_${formData.pagoNro}_${cleanName}.pdf`;
+    const filename = `Certificado De Supervision O Equivalente A Factura.pdf`;
 
     const clone = element.cloneNode(true) as HTMLElement;
     clone.style.width = '816px';
@@ -605,10 +602,7 @@ export default function CertificadoSupervisionDoc({
       return;
     }
 
-    const cleanName = formData.contratistaNombre
-      ? formData.contratistaNombre.trim().replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]/g, '_').toUpperCase()
-      : 'CONTRATISTA';
-    const filename = `CERTIFICADO_SUPERVISION_PAGO_${formData.pagoNro}_${cleanName}.png`;
+    const filename = `Certificado De Supervision O Equivalente A Factura.png`;
 
     const clone = element.cloneNode(true) as HTMLElement;
     clone.style.width = '816px';

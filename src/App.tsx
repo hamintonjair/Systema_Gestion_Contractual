@@ -6,7 +6,6 @@ import ReportEditor from './components/ReportEditor';
 import ReportPreview from './components/ReportPreview';
 import SecretariaAdminView from './components/SecretariaAdminView';
 import SuperAdminView from './components/SuperAdminView';
-import Footer from './components/Footer';
 import { AuthUser, DEMO_USERS, ReportData, InformeSummary, initialMockData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData } from './types';
 import { supabaseService } from './services/supabaseService';
 import { exportInformeToPDF } from './utils/pdfGenerator';
