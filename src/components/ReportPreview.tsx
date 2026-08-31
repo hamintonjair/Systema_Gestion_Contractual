@@ -33,42 +33,84 @@ export default function ReportPreview({
   });
 
   const findCommentForField = (fieldId: string, fieldName: string): { key: string; comment: FieldComment } | null => {
-    if (!data.comentariosCampos) return null;
+    if (!data.comentariosCampos || Object.keys(data.comentariosCampos).length === 0) return null;
+    
+    // 1. Coincidencia directa por ID exacto
     if (data.comentariosCampos[fieldId]) {
       return { key: fieldId, comment: data.comentariosCampos[fieldId] };
     }
 
-    const lowerFieldId = fieldId.toLowerCase();
-    const lowerFieldName = fieldName.toLowerCase();
+    const lowerFieldId = fieldId.toLowerCase().trim();
+    const lowerFieldName = fieldName.toLowerCase().trim();
+    const cleanFieldId = lowerFieldId.replace(/[^a-z0-9]/g, '');
+    const cleanFieldName = lowerFieldName.replace(/[^a-z0-9]/g, '');
+
+    // Determinar si el campo actual es una sub-sección de una obligación
+    const isTargetObligacion = lowerFieldId.includes('obligacion') || lowerFieldId.includes('ob_') || lowerFieldName.includes('obligaci');
+    
+    let targetSubfield: 'descripcion' | 'actividades' | 'soportes' | null = null;
+    if (isTargetObligacion) {
+      if (lowerFieldId.includes('actividad') || lowerFieldName.includes('actividad')) {
+        targetSubfield = 'actividades';
+      } else if (lowerFieldId.includes('descrip') || lowerFieldName.includes('descrip')) {
+        targetSubfield = 'descripcion';
+      } else if (lowerFieldId.includes('soporte') || lowerFieldName.includes('soporte')) {
+        targetSubfield = 'soportes';
+      }
+    }
+
+    // Extraer número de obligación del campo actual (1-based)
+    const matchNumTarget = lowerFieldName.match(/obligaci[oó]n\s*#?\s*(\d+)/i) || lowerFieldId.match(/(?:obligacion|ob)_(\d+)/i);
+    const targetNum = matchNumTarget ? parseInt(matchNumTarget[1], 10) : null;
 
     for (const [k, comm] of Object.entries(data.comentariosCampos)) {
-      const lowerK = k.toLowerCase();
-      const lowerCommFn = (comm.nombreCampo || comm.fieldName || '').toLowerCase();
+      if (!comm) continue;
+      const lowerK = k.toLowerCase().trim();
+      const lowerCommFn = (comm.nombreCampo || comm.fieldName || '').toLowerCase().trim();
+      const cleanK = lowerK.replace(/[^a-z0-9]/g, '');
+      const cleanCommFn = lowerCommFn.replace(/[^a-z0-9]/g, '');
 
-      if (lowerK === lowerFieldId) return { key: k, comment: comm };
+      // Coincidencia directa por id o nombre normalizado (para campos no dependientes de subcampos)
+      if (lowerK === lowerFieldId || cleanK === cleanFieldId) return { key: k, comment: comm };
+      if (!isTargetObligacion && (lowerCommFn === lowerFieldName || (cleanCommFn && cleanCommFn === cleanFieldName))) {
+        return { key: k, comment: comm };
+      }
 
-      if (lowerFieldId.includes('obligacion_')) {
-        let subfield = '';
-        if (lowerFieldId.includes('actividades')) subfield = 'actividades';
-        else if (lowerFieldId.includes('descripcion')) subfield = 'descripcion';
-        else if (lowerFieldId.includes('soportes')) subfield = 'soportes';
+      // Si el campo objetivo es una obligación
+      if (isTargetObligacion) {
+        const isCommObligacion = lowerK.includes('obligacion') || lowerK.includes('ob_') || lowerCommFn.includes('obligaci');
+        if (!isCommObligacion) continue;
 
-        const matchNum = lowerFieldName.match(/obligaci[oó]n\s*#?\s*(\d+)/i) || lowerFieldId.match(/obligacion_(\d+)_/i);
-        const targetNum = matchNum ? parseInt(matchNum[1], 10) : null;
+        // Determinar subcampo del comentario almacenado
+        let commSubfield: 'descripcion' | 'actividades' | 'soportes' | null = null;
+        if (lowerK.includes('actividad') || lowerCommFn.includes('actividad')) {
+          commSubfield = 'actividades';
+        } else if (lowerK.includes('descrip') || lowerCommFn.includes('descrip')) {
+          commSubfield = 'descripcion';
+        } else if (lowerK.includes('soporte') || lowerCommFn.includes('soporte')) {
+          commSubfield = 'soportes';
+        }
 
-        if (subfield) {
-          const kSubfieldMatch = lowerK.includes(subfield) || lowerCommFn.includes(subfield);
-          const kNumMatch = targetNum !== null && (
-            lowerK.includes(`obligacion_${targetNum}_`) ||
-            lowerK.includes(`ob_${targetNum}_`) ||
-            lowerCommFn.includes(`obligación #${targetNum}`) ||
-            lowerCommFn.includes(`obligacion #${targetNum}`) ||
-            lowerCommFn.includes(`obligación ${targetNum}`)
-          );
+        // Si los subcampos no coinciden exactamente, no resaltar (ej. si la observación es solo en descripción, no resaltar actividades ni soportes)
+        if (targetSubfield !== commSubfield) {
+          continue;
+        }
 
-          if (kSubfieldMatch && kNumMatch) {
-            return { key: k, comment: comm };
-          }
+        // Extraer número de obligación del comentario
+        const matchNumComm = lowerCommFn.match(/obligaci[oó]n\s*#?\s*(\d+)/i) || lowerK.match(/(?:obligacion|ob)_(\d+)/i);
+        const commNum = matchNumComm ? parseInt(matchNumComm[1], 10) : null;
+
+        const isNumMatch = targetNum !== null && commNum !== null && targetNum === commNum;
+        const isKeyNumMatch = targetNum !== null && (
+          lowerK.includes(`obligacion_${targetNum}_`) ||
+          lowerK.includes(`ob_${targetNum}_`) ||
+          lowerCommFn.includes(`obligación #${targetNum}`) ||
+          lowerCommFn.includes(`obligacion #${targetNum}`) ||
+          lowerCommFn.includes(`obligación ${targetNum}`)
+        );
+
+        if (isNumMatch || isKeyNumMatch) {
+          return { key: k, comment: comm };
         }
       }
     }

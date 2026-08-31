@@ -139,30 +139,33 @@ const parseObservacionesAndComments = (rawObs?: string): { cleanObs: string; com
   let comments: Record<string, FieldComment> = {};
   let valorPagarText: string | undefined;
 
-  // 1. Extraer __VALOR_PAGAR__: si existe
-  if (current.includes('__VALOR_PAGAR__:')) {
-    const parts = current.split('__VALOR_PAGAR__:');
-    current = parts[0] || '';
-    if (parts[1]) {
-      const rawVp = parts[1].split('__COMMENTS_JSON__:')[0].trim();
-      try {
-        valorPagarText = decodeURIComponent(rawVp);
-      } catch (e) {
-        valorPagarText = rawVp;
-      }
+  // 1. Extraer __COMMENTS_JSON__: si existe (independientemente de su posición)
+  if (current.includes('__COMMENTS_JSON__:')) {
+    const idx = current.indexOf('__COMMENTS_JSON__:');
+    const afterComments = current.slice(idx + '__COMMENTS_JSON__:'.length);
+    const rawJson = afterComments.split('__VALOR_PAGAR__:')[0].trim();
+    try {
+      comments = JSON.parse(rawJson);
+    } catch (e) {
+      console.warn('Error parsing __COMMENTS_JSON__:', e);
     }
+    // Remover __COMMENTS_JSON__ del string manteniendo cualquier otro marcador
+    const before = current.slice(0, idx);
+    const extra = afterComments.includes('__VALOR_PAGAR__:') ? '__VALOR_PAGAR__:' + afterComments.split('__VALOR_PAGAR__:')[1] : '';
+    current = (before + extra).trim();
   }
 
-  // 2. Extraer __COMMENTS_JSON__: si existe
-  if (current.includes('__COMMENTS_JSON__:')) {
-    const parts = current.split('__COMMENTS_JSON__:');
-    current = parts[0] || '';
-    if (parts[1]) {
-      const rawComm = parts[1].split('__VALOR_PAGAR__:')[0].trim();
-      try {
-        comments = JSON.parse(rawComm);
-      } catch (e) {}
+  // 2. Extraer __VALOR_PAGAR__: si existe
+  if (current.includes('__VALOR_PAGAR__:')) {
+    const idx = current.indexOf('__VALOR_PAGAR__:');
+    const afterVp = current.slice(idx + '__VALOR_PAGAR__:'.length);
+    const rawVp = afterVp.split('__COMMENTS_JSON__:')[0].trim();
+    try {
+      valorPagarText = decodeURIComponent(rawVp);
+    } catch (e) {
+      valorPagarText = rawVp;
     }
+    current = current.slice(0, idx).trim();
   }
 
   return { cleanObs: current.trim(), comments, valorPagarText };
@@ -1299,13 +1302,18 @@ export const supabaseService = {
           .filter((row: any) => row.contratos !== null && row.estado !== 'Borrador')
           .map((row: any) => {
           const { comments: obsComments } = parseObservacionesAndComments(row.observaciones);
-          let dbComments = row.comentarios_campos || obsComments;
+          let dbComments = (row.comentarios_campos && typeof row.comentarios_campos === 'object' && Object.keys(row.comentarios_campos).length > 0)
+            ? row.comentarios_campos
+            : ((obsComments && typeof obsComments === 'object' && Object.keys(obsComments).length > 0) ? obsComments : null);
           if (typeof dbComments === 'string') {
             try { dbComments = JSON.parse(dbComments); } catch (e) {}
           }
           const doc = row.contratos?.profiles?.documento_identidad;
           const infNro = row.informe_nro ? String(row.informe_nro) : '1';
-          const comments = (dbComments && typeof dbComments === 'object') ? dbComments : getStoredComments(doc, infNro);
+          const storedComm = getStoredComments(doc, infNro);
+          const comments = (dbComments && typeof dbComments === 'object' && Object.keys(dbComments).length > 0) 
+            ? dbComments 
+            : ((storedComm && typeof storedComm === 'object' && Object.keys(storedComm).length > 0) ? storedComm : (obsComments || {}));
           const hasComments = comments && Object.keys(comments).length > 0;
           const finalStatus = mapStatusFromDb(row.estado, hasComments);
 
@@ -1421,13 +1429,18 @@ export const supabaseService = {
           }));
 
         const { cleanObs, comments: obsComments, valorPagarText } = parseObservacionesAndComments(row.observaciones);
-        let dbComments = row.comentarios_campos || obsComments;
+        let dbComments = (row.comentarios_campos && typeof row.comentarios_campos === 'object' && Object.keys(row.comentarios_campos).length > 0)
+          ? row.comentarios_campos
+          : ((obsComments && typeof obsComments === 'object' && Object.keys(obsComments).length > 0) ? obsComments : null);
         if (typeof dbComments === 'string') {
           try { dbComments = JSON.parse(dbComments); } catch (e) {}
         }
         const docIdentidad = row.contratos?.profiles?.documento_identidad || '';
         const infNumStr = String(row.informe_nro || '1');
-        const finalComments = (dbComments && typeof dbComments === 'object') ? dbComments : getStoredComments(docIdentidad, infNumStr);
+        const storedComm = getStoredComments(docIdentidad, infNumStr);
+        const finalComments = (dbComments && typeof dbComments === 'object' && Object.keys(dbComments).length > 0)
+          ? dbComments
+          : ((storedComm && typeof storedComm === 'object' && Object.keys(storedComm).length > 0) ? storedComm : (obsComments || {}));
         const hasComm = Object.keys(finalComments).length > 0;
         const finalState = mapStatusFromDb(row.estado, hasComm);
 
@@ -1591,13 +1604,20 @@ export const supabaseService = {
               }));
 
             const { cleanObs, comments: obsComments, valorPagarText } = parseObservacionesAndComments(row.observaciones);
-            let dbComments = row.comentarios_campos || obsComments;
+            let dbComments = (row.comentarios_campos && typeof row.comentarios_campos === 'object' && Object.keys(row.comentarios_campos).length > 0)
+              ? row.comentarios_campos
+              : ((obsComments && typeof obsComments === 'object' && Object.keys(obsComments).length > 0) ? obsComments : null);
             if (typeof dbComments === 'string') {
               try { dbComments = JSON.parse(dbComments); } catch (e) {}
             }
             const docIdentidad = row.contratos?.profiles?.documento_identidad || contractorDocument || '';
             const infNumStr = String(row.informe_nro || '1');
-            const finalComments = row.estado === 'Borrador' ? {} : ((dbComments && typeof dbComments === 'object') ? dbComments : getStoredComments(docIdentidad, infNumStr));
+            const storedComm = getStoredComments(docIdentidad, infNumStr);
+            const finalComments = row.estado === 'Borrador' ? {} : (
+              (dbComments && typeof dbComments === 'object' && Object.keys(dbComments).length > 0)
+                ? dbComments
+                : ((storedComm && typeof storedComm === 'object' && Object.keys(storedComm).length > 0) ? storedComm : (obsComments || {}))
+            );
             const hasComm = Object.keys(finalComments).length > 0;
             const finalState = mapStatusFromDb(row.estado, hasComm);
 
@@ -2014,16 +2034,53 @@ export const supabaseService = {
         const { cleanObs, valorPagarText } = parseObservacionesAndComments(currentReport?.observaciones);
         const newObsWithComments = buildObservacionesWithComments(cleanObs, comments, valorPagarText);
 
-        await supabase
+        const updatePayload: any = { 
+          observaciones: newObsWithComments,
+          estado: mapStatusToDb(statusToSave) 
+        };
+
+        try {
+          updatePayload.comentarios_campos = comments;
+        } catch (e) {}
+
+        const { error: updErr } = await supabase
           .from('informes_mensuales')
-          .update({ 
-            observaciones: newObsWithComments,
-            estado: mapStatusToDb(statusToSave) 
-          })
+          .update(updatePayload)
           .eq('id', reportId);
+
+        if (updErr) {
+          await supabase
+            .from('informes_mensuales')
+            .update({ 
+              observaciones: newObsWithComments,
+              estado: mapStatusToDb(statusToSave) 
+            })
+            .eq('id', reportId);
+        }
       }
     } catch (e) {
       console.warn('Error saving comments to Supabase:', e);
+    }
+
+    // Guardar respaldo inmediato en LocalStorage
+    if (typeof localStorage !== 'undefined') {
+      const docKey = contractorDoc ? `_${contractorDoc}` : '';
+      if (contractorDoc) {
+        localStorage.setItem(`informe_comments_${contractorDoc}_${informeNro}`, JSON.stringify(comments));
+      }
+      localStorage.setItem(`informe_comments_${informeNro}`, JSON.stringify(comments));
+
+      const localKey = `informe_data${docKey}_${informeNro}`;
+      const saved = localStorage.getItem(localKey) || localStorage.getItem(`informe_data_${informeNro}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          parsed.comentariosCampos = comments;
+          parsed.estado = statusToSave;
+          localStorage.setItem(localKey, JSON.stringify(parsed));
+          localStorage.setItem(`informe_data_${informeNro}`, JSON.stringify(parsed));
+        } catch (e) {}
+      }
     }
 
     // 1. Notificación para el Contratista si hay observaciones pendientes
@@ -2040,10 +2097,10 @@ export const supabaseService = {
       });
 
       const docNames = Array.from(docNamesSet).join(', ') || 'Informe Mensual';
-      const firstComm = pendingComments[0]?.comentario || 'Verifique las observaciones en el documento.';
+      const bulletPoints = pendingComments.map((c, i) => `· ${c.nombreCampo || c.campoId || `Campo ${i + 1}`}: ${c.comentario}`).join('\n');
       
       const titulo = `⚠️ Observación en ${docNames} (Informe #${informeNro})`;
-      const mensaje = `La supervisión ha registrado observaciones en ${docNames} del Informe #${informeNro}: "${firstComm}". Por favor ingrese para realizar la corrección.`;
+      const mensaje = `La supervisión ha registrado observaciones en ${docNames} del Informe #${informeNro}:\n\n${bulletPoints}\n\nPor favor ingrese a la plataforma, corrija las casillas resaltadas en amarillo y presione "Radicar / Reenviar Informe".`;
 
       this.crearNotificacion({
         user_id: contractorDoc,

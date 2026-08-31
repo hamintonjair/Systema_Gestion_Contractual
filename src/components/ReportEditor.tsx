@@ -790,40 +790,52 @@ export default function ReportEditor({
         </div>
       </div>
 
-      {/* BANNER COMPACTO DE OBSERVACIONES DE SUPERVISIÓN */}
+      {/* BANNER DE OBSERVACIONES DE SUPERVISIÓN */}
       {totalComments > 0 && (
         pendientesCount > 0 ? (
-          <div className="bg-amber-100/90 border-b border-amber-300 px-4 py-2 text-amber-950 text-xs flex items-center justify-between gap-2 shadow-xs animate-in fade-in">
-            <div className="flex items-center gap-2 flex-wrap">
-              <AlertTriangle size={16} className="text-amber-800 shrink-0" />
-              <strong className="font-bold text-amber-950">
-                {pendientesCount} Observación(es) Pendiente(s) {corregidosCount > 0 ? `• (${corregidosCount} corregida(s) 🟢)` : ''}
-              </strong>
-              <span className="text-amber-900 text-[11px]">
-                Campos pendientes en <strong className="text-amber-950 underline font-bold">amarillo</strong> y corregidos en <strong className="text-emerald-800 underline font-bold">verde</strong>.
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {Object.entries(data.comentariosCampos || {})
-                .filter(([_, comm]) => !comm.corregido)
-                .slice(0, 3)
-                .map(([key, comm]) => (
-                  <span key={key} className="hidden md:inline-flex items-center gap-1 bg-amber-200 text-amber-950 text-[10px] px-2 py-0.5 rounded font-bold border border-amber-400">
-                    ⚠️ {comm.nombreCampo || comm.fieldName || key}
-                  </span>
-                ))}
+          <div className="bg-amber-50 border-b-2 border-amber-400 p-4 animate-in fade-in">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={24} className="text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-black text-amber-950 text-sm md:text-base flex items-center gap-2">
+                    {pendientesCount} Campo(s) con Observaciones de la Supervisora
+                  </h3>
+                  <p className="text-amber-900 text-xs mt-1 leading-relaxed max-w-3xl">
+                    La supervisora ha revisado este informe y dejó comentarios para que realices correcciones. Los campos señalados están resaltados en <strong className="font-bold underline">amarillo</strong> en las pestañas correspondientes.
+                  </p>
+                  
+                  {/* Resumen de campos */}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {Object.entries(data.comentariosCampos || {})
+                      .filter(([_, comm]) => !comm.corregido)
+                      .map(([key, comm]) => (
+                        <span key={key} className="inline-flex items-center gap-1 bg-amber-200 text-amber-950 text-[10px] px-2.5 py-1 rounded-md font-bold shadow-sm">
+                          ⚠️ {comm.nombreCampo || comm.fieldName || key}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              </div>
+              <div className="hidden sm:flex shrink-0">
+                <span className="bg-amber-200 text-amber-900 border border-amber-300 px-3 py-1.5 rounded-lg text-xs font-black shadow-sm">
+                  Ajuste Requerido
+                </span>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="bg-emerald-50 border-b border-emerald-300 px-4 py-2 text-emerald-950 text-xs flex items-center justify-between gap-2 shadow-xs animate-in fade-in">
-            <div className="flex items-center gap-2 flex-wrap">
-              <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
-              <strong className="font-bold text-emerald-950">
-                🟢 {corregidosCount} Corrección(es) Realizada(s) • Todas las observaciones ajustadas
-              </strong>
-              <span className="text-emerald-900 text-[11px]">
-                Los campos corregidos se destacan en verde. Guarda los cambios para que la supervisora los re-verifique.
-              </span>
+          <div className="bg-emerald-50 border-b border-emerald-300 p-4 animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 size={24} className="text-emerald-600 shrink-0" />
+              <div>
+                <strong className="font-black text-emerald-950 text-sm">
+                  🟢 {corregidosCount} Corrección(es) Realizada(s) • Todas las observaciones ajustadas
+                </strong>
+                <p className="text-emerald-900 text-xs mt-0.5">
+                  Los campos corregidos se destacan en verde. Guarda los cambios para que la supervisora los re-verifique.
+                </p>
+              </div>
             </div>
           </div>
         )
