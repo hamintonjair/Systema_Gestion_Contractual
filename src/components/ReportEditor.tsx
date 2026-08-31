@@ -2151,9 +2151,11 @@ export default function ReportEditor({
                <p className="text-[10px] text-gray-500">
                   Usa el botón "Imprimir / Descargar PDF" de la barra superior. Si tu navegador móvil no soporta la descarga directa, usa esta vista para revisar.
                </p>
-               <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-100 p-2 relative h-[450px] overflow-y-auto">
-                  <div className="transform origin-top scale-[0.4] sm:scale-[0.55] w-[215mm] bg-white shadow-sm mx-auto">
-                     <ReportPreview data={data} />
+               <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-100 py-4 relative h-[450px] overflow-y-auto overflow-x-hidden flex justify-center">
+                  <div className="w-[75mm] min-[400px]:w-[86mm] sm:w-[107.5mm] shrink-0 origin-top-left">
+                     <div className="transform origin-top-left scale-[0.35] min-[400px]:scale-[0.4] sm:scale-[0.5] w-[215mm] bg-white shadow-sm">
+                        <ReportPreview data={data} />
+                     </div>
                   </div>
                </div>
             </div>
