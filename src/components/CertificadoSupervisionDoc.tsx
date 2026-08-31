@@ -485,10 +485,16 @@ export default function CertificadoSupervisionDoc({
 
       setTimeout(() => {
         try {
+          const oldTitle = document.title;
+          document.title = "Certificado De Supervision O Equivalente A Factura";
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
+          document.title = oldTitle;
         } catch (e) {
+          const oldTitle = document.title;
+          document.title = "Certificado De Supervision O Equivalente A Factura";
           window.print();
+          document.title = oldTitle;
         } finally {
           setTimeout(() => {
             if (document.body.contains(iframe)) {

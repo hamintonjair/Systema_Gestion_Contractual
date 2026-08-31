@@ -316,7 +316,10 @@ export default function DeclaracionRentaDoc({
             <script>
               window.onload = () => {
                 setTimeout(() => {
+                  const oldTitle = window.parent.document.title;
+                  window.parent.document.title = "Certificado Bajo Juramento Alcaldia";
                   window.print();
+                  window.parent.document.title = oldTitle;
                   setTimeout(() => {
                     window.parent.document.body.removeChild(window.frameElement);
                   }, 500);

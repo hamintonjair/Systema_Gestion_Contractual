@@ -433,7 +433,10 @@ export default function AutorizacionDesembolsoDoc({
             <script>
               window.onload = () => {
                 setTimeout(() => {
+                  const oldTitle = window.parent.document.title;
+                  window.parent.document.title = "Autorizacion De Desembolso Y Equivalente A La Factura";
                   window.print();
+                  window.parent.document.title = oldTitle;
                   setTimeout(() => {
                     window.parent.document.body.removeChild(window.frameElement);
                   }, 500);

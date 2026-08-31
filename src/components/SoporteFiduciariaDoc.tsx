@@ -424,7 +424,10 @@ export default function SoporteFiduciariaDoc({
             </div>
             <script>
               setTimeout(() => {
+                const oldTitle = window.parent.document.title;
+                window.parent.document.title = "Documento Soporte Fiduciaria";
                 window.print();
+                window.parent.document.title = oldTitle;
                 setTimeout(() => {
                   window.frameElement?.remove();
                 }, 500);
