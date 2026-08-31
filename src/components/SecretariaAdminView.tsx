@@ -128,6 +128,39 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       periodoHasta = item.periodo_hasta || '';
       comentariosCampos = item.comentariosCampos;
       estado = item.estado || 'Enviado';
+
+      // Si inspectingInforme coincide con este informe, usar sus comentarios actualizados
+      if (
+        inspectingInforme &&
+        (inspectingInforme.id === item.id ||
+         (inspectingInforme.contratistaDocumento === contratistaDocumento && String(inspectingInforme.informeNro) === informeNro)) &&
+        inspectingInforme.comentariosCampos &&
+        Object.keys(inspectingInforme.comentariosCampos).length > 0
+      ) {
+        comentariosCampos = inspectingInforme.comentariosCampos;
+      }
+
+      // Si aún no tiene comentarios, buscar en localStorage / almacén seguro
+      if (!comentariosCampos || Object.keys(comentariosCampos).length === 0) {
+        const stored = supabaseService.getStoredComments(contratistaDocumento, informeNro);
+        if (stored && Object.keys(stored).length > 0) {
+          comentariosCampos = stored;
+        } else {
+          const userDocKey = contratistaDocumento ? `_${contratistaDocumento}` : '';
+          const saved = localStorage.getItem(`informe_data${userDocKey}_${informeNro}`) ||
+                        localStorage.getItem(`informe_data_${informeNro}`) ||
+                        localStorage.getItem(`alcaldia_quibdo_report${userDocKey}_${informeNro}`) ||
+                        localStorage.getItem(`alcaldia_quibdo_report_${informeNro}`);
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              if (parsed.comentariosCampos && Object.keys(parsed.comentariosCampos).length > 0) {
+                comentariosCampos = parsed.comentariosCampos;
+              }
+            } catch (e) {}
+          }
+        }
+      }
     } 
     // Si es AuthUser (de la lista de contratistas)
     else {

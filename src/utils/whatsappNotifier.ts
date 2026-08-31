@@ -88,22 +88,14 @@ _Mensaje oficial emitido desde el Panel de Supervisión Municipal._`;
       commentsText = `\n*Observaciones Registradas (${pendingComments.length}):*\n` + 
         pendingComments.map((c, i) => {
           const field = c.nombreCampo || c.campoId || `Campo ${i + 1}`;
-          let prefix = '•';
-          const fieldLower = field.toLowerCase();
-          if (fieldLower.includes('certificado de supervisión')) prefix = '📋';
-          else if (fieldLower.includes('fiduciaria') || fieldLower.includes('pagos')) prefix = '🏛️';
-          else if (fieldLower.includes('declaración') || fieldLower.includes('juramento')) prefix = '⚖️';
-          else if (fieldLower.includes('desembolso')) prefix = '💳';
-          else prefix = '📄';
-          
-          return `${prefix} *${field}:* ${c.comentario}`;
+          return `- *${field}:* ${c.comentario}`;
         }).join('\n') + '\n';
     } else if (commentsList.length > 0) {
       commentsText = `\n*Observaciones Registradas:*\n` + 
         commentsList.map((c, i) => {
           const field = c.nombreCampo || c.campoId || `Campo ${i + 1}`;
           const isFixed = Boolean(c.corregido);
-          return `${isFixed ? '🟢' : '⚠️'} *${field}:* ${c.comentario} ${isFixed ? '_(Subsanado)_' : ''}`;
+          return `- *${field}:* ${c.comentario} ${isFixed ? '_(Subsanado)_' : '_(Pendiente)_'}`;
         }).join('\n') + '\n';
     }
 
@@ -171,7 +163,7 @@ Hola, apreciado(a) supervisora *${supervisorNombre}*.
 
 Le informo que he corregido y marcado como *SUBSANADO* el documento *${docName}* correspondiente al *Informe Mensual #${informeNro}* (Contrato *#${contratoNro}*).
 
-• *Observación Atendida:* "${comentario}"
+- *Observación Atendida:* "${comentario}"
 
 Quedo atento(a) a su revisión y validación final en la plataforma institucional:
 ${appUrl}
@@ -185,7 +177,7 @@ Hola, estimado(a) *${contratistaNombre.trim()}*.
 
 Le informamos que en la revisión de su *Informe Mensual #${informeNro}* (Contrato *#${contratoNro}*), la supervisora *${supervisorNombre}* ha registrado la siguiente observación en el *${docName}*:
 
-• *Observación:* "${comentario}"
+- *Observación:* "${comentario}"
 
 Por favor ingrese a la plataforma, efectúe el ajuste correspondiente y presione *"Marcar como Subsanado"*:
 ${appUrl}

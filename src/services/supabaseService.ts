@@ -21,11 +21,31 @@ const getStoredComments = (docKey?: string, informeNro?: string): Record<string,
   try {
     if (docKey && informeNro) {
       const raw = localStorage.getItem(`informe_comentarios_${docKey}_${informeNro}`);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Object.keys(parsed).length > 0) return parsed;
+      }
+      const rawData = localStorage.getItem(`informe_data_${docKey}_${informeNro}`) || localStorage.getItem(`alcaldia_quibdo_report_${docKey}_${informeNro}`);
+      if (rawData) {
+        const parsed = JSON.parse(rawData);
+        if (parsed?.comentariosCampos && Object.keys(parsed.comentariosCampos).length > 0) {
+          return parsed.comentariosCampos;
+        }
+      }
     }
     if (informeNro) {
       const raw = localStorage.getItem(`informe_comentarios_${informeNro}`);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Object.keys(parsed).length > 0) return parsed;
+      }
+      const rawData = localStorage.getItem(`informe_data_${informeNro}`) || localStorage.getItem(`alcaldia_quibdo_report_${informeNro}`);
+      if (rawData) {
+        const parsed = JSON.parse(rawData);
+        if (parsed?.comentariosCampos && Object.keys(parsed.comentariosCampos).length > 0) {
+          return parsed.comentariosCampos;
+        }
+      }
     }
   } catch (e) {}
   return {};
@@ -223,6 +243,11 @@ const SYSTEM_CORE_USERS: AuthUser[] = [
 ];
 
 export const supabaseService = {
+  // Helper: Obtener comentarios guardados por documento y número de informe
+  getStoredComments(docKey?: string, informeNro?: string): Record<string, FieldComment> {
+    return getStoredComments(docKey, informeNro);
+  },
+
   // Helper: Guardar contraseña en almacén seguro local
   saveUserPassword(identifier: string, pass: string) {
     try {
@@ -1331,6 +1356,7 @@ export const supabaseService = {
             contrato_nro: row.contratos?.contrato_nro || '001',
             secretaria_nombre: row.contratos?.sec_secretarias?.nombre || 'Secretaría Municipal',
             created_at: row.created_at || new Date().toISOString(),
+            comentariosCampos: comments,
           };
         })
         .filter((inf: InformeSummary) => inf.estado !== 'Borrador');
