@@ -727,14 +727,14 @@ export const supabaseService = {
     try {
       let { data, error } = await supabase
         .from('profiles')
-        .select('*, sec_secretarias(*)')
+        .select('*, sec_secretarias(*), contratos(*)')
         .eq('role', 'contratista')
         .order('created_at', { ascending: false });
 
       if (error || !data || data.length === 0) {
         const fallback = await supabase
           .from('profiles')
-          .select('*')
+          .select('*, contratos(*)')
           .eq('role', 'contratista');
         if (!fallback.error && fallback.data) {
           data = fallback.data;
@@ -747,6 +747,7 @@ export const supabaseService = {
           const doc = row.documento_identidad || '';
           const mail = row.email || '';
           const pass = this.getUserPassword(mail) || this.getUserPassword(doc) || 'Contratista2026*';
+          const cont = Array.isArray(row.contratos) ? row.contratos[0] : row.contratos;
 
           return {
             id: row.id,
@@ -760,8 +761,25 @@ export const supabaseService = {
             secretariaCodigo: row.sec_secretarias?.codigo || '',
             cargo: row.cargo || 'Contratista de Prestación de Servicios',
             telefono: row.telefono || '',
-            barrio: row.barrio || row.direccion || '',
-            direccion: row.direccion || row.barrio || '',
+            barrio: row.direccion || '',
+            direccion: row.direccion || '',
+            numeroCuenta: cont?.numero_cuenta || '53686186829',
+            banco: cont?.banco || 'BANCOLOMBIA',
+            tipoCuenta: cont?.tipo_cuenta || 'AHORRO',
+            ciudad: cont?.ciudad || 'CHOCÓ',
+            contratoNro: cont?.contrato_nro || '',
+            objetoContrato: cont?.objeto || '',
+            valorContrato: cont?.valor_contrato ? String(cont.valor_contrato) : '',
+            cdpNro: cont?.cdp_nro || '',
+            crpNro: cont?.crp_nro || '',
+            polizaNro: cont?.poliza_nro || '',
+            fechaPoliza: cont?.fecha_aprobacion_poliza || '',
+            fechaInicio: cont?.fecha_inicio || '',
+            fechaTerminacion: cont?.fecha_terminacion || '',
+            supervisorNombre: cont?.supervisor_nombre || '',
+            supervisorDocumento: cont?.supervisor_documento || '',
+            apoyoSupervisionNombre: cont?.apoyo_supervision_nombre || '',
+            apoyoSupervisionDocumento: cont?.apoyo_supervision_documento || '',
             createdAt: row.created_at || new Date().toISOString(),
           };
         });
@@ -835,6 +853,7 @@ export const supabaseService = {
         documento_identidad: rawDoc,
         email: rawEmail,
         telefono: phone,
+        direccion: contractorData.direccion || contractorData.barrio || '',
         cargo: cargo,
         activo: true,
       };
@@ -864,6 +883,7 @@ export const supabaseService = {
           documento_identidad: rawDoc,
           email: rawEmail,
           telefono: phone,
+          direccion: contractorData.direccion || contractorData.barrio || '',
         };
         if (isUuid(newGeneratedId)) fallbackPayload.id = newGeneratedId;
         if (secUuid && isUuid(secUuid)) fallbackPayload.secretaria_id = secUuid;
@@ -928,6 +948,10 @@ export const supabaseService = {
           supervisor_documento: contractorData.supervisorDocumento || '35.602.521',
           apoyo_supervision_nombre: contractorData.apoyoSupervisionNombre && contractorData.apoyoSupervisionNombre !== 'N/A' ? contractorData.apoyoSupervisionNombre : null,
           apoyo_supervision_documento: contractorData.apoyoSupervisionDocumento && contractorData.apoyoSupervisionDocumento !== 'N/A' ? contractorData.apoyoSupervisionDocumento : null,
+          numero_cuenta: contractorData.numeroCuenta || '53686186829',
+          banco: contractorData.banco || 'BANCOLOMBIA',
+          tipo_cuenta: contractorData.tipoCuenta || 'AHORRO',
+          ciudad: contractorData.ciudad || 'CHOCÓ',
           vigencia: 2026,
         }]);
     } catch (e) {
@@ -980,6 +1004,9 @@ export const supabaseService = {
       if (rawDoc) profileUpdatePayload.documento_identidad = rawDoc;
       if (rawEmail) profileUpdatePayload.email = rawEmail;
       if (phone !== undefined) profileUpdatePayload.telefono = phone;
+      if (updateData.direccion !== undefined || updateData.barrio !== undefined) {
+        profileUpdatePayload.direccion = updateData.direccion || updateData.barrio || '';
+      }
       if (cargo !== undefined) profileUpdatePayload.cargo = cargo;
 
       if (isUuid(contractorId)) {
@@ -1020,6 +1047,10 @@ export const supabaseService = {
       if (updateData.supervisorDocumento) contractUpdatePayload.supervisor_documento = updateData.supervisorDocumento;
       if (updateData.apoyoSupervisionNombre) contractUpdatePayload.apoyo_supervision_nombre = updateData.apoyoSupervisionNombre === 'N/A' ? null : updateData.apoyoSupervisionNombre;
       if (updateData.apoyoSupervisionDocumento) contractUpdatePayload.apoyo_supervision_documento = updateData.apoyoSupervisionDocumento === 'N/A' ? null : updateData.apoyoSupervisionDocumento;
+      if (updateData.numeroCuenta) contractUpdatePayload.numero_cuenta = updateData.numeroCuenta;
+      if (updateData.banco) contractUpdatePayload.banco = updateData.banco;
+      if (updateData.tipoCuenta) contractUpdatePayload.tipo_cuenta = updateData.tipoCuenta;
+      if (updateData.ciudad) contractUpdatePayload.ciudad = updateData.ciudad;
 
       if (Object.keys(contractUpdatePayload).length > 0) {
         if (isUuid(contractorId)) {
@@ -1245,8 +1276,18 @@ export const supabaseService = {
         supervisor_documento: report.supervisorDocumento || user?.supervisorDocumento || '35.602.521',
         apoyo_supervision_nombre: report.apoyoSupervisionNombre && report.apoyoSupervisionNombre !== 'N/A' ? report.apoyoSupervisionNombre : null,
         apoyo_supervision_documento: report.apoyoSupervisionDocumento && report.apoyoSupervisionDocumento !== 'N/A' ? report.apoyoSupervisionDocumento : null,
+        numero_cuenta: report.numeroCuenta || user?.numeroCuenta || '53686186829',
+        banco: report.banco || user?.banco || 'BANCOLOMBIA',
+        tipo_cuenta: report.tipoCuenta || user?.tipoCuenta || 'AHORRO',
+        ciudad: report.ciudad || report.ciudadCuenta || user?.ciudad || 'CHOCÓ',
         vigencia: 2026
       };
+
+      // Actualizar la dirección en la tabla profiles si viene especificada
+      const dirVal = report.direccion || report.barrio || report.contratistaDireccion || user?.direccion || user?.barrio;
+      if (validContratistaId && dirVal) {
+        await supabase.from('profiles').update({ direccion: dirVal }).eq('id', validContratistaId);
+      }
 
       // 3. Buscar si ya existe contrato exclusivamente para este contratista_id y sincronizar cambios
       if (validContratistaId) {
@@ -1530,11 +1571,14 @@ export const supabaseService = {
           valorPagar: finalValorPagar,
           estado: finalState,
           comentariosCampos: finalComments,
-          numeroCuenta: storedData?.numeroCuenta || '53686186829',
-          banco: storedData?.banco || 'BANCOLOMBIA',
-          tipoCuenta: storedData?.tipoCuenta || 'AHORRO',
-          ciudad: storedData?.ciudad || storedData?.ciudadCuenta || 'CHOCÓ',
-          ciudadCuenta: storedData?.ciudadCuenta || storedData?.ciudad || 'CHOCÓ',
+          numeroCuenta: storedData?.numeroCuenta || (row.contratos as any)?.numero_cuenta || '53686186829',
+          banco: storedData?.banco || (row.contratos as any)?.banco || 'BANCOLOMBIA',
+          tipoCuenta: storedData?.tipoCuenta || (row.contratos as any)?.tipo_cuenta || 'AHORRO',
+          ciudad: storedData?.ciudad || storedData?.ciudadCuenta || (row.contratos as any)?.ciudad || 'CHOCÓ',
+          ciudadCuenta: storedData?.ciudadCuenta || storedData?.ciudad || (row.contratos as any)?.ciudad || 'CHOCÓ',
+          barrio: storedData?.barrio || storedData?.direccion || (row.contratos?.profiles as any)?.barrio || (row.contratos?.profiles as any)?.direccion || '',
+          direccion: storedData?.direccion || storedData?.barrio || (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || '',
+          contratistaDireccion: storedData?.contratistaDireccion || storedData?.barrio || storedData?.direccion || (row.contratos?.profiles as any)?.barrio || (row.contratos?.profiles as any)?.direccion || '',
           fechaRegistroPresupuestal: storedData?.fechaRegistroPresupuestal ? formatDateSlash(storedData.fechaRegistroPresupuestal) : '14/01/2026',
           codigoRubro: storedData?.codigoRubro || '2.3.2.02.02.008.04.01.02',
           syncedToDb: true,
@@ -1716,11 +1760,14 @@ export const supabaseService = {
               valorPagarCertificado: row.valor_pagar_certificado || (numCert ? String(numCert) : ''),
               estado: finalState,
               comentariosCampos: finalComments,
-              numeroCuenta: storedData?.numeroCuenta || '53686186829',
-              banco: storedData?.banco || 'BANCOLOMBIA',
-              tipoCuenta: storedData?.tipoCuenta || 'AHORRO',
-              ciudad: storedData?.ciudad || storedData?.ciudadCuenta || 'CHOCÓ',
-              ciudadCuenta: storedData?.ciudadCuenta || storedData?.ciudad || 'CHOCÓ',
+              numeroCuenta: storedData?.numeroCuenta || (row.contratos as any)?.numero_cuenta || '53686186829',
+              banco: storedData?.banco || (row.contratos as any)?.banco || 'BANCOLOMBIA',
+              tipoCuenta: storedData?.tipoCuenta || (row.contratos as any)?.tipo_cuenta || 'AHORRO',
+              ciudad: storedData?.ciudad || storedData?.ciudadCuenta || (row.contratos as any)?.ciudad || 'CHOCÓ',
+              ciudadCuenta: storedData?.ciudadCuenta || storedData?.ciudad || (row.contratos as any)?.ciudad || 'CHOCÓ',
+              barrio: storedData?.barrio || storedData?.direccion || (row.contratos?.profiles as any)?.barrio || (row.contratos?.profiles as any)?.direccion || '',
+              direccion: storedData?.direccion || storedData?.barrio || (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || '',
+              contratistaDireccion: storedData?.contratistaDireccion || storedData?.barrio || storedData?.direccion || (row.contratos?.profiles as any)?.barrio || (row.contratos?.profiles as any)?.direccion || '',
               fechaRegistroPresupuestal: storedData?.fechaRegistroPresupuestal ? formatDateSlash(storedData.fechaRegistroPresupuestal) : '14/01/2026',
               codigoRubro: storedData?.codigoRubro || '2.3.2.02.02.008.04.01.02',
               syncedToDb: true,
@@ -1804,7 +1851,17 @@ export const supabaseService = {
             supervisor_documento: report.supervisorDocumento || '35.602.521',
             apoyo_supervision_nombre: report.apoyoSupervisionNombre && report.apoyoSupervisionNombre !== 'N/A' ? report.apoyoSupervisionNombre : null,
             apoyo_supervision_documento: report.apoyoSupervisionDocumento && report.apoyoSupervisionDocumento !== 'N/A' ? report.apoyoSupervisionDocumento : null,
+            numero_cuenta: report.numeroCuenta || '53686186829',
+            banco: report.banco || 'BANCOLOMBIA',
+            tipo_cuenta: report.tipoCuenta || 'AHORRO',
+            ciudad: report.ciudad || report.ciudadCuenta || 'CHOCÓ',
           }).eq('id', contratoId);
+
+          const dirVal = report.direccion || report.barrio || report.contratistaDireccion;
+          const contractorDoc = report.contratistaDocumento || user?.documentoIdentidad;
+          if (dirVal && contractorDoc) {
+            await supabase.from('profiles').update({ direccion: dirVal }).eq('documento_identidad', contractorDoc);
+          }
         } catch (contractErr) {
           console.warn('Error updating contract fields in saveFullInforme:', contractErr);
         }

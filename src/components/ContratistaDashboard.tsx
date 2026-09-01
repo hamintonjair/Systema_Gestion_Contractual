@@ -58,6 +58,10 @@ export type ContratistaModuleTab = 'informe' | 'supervision' | 'fiduciaria' | 'j
 
 export default function ContratistaDashboard({ user, onOpenReportEditor, onDirectPrint }: Props) {
   const [activeModuleTab, setActiveModuleTab] = useState<ContratistaModuleTab>('informe');
+  const moduleTabsRef = React.useRef<HTMLDivElement>(null);
+  const scrollModuleTabs = (dir: 'left' | 'right') => {
+    moduleTabsRef.current?.scrollBy({ left: dir === 'left' ? -250 : 250, behavior: 'smooth' });
+  };
   const [reportsList, setReportsList] = useState<ReportData[]>([]);
 
   // Estados de ID seleccionados en los selectors de los módulos
@@ -79,13 +83,20 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
   const selectedFidReport = useMemo(() => {
     if (!reportsList || reportsList.length === 0) return null;
-    return (
+    const found = (
       reportsList.find(inf => inf.id && inf.id === selectedFidInformeId) ||
       reportsList.find(inf => String(inf.informeNro) === selectedFidInformeId) ||
       reportsList[0] ||
       null
     );
-  }, [reportsList, selectedFidInformeId]);
+    if (!found) return null;
+    return {
+      ...found,
+      barrio: found.barrio || found.direccion || user.barrio || user.direccion || '',
+      direccion: found.direccion || found.barrio || user.direccion || user.barrio || '',
+      contratistaDireccion: found.contratistaDireccion || found.barrio || found.direccion || user.barrio || user.direccion || '',
+    };
+  }, [reportsList, selectedFidInformeId, user.barrio, user.direccion]);
 
   const selectedJuramentoReport = useMemo(() => {
     if (!reportsList || reportsList.length === 0) return null;
@@ -99,13 +110,20 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
   const selectedDesembolsoReport = useMemo(() => {
     if (!reportsList || reportsList.length === 0) return null;
-    return (
+    const found = (
       reportsList.find(inf => inf.id && inf.id === selectedDesembolsoInformeId) ||
       reportsList.find(inf => String(inf.informeNro) === selectedDesembolsoInformeId) ||
       reportsList[0] ||
       null
     );
-  }, [reportsList, selectedDesembolsoInformeId]);
+    if (!found) return null;
+    return {
+      ...found,
+      barrio: found.barrio || found.direccion || user.barrio || user.direccion || '',
+      direccion: found.direccion || found.barrio || user.direccion || user.barrio || '',
+      contratistaDireccion: found.contratistaDireccion || found.barrio || found.direccion || user.barrio || user.direccion || '',
+    };
+  }, [reportsList, selectedDesembolsoInformeId, user.barrio, user.direccion]);
 
   const [loadingDb, setLoadingDb] = useState(true);
   const [savingReportId, setSavingReportId] = useState<string | null>(null);
@@ -974,12 +992,21 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
       </div>
 
       {/* Menú de Módulos de la Suite Contractual */}
-      <div className="bg-white p-2 rounded-2xl border border-slate-200/90 shadow-sm">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+      <div className="bg-white p-2 rounded-2xl border border-slate-200/90 shadow-sm flex items-center gap-1.5 sm:gap-2">
+        <button
+          type="button"
+          onClick={() => scrollModuleTabs('left')}
+          className="p-1.5 sm:p-2 rounded-xl text-slate-500 hover:text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 transition-colors shrink-0 border border-slate-200 hover:border-emerald-300 shadow-xs"
+          title="Desplazar pestañas a la izquierda"
+        >
+          <ChevronLeft size={16} />
+        </button>
+
+        <div ref={moduleTabsRef} className="flex items-center gap-1.5 overflow-x-auto py-0.5 scrollbar-none scroll-smooth flex-1">
           
           <button
             onClick={() => setActiveModuleTab('informe')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 relative ${
               activeModuleTab === 'informe'
                 ? 'bg-[#006b33] text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1002,7 +1029,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
           <button
             onClick={() => setActiveModuleTab('supervision')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 relative ${
               activeModuleTab === 'supervision'
                 ? 'bg-[#006b33] text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1031,7 +1058,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
           <button
             onClick={() => setActiveModuleTab('fiduciaria')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 relative ${
               activeModuleTab === 'fiduciaria'
                 ? 'bg-[#006b33] text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1048,7 +1075,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
           <button
             onClick={() => setActiveModuleTab('juramento')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 relative ${
               activeModuleTab === 'juramento'
                 ? 'bg-[#006b33] text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1065,7 +1092,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
           <button
             onClick={() => setActiveModuleTab('desembolso')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 relative ${
               activeModuleTab === 'desembolso'
                 ? 'bg-[#006b33] text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1082,7 +1109,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
           <button
             onClick={() => setActiveModuleTab('orden')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap relative ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 relative ${
               activeModuleTab === 'orden'
                 ? 'bg-[#006b33] text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1096,6 +1123,15 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           </button>
 
         </div>
+
+        <button
+          type="button"
+          onClick={() => scrollModuleTabs('right')}
+          className="p-1.5 sm:p-2 rounded-xl text-slate-500 hover:text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 transition-colors shrink-0 border border-slate-200 hover:border-emerald-300 shadow-xs"
+          title="Desplazar pestañas a la derecha"
+        >
+          <ChevronRight size={16} />
+        </button>
       </div>
 
       {/* Guía Rápida de Edición de Módulos Contractuales */}

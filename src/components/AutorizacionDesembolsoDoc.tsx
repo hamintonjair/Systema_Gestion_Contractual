@@ -99,6 +99,11 @@ export default function AutorizacionDesembolsoDoc({
         nombre: reportData.contratistaNombre || baseData.nombre,
         nitCc: reportData.contratistaDocumento || baseData.nitCc,
         telefono: reportData.contratistaTelefono || baseData.telefono,
+        direccion: (reportData.barrio || reportData.direccion || reportData.contratistaDireccion || baseData.direccion || 'BARRIO BUENOS AIRES').toUpperCase(),
+        nroCuenta: reportData.numeroCuenta || baseData.nroCuenta || '53686186829',
+        banco: (reportData.banco || baseData.banco || 'BANCOLOMBIA').toUpperCase(),
+        tipoCuenta: (reportData.tipoCuenta || baseData.tipoCuenta || 'AHORRO').toUpperCase(),
+        ciudad: (reportData.ciudad || reportData.ciudadCuenta || baseData.ciudad || 'CHOCÓ').toUpperCase(),
         contratoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.contratoNro || '590'),
         conceptoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.conceptoNro || '590'),
         objeto: defaultObjeto,
@@ -182,6 +187,11 @@ export default function AutorizacionDesembolsoDoc({
             nombre: reportData.contratistaNombre || baseData.nombre,
             nitCc: reportData.contratistaDocumento || baseData.nitCc,
             telefono: reportData.contratistaTelefono || baseData.telefono,
+            direccion: (reportData.barrio || reportData.direccion || reportData.contratistaDireccion || baseData.direccion || 'BARRIO BUENOS AIRES').toUpperCase(),
+            nroCuenta: reportData.numeroCuenta || baseData.nroCuenta || '53686186829',
+            banco: (reportData.banco || baseData.banco || 'BANCOLOMBIA').toUpperCase(),
+            tipoCuenta: (reportData.tipoCuenta || baseData.tipoCuenta || 'AHORRO').toUpperCase(),
+            ciudad: (reportData.ciudad || reportData.ciudadCuenta || baseData.ciudad || 'CHOCÓ').toUpperCase(),
             contratoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.contratoNro || '590'),
             conceptoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.conceptoNro || '590'),
             objeto: defaultObjeto,
@@ -197,7 +207,7 @@ export default function AutorizacionDesembolsoDoc({
     };
 
     loadData();
-  }, [data, reportData?.id, reportData?.informeNro, reportData?.valorPagar, reportData?.valorContrato, reportData?.valorMensual, reportData?.periodoDesde, reportData?.periodoHasta, reportData?.fechaPresentacion, storageKey]);
+  }, [data, reportData?.id, reportData?.informeNro, reportData?.barrio, reportData?.direccion, reportData?.numeroCuenta, reportData?.banco, reportData?.tipoCuenta, reportData?.ciudad, reportData?.valorPagar, reportData?.valorContrato, reportData?.valorMensual, reportData?.periodoDesde, reportData?.periodoHasta, reportData?.fechaPresentacion, storageKey]);
 
   useEffect(() => {
     const handleSyncEvent = (e: any) => {

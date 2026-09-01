@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   documento_identidad TEXT,
   email TEXT,
   telefono TEXT,
+  direccion TEXT,
   cargo TEXT,
   activo BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -55,6 +56,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nombre_completo TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS documento_identidad TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS email TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS telefono TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS direccion TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS cargo TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
@@ -85,6 +87,10 @@ CREATE TABLE IF NOT EXISTS contratos (
   supervisor_documento TEXT,
   apoyo_supervision_nombre TEXT,
   apoyo_supervision_documento TEXT,
+  numero_cuenta TEXT,
+  banco TEXT,
+  tipo_cuenta TEXT,
+  ciudad TEXT,
   activo BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -108,6 +114,10 @@ ALTER TABLE contratos ADD COLUMN IF NOT EXISTS supervisor_nombre TEXT;
 ALTER TABLE contratos ADD COLUMN IF NOT EXISTS supervisor_documento TEXT;
 ALTER TABLE contratos ADD COLUMN IF NOT EXISTS apoyo_supervision_nombre TEXT;
 ALTER TABLE contratos ADD COLUMN IF NOT EXISTS apoyo_supervision_documento TEXT;
+ALTER TABLE contratos ADD COLUMN IF NOT EXISTS numero_cuenta TEXT;
+ALTER TABLE contratos ADD COLUMN IF NOT EXISTS banco TEXT;
+ALTER TABLE contratos ADD COLUMN IF NOT EXISTS tipo_cuenta TEXT;
+ALTER TABLE contratos ADD COLUMN IF NOT EXISTS ciudad TEXT;
 ALTER TABLE contratos ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT TRUE;
 
 -- ==============================================================================
