@@ -40,6 +40,13 @@ export interface AuthUser {
   supervisorDocumento?: string;
   apoyoSupervisionNombre?: string;
   apoyoSupervisionDocumento?: string;
+  numeroCuenta?: string;
+  banco?: string;
+  tipoCuenta?: string;
+  ciudad?: string;
+  ciudadCuenta?: string;
+  fechaRegistroPresupuestal?: string;
+  codigoRubro?: string;
   createdAt?: string;
 }
 
@@ -68,6 +75,12 @@ export const DEMO_USERS: AuthUser[] = [
     supervisorDocumento: '35.602.521',
     apoyoSupervisionNombre: 'YICELA BEJARANO CORDOBA',
     apoyoSupervisionDocumento: '1.077.441.597',
+    numeroCuenta: '53686186829',
+    banco: 'BANCOLOMBIA',
+    tipoCuenta: 'AHORRO',
+    ciudad: 'CHOCÓ',
+    fechaRegistroPresupuestal: '14/01/2026',
+    codigoRubro: '2.3.2.02.02.008.04.01.02',
   },
   {
     id: 'usr-admin-sec-01',
@@ -131,6 +144,12 @@ export interface Contrato {
   supervisor_documento: string;
   apoyo_supervision_nombre: string;
   apoyo_supervision_documento: string;
+  numero_cuenta?: string;
+  banco?: string;
+  tipo_cuenta?: string;
+  ciudad_cuenta?: string;
+  fecha_registro_presupuestal?: string;
+  codigo_rubro?: string;
   created_at?: string;
 }
 
@@ -234,6 +253,13 @@ export interface ReportData {
   valorPagar: string;
   valorPagarCertificado?: string | number;
   comentariosCampos?: Record<string, FieldComment>;
+  numeroCuenta?: string;
+  banco?: string;
+  tipoCuenta?: string;
+  ciudad?: string;
+  ciudadCuenta?: string;
+  fechaRegistroPresupuestal?: string;
+  codigoRubro?: string;
 }
 
 import { getDatosLiquidacionPeriodo, limpiarNumeroMoneda } from './utils/paymentPlanUtils';
@@ -424,12 +450,12 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
     
     clausulaNro: '6',
     
-    numeroCuenta: '53686186829',
-    banco: 'Bancolombia',
-    tipoCuenta: 'Ahorro',
+    numeroCuenta: rep?.numeroCuenta || '53686186829',
+    banco: rep?.banco || 'Bancolombia',
+    tipoCuenta: rep?.tipoCuenta || 'Ahorro',
     fechaInicio: rep.fechaInicio || '14-ene.-2026',
-    plazoMeses: String(plazoParsed.meses || '6'),
-    plazoDias: String(plazoParsed.dias ?? '0'),
+    plazoMeses: String(plazoParsed.meses !== undefined ? plazoParsed.meses : 6),
+    plazoDias: String(plazoParsed.dias !== undefined ? plazoParsed.dias : 0),
     fechaTerminacion: rep.fechaTerminacion || '14-jul.-2026',
     valorInicial: rep.valorContrato || '$ 20.029.800',
     adicion1: '-',
@@ -442,8 +468,8 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
 
     cdpNro: rep.cdpNro || '137',
     crpNro: rep.crpNro || '191',
-    fechaRegistroPresupuestal: '14/01/2026',
-    codigoRubro: '2.3.2.02.02.008.04.01.02',
+    fechaRegistroPresupuestal: formatDateSlash(rep?.fechaRegistroPresupuestal) || '14/01/2026',
+    codigoRubro: rep?.codigoRubro || '2.3.2.02.02.008.04.01.02',
     valorRubro: valorAPagarSinIvaCalculado,
 
     cdpNro2: '',
@@ -637,7 +663,7 @@ export const createDefaultFiduciariaData = (report?: ReportData): SoporteFiducia
   return {
     reportId: rep.id,
     docSoporteNro: '',
-    ciudad: 'Quibdó',
+    ciudad: rep?.ciudad || rep?.ciudadCuenta || 'Quibdó',
     fecha: fechaFiduciaria,
     nombresApellidos: rep.contratistaNombre || 'Haminton Mena Mena',
     cedula: rep.contratistaDocumento || '80.772.379',
@@ -746,10 +772,10 @@ export const createDefaultAutorizacionDesembolsoData = (report?: ReportData): Au
     consecutivoNro: rep?.informeNro || '1',
     nombre: rep?.contratistaNombre || 'HAMINTON MENA MENA',
     nitCc: rep?.contratistaDocumento || '80.772.379',
-    nroCuenta: '53686186829',
-    tipoCuenta: 'AHORRO',
-    banco: 'BANCOLOMBIA',
-    ciudad: 'CHOCÓ',
+    nroCuenta: rep?.numeroCuenta || '53686186829',
+    tipoCuenta: (rep?.tipoCuenta || 'AHORRO').toUpperCase(),
+    banco: (rep?.banco || 'BANCOLOMBIA').toUpperCase(),
+    ciudad: (rep?.ciudad || rep?.ciudadCuenta || 'CHOCÓ').toUpperCase(),
     direccion: 'BARRIO BUENOS AIRES',
     telefono: rep?.contratistaTelefono || '3124943527',
     concepto: 'PRESTACION DE SERVICIOS',

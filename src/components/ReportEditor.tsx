@@ -1366,16 +1366,16 @@ export default function ReportEditor({
                   <input
                     type="text"
                     value={data.plazo}
-                    onChange={(e) => handleChange('plazo', e.target.value)}
+                    onChange={(e) => handleChange('plazo', e.target.value.toUpperCase())}
                     onBlur={() => {
                       if (data.plazo) {
                         handleChange('plazo', formatPlazoLetraYNumero(data.plazo));
                       }
                     }}
-                    placeholder="Ej. 6 MESES o 6 MESES 8 DÍAS"
+                    placeholder="Ej. CUATRO(4) MESES 8 DIAS o SEIS(6) MESES"
                     className={`w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 font-bold uppercase ${getFieldHighlightClass('plazo')}`}
                   />
-                  <p className="text-[10px] text-gray-500 mt-0.5">Se formatea en letra y número (Ej. SEIS(6) MESES Y OCHO(8) DÍAS)</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Se guarda tal como se escribe (Ej. CUATRO(4) MESES 8 DIAS o SEIS(6) MESES)</p>
                   {renderCommentAlert('plazo')}
                 </div>
 
@@ -1418,6 +1418,78 @@ export default function ReportEditor({
                     className={`w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 italic text-xs ${getFieldHighlightClass('modificaciones')}`}
                   />
                   {renderCommentAlert('modificaciones')}
+                </div>
+
+                <div className="col-span-2 pt-3 mt-1 border-t border-gray-100">
+                  <h4 className="text-xs font-bold text-[#006b33] uppercase mb-2">Información Bancaria y Presupuestal (Supervisión y Desembolso)</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block font-medium text-gray-700 mb-1">Nro. de Cuenta</label>
+                      <input
+                        type="text"
+                        value={data.numeroCuenta || ''}
+                        onChange={(e) => handleChange('numeroCuenta', e.target.value)}
+                        placeholder="Ej. 53686186829"
+                        className="w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium text-gray-700 mb-1">Banco</label>
+                      <input
+                        type="text"
+                        value={data.banco || ''}
+                        onChange={(e) => handleChange('banco', e.target.value.toUpperCase())}
+                        placeholder="Ej. BANCOLOMBIA"
+                        className="w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 text-xs uppercase"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium text-gray-700 mb-1">Tipo de Cuenta</label>
+                      <select
+                        value={data.tipoCuenta || 'AHORRO'}
+                        onChange={(e) => handleChange('tipoCuenta', e.target.value)}
+                        className="w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 text-xs bg-white"
+                      >
+                        <option value="AHORRO">AHORRO</option>
+                        <option value="CORRIENTE">CORRIENTE</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-medium text-gray-700 mb-1">Ciudad / Domicilio</label>
+                      <input
+                        type="text"
+                        value={data.ciudad || data.ciudadCuenta || ''}
+                        onChange={(e) => {
+                          handleChange('ciudad', e.target.value.toUpperCase());
+                          handleChange('ciudadCuenta', e.target.value.toUpperCase());
+                        }}
+                        placeholder="Ej. CHOCÓ o QUIBDÓ"
+                        className="w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 text-xs uppercase"
+                      />
+                    </div>
+                    <div className="col-span-2 sm:col-span-2">
+                      <label className="block font-medium text-gray-700 mb-1 flex items-center gap-1">
+                        <Calendar size={13} className="text-emerald-700" />
+                        <span>Fecha Registro Presupuestal (CRP)</span>
+                      </label>
+                      <DatePickerInput
+                        value={data.fechaRegistroPresupuestal}
+                        onChange={(val) => handleChange('fechaRegistroPresupuestal', val)}
+                        placeholder="DD/MM/AAAA"
+                        className="border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 text-xs"
+                      />
+                    </div>
+                    <div className="col-span-2 sm:col-span-2">
+                      <label className="block font-medium text-gray-700 mb-1">Código Rubro Presupuestal</label>
+                      <input
+                        type="text"
+                        value={data.codigoRubro || ''}
+                        onChange={(e) => handleChange('codigoRubro', e.target.value)}
+                        placeholder="Ej. 2.3.2.02.02.008.04.01.02"
+                        className="w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 text-xs"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1528,6 +1528,13 @@ export const supabaseService = {
           valorPagar: finalValorPagar,
           estado: finalState,
           comentariosCampos: finalComments,
+          numeroCuenta: storedData?.numeroCuenta || '53686186829',
+          banco: storedData?.banco || 'BANCOLOMBIA',
+          tipoCuenta: storedData?.tipoCuenta || 'AHORRO',
+          ciudad: storedData?.ciudad || storedData?.ciudadCuenta || 'CHOCÓ',
+          ciudadCuenta: storedData?.ciudadCuenta || storedData?.ciudad || 'CHOCÓ',
+          fechaRegistroPresupuestal: storedData?.fechaRegistroPresupuestal ? formatDateSlash(storedData.fechaRegistroPresupuestal) : '14/01/2026',
+          codigoRubro: storedData?.codigoRubro || '2.3.2.02.02.008.04.01.02',
           syncedToDb: true,
         };
       }
@@ -1707,6 +1714,13 @@ export const supabaseService = {
               valorPagarCertificado: row.valor_pagar_certificado || (numCert ? String(numCert) : ''),
               estado: finalState,
               comentariosCampos: finalComments,
+              numeroCuenta: storedData?.numeroCuenta || '53686186829',
+              banco: storedData?.banco || 'BANCOLOMBIA',
+              tipoCuenta: storedData?.tipoCuenta || 'AHORRO',
+              ciudad: storedData?.ciudad || storedData?.ciudadCuenta || 'CHOCÓ',
+              ciudadCuenta: storedData?.ciudadCuenta || storedData?.ciudad || 'CHOCÓ',
+              fechaRegistroPresupuestal: storedData?.fechaRegistroPresupuestal ? formatDateSlash(storedData.fechaRegistroPresupuestal) : '14/01/2026',
+              codigoRubro: storedData?.codigoRubro || '2.3.2.02.02.008.04.01.02',
               syncedToDb: true,
             };
           });

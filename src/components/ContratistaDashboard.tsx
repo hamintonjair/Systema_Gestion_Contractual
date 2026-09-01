@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AuthUser, ReportData, EstadoInforme, initialMockData, Obligacion, CertificadoSupervisionData, createDefaultCertificadoData, SoporteFiduciariaData, createDefaultFiduciariaData } from '../types';
-import { formatColombianCurrency, formatFechaAplicacion, formatPlazoLetraYNumero } from '../utils/formatters';
+import { formatColombianCurrency, formatFechaAplicacion, formatPlazoLetraYNumero, formatDateSlash } from '../utils/formatters';
 import { supabaseService } from '../services/supabaseService';
 import { supabase } from '../lib/supabase';
 import { isMainReportComment, isCertificateComment } from '../utils/commentUtils';
@@ -153,6 +153,14 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   const [newSecretariaNombre, setNewSecretariaNombre] = useState(user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social');
   const [newSecretariaCodigo, setNewSecretariaCodigo] = useState(user.secretariaCodigo || '170');
 
+  // Datos Bancarios y Presupuestales del Contratista (Requeridos para Certificado de Supervisión, Soporte Fiduciaria y Desembolso)
+  const [newNumeroCuenta, setNewNumeroCuenta] = useState(user.numeroCuenta || '');
+  const [newBanco, setNewBanco] = useState(user.banco || 'BANCOLOMBIA');
+  const [newTipoCuenta, setNewTipoCuenta] = useState(user.tipoCuenta || 'AHORRO');
+  const [newCiudad, setNewCiudad] = useState(user.ciudad || user.ciudadCuenta || 'CHOCÓ');
+  const [newFechaRegistroPresupuestal, setNewFechaRegistroPresupuestal] = useState(convertDDMMYYYYtoYYYYMMDD(user.fechaRegistroPresupuestal));
+  const [newCodigoRubro, setNewCodigoRubro] = useState(user.codigoRubro || '');
+
   const handleOpenCreateModal = () => {
     const lastReport = reportsList[0];
     setNewInformeNro(reportsList.length > 0 ? String(reportsList.length + 1) : '1');
@@ -176,6 +184,12 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
       setNewSecretariaCodigo(lastReport.secretariaCodigo || user.secretariaCodigo || '170');
       setNewPolizaNro(lastReport.polizaNro || user.polizaNro || '');
       setNewFechaPoliza(convertDDMMYYYYtoYYYYMMDD(lastReport.fechaPoliza || user.fechaPoliza));
+      setNewNumeroCuenta(lastReport.numeroCuenta || user.numeroCuenta || '');
+      setNewBanco(lastReport.banco || user.banco || 'BANCOLOMBIA');
+      setNewTipoCuenta(lastReport.tipoCuenta || user.tipoCuenta || 'AHORRO');
+      setNewCiudad(lastReport.ciudad || lastReport.ciudadCuenta || user.ciudad || user.ciudadCuenta || 'CHOCÓ');
+      setNewFechaRegistroPresupuestal(convertDDMMYYYYtoYYYYMMDD(lastReport.fechaRegistroPresupuestal || user.fechaRegistroPresupuestal));
+      setNewCodigoRubro(lastReport.codigoRubro || user.codigoRubro || '');
     } else {
       // PRIMER INFORME:
       // Campos de contrato específicos: Se cargan únicamente si existen en el perfil 'user', de lo contrario van en blanco ("")
@@ -195,6 +209,14 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
       setNewSupervisorNombre(user.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA');
       setNewSecretariaNombre(user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social');
       setNewSecretariaCodigo(user.secretariaCodigo || '170');
+
+      // Datos Bancarios y Presupuestales
+      setNewNumeroCuenta(user.numeroCuenta || '');
+      setNewBanco(user.banco || 'BANCOLOMBIA');
+      setNewTipoCuenta(user.tipoCuenta || 'AHORRO');
+      setNewCiudad(user.ciudad || user.ciudadCuenta || 'CHOCÓ');
+      setNewFechaRegistroPresupuestal(convertDDMMYYYYtoYYYYMMDD(user.fechaRegistroPresupuestal));
+      setNewCodigoRubro(user.codigoRubro || '');
     }
 
     setShowCreateModal(true);
@@ -451,6 +473,13 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           secretariaNombre: newSecretariaNombre || user.secretariaNombre || '',
           secretariaCodigo: newSecretariaCodigo || user.secretariaCodigo || '',
           secretariaNit: '891.680.029-7',
+          numeroCuenta: newNumeroCuenta || user.numeroCuenta || '',
+          banco: newBanco || user.banco || 'BANCOLOMBIA',
+          tipoCuenta: newTipoCuenta || user.tipoCuenta || 'AHORRO',
+          ciudad: newCiudad || user.ciudad || user.ciudadCuenta || 'CHOCÓ',
+          ciudadCuenta: newCiudad || user.ciudad || user.ciudadCuenta || 'CHOCÓ',
+          fechaRegistroPresupuestal: formatDateToDDMMYYYY(newFechaRegistroPresupuestal) || user.fechaRegistroPresupuestal || '',
+          codigoRubro: newCodigoRubro || user.codigoRubro || '',
           isClonedFromPrevious: false
         };
       } else {
@@ -475,6 +504,13 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           secretariaCodigo: lastSavedReport.secretariaCodigo || user.secretariaCodigo || '',
           secretariaNit: lastSavedReport.secretariaNit || '891.680.029-7',
           valorPagar: lastSavedReport.valorPagar,
+          numeroCuenta: lastSavedReport.numeroCuenta || user.numeroCuenta || '',
+          banco: lastSavedReport.banco || user.banco || 'BANCOLOMBIA',
+          tipoCuenta: lastSavedReport.tipoCuenta || user.tipoCuenta || 'AHORRO',
+          ciudad: lastSavedReport.ciudad || lastSavedReport.ciudadCuenta || user.ciudad || user.ciudadCuenta || 'CHOCÓ',
+          ciudadCuenta: lastSavedReport.ciudadCuenta || lastSavedReport.ciudad || user.ciudad || user.ciudadCuenta || 'CHOCÓ',
+          fechaRegistroPresupuestal: lastSavedReport.fechaRegistroPresupuestal || user.fechaRegistroPresupuestal || '',
+          codigoRubro: lastSavedReport.codigoRubro || user.codigoRubro || '',
           isClonedFromPrevious: true
         };
 
@@ -882,7 +918,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                                   Informe Nro. {r.informeNro} ({r.tipoInforme})
                                 </h5>
                                 <p className="text-[11px] text-slate-600 mt-0.5">
-                                  Período: {r.periodoDesde} al {r.periodoHasta}
+                                  Período: {formatDateSlash(r.periodoDesde)} al {formatDateSlash(r.periodoHasta)}
                                 </p>
                                 <p className="text-[10px] text-emerald-800 font-medium mt-0.5">
                                   Aprobado por: {r.supervisorNombre || activeSupervisor}
@@ -1393,7 +1429,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                         <p className="text-xs text-slate-600 flex items-center gap-3 flex-wrap">
                           <span className="flex items-center gap-1">
                             <Calendar size={13} className="text-slate-400" />
-                            <strong>Período:</strong> {report.periodoDesde} al {report.periodoHasta}
+                            <strong>Período:</strong> {formatDateSlash(report.periodoDesde)} al {formatDateSlash(report.periodoHasta)}
                           </span>
                           <span>•</span>
                           <span><strong>Obligaciones:</strong> {report.obligaciones.length}</span>
@@ -1401,7 +1437,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                           <span><strong>Fotos:</strong> {report.anexos.length}</span>
                         </p>
                         <p className="text-[11px] text-slate-500 font-mono">
-                          Fecha de Presentación: {report.fechaPresentacion} • Radicación: {report.secretariaNombre}
+                          Fecha de Presentación: {formatDateSlash(report.fechaPresentacion)} • Radicación: {report.secretariaNombre}
                         </p>
 
                         {/* Listado de Casillas Observadas por la Supervisión (Solo PENDIENTES del informe principal) */}
@@ -2282,12 +2318,12 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                         type="text"
                         required
                         value={newPlazo}
-                        onChange={(e) => setNewPlazo(e.target.value)}
+                        onChange={(e) => setNewPlazo(e.target.value.toUpperCase())}
                         onBlur={() => {
                           if (newPlazo) setNewPlazo(formatPlazoLetraYNumero(newPlazo));
                         }}
-                        placeholder="Ej. 6 MESES o 6 MESES 8 DÍAS"
-                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        placeholder="Ej. CUATRO(4) MESES 8 DIAS o SEIS(6) MESES"
+                        className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none uppercase"
                       />
                     </div>
 
@@ -2375,6 +2411,92 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                         placeholder="Ej. 170"
                         className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                       />
+                    </div>
+                  </div>
+
+                  {/* SUBSECCIÓN: DATOS BANCARIOS DEL CONTRATISTA */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <label className="block font-bold text-slate-800 text-xs mb-2 text-[#006b33]">
+                      Datos Bancarios del Contratista (Para Certificado de Supervisión, Soporte Fiduciaria y Pago)
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Número de Cuenta *</label>
+                        <input
+                          type="text"
+                          required
+                          value={newNumeroCuenta}
+                          onChange={(e) => setNewNumeroCuenta(e.target.value)}
+                          placeholder="Ej. 53686186829"
+                          className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Banco *</label>
+                        <input
+                          type="text"
+                          required
+                          value={newBanco}
+                          onChange={(e) => setNewBanco(e.target.value.toUpperCase())}
+                          placeholder="Ej. BANCOLOMBIA"
+                          className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none uppercase"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Tipo de Cuenta *</label>
+                        <select
+                          value={newTipoCuenta}
+                          onChange={(e) => setNewTipoCuenta(e.target.value)}
+                          className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
+                        >
+                          <option value="AHORRO">Ahorro</option>
+                          <option value="CORRIENTE">Corriente</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Ciudad Cuenta / Residencia</label>
+                        <input
+                          type="text"
+                          value={newCiudad}
+                          onChange={(e) => setNewCiudad(e.target.value.toUpperCase())}
+                          placeholder="Ej. CHOCÓ o QUIBDÓ"
+                          className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none uppercase"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SUBSECCIÓN: INFORMACIÓN PRESUPUESTAL */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <label className="block font-bold text-slate-800 text-xs mb-2 text-[#006b33]">
+                      Información Presupuestal (Para Certificado de Supervisión)
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Fecha Registro Presupuestal (CRP) *</label>
+                        <input
+                          type="date"
+                          required
+                          value={newFechaRegistroPresupuestal}
+                          onChange={(e) => setNewFechaRegistroPresupuestal(e.target.value)}
+                          className="w-full border border-slate-300 rounded-xl p-2 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Código Rubro Presupuestal *</label>
+                        <input
+                          type="text"
+                          required
+                          value={newCodigoRubro}
+                          onChange={(e) => setNewCodigoRubro(e.target.value)}
+                          placeholder="Ej. 2.3.2.02.02.008.04.01.02"
+                          className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

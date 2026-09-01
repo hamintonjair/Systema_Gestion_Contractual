@@ -964,10 +964,10 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                           #{item.contrato_nro}
                         </td>
                         <td className="px-4 py-3.5 text-gray-600">
-                          {item.periodo_desde} al {item.periodo_hasta}
+                          {formatDateSlash(item.periodo_desde)} al {formatDateSlash(item.periodo_hasta)}
                         </td>
                         <td className="px-4 py-3.5 text-gray-600">
-                          {item.fecha_presentacion}
+                          {formatDateSlash(item.fecha_presentacion)}
                         </td>
                         <td className="px-4 py-3.5">
                           {(() => {
@@ -1240,10 +1240,10 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                           #{item.contrato_nro}
                         </td>
                         <td className="px-4 py-3.5 text-gray-600">
-                          {item.periodo_desde} al {item.periodo_hasta}
+                          {formatDateSlash(item.periodo_desde)} al {formatDateSlash(item.periodo_hasta)}
                         </td>
                         <td className="px-4 py-3.5 text-gray-600">
-                          {item.fecha_presentacion}
+                          {formatDateSlash(item.fecha_presentacion)}
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
@@ -1623,7 +1623,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                     </span>
                   </h3>
                   <p className="text-[11px] text-emerald-200">
-                    Contrato #{inspectingInforme.contratoNro} • Período {inspectingInforme.periodoDesde} al {inspectingInforme.periodoHasta}
+                    Contrato #{inspectingInforme.contratoNro} • Período {formatDateSlash(inspectingInforme.periodoDesde)} al {formatDateSlash(inspectingInforme.periodoHasta)}
                   </p>
                 </div>
               </div>
@@ -2196,7 +2196,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                               </span>
                             </div>
                             <p className="text-xs text-gray-600 font-mono">
-                              Período: {inf.periodo_desde} al {inf.periodo_hasta} • Radicado: {inf.fecha_presentacion || 'N/A'}
+                              Período: {formatDateSlash(inf.periodo_desde)} al {formatDateSlash(inf.periodo_hasta)} • Radicado: {formatDateSlash(inf.fecha_presentacion) || 'N/A'}
                             </p>
                           </div>
 

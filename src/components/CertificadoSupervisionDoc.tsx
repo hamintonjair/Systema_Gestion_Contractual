@@ -80,21 +80,27 @@ export default function CertificadoSupervisionDoc({
     }
 
     if (reportData) {
+      const liveDefaults = createDefaultCertificadoData(reportData);
       return {
         ...baseData,
         reportId: reportData.id || baseData.reportId,
         contratistaNombre: reportData.contratistaNombre || baseData.contratistaNombre,
         contratistaDocumento: reportData.contratistaDocumento || baseData.contratistaDocumento,
-        contratoNro: reportData.contratoNro || baseData.contratoNro,
+        contratoNro: liveDefaults.contratoNro || baseData.contratoNro,
+        contratoAno: liveDefaults.contratoAno || baseData.contratoAno,
         supervisorNombre: reportData.supervisorNombre || baseData.supervisorNombre,
         objeto: reportData.objeto || baseData.objeto,
         cdpNro: reportData.cdpNro || baseData.cdpNro,
         crpNro: reportData.crpNro || baseData.crpNro,
         fechaInicio: reportData.fechaInicio || baseData.fechaInicio,
         fechaTerminacion: reportData.fechaTerminacion || baseData.fechaTerminacion,
+        plazoMeses: liveDefaults.plazoMeses ?? baseData.plazoMeses,
+        plazoDias: liveDefaults.plazoDias ?? baseData.plazoDias,
         valorInicial: reportData.valorContrato || baseData.valorInicial,
-        periodoDesde: reportData.periodoDesde || baseData.periodoDesde,
-        periodoHasta: reportData.periodoHasta || baseData.periodoHasta,
+        periodoDesde: liveDefaults.periodoDesde || reportData.periodoDesde || baseData.periodoDesde,
+        periodoHasta: liveDefaults.periodoHasta || reportData.periodoHasta || baseData.periodoHasta,
+        fechaRegistroPresupuestal: liveDefaults.fechaRegistroPresupuestal || baseData.fechaRegistroPresupuestal,
+        codigoRubro: liveDefaults.codigoRubro || baseData.codigoRubro,
       };
     }
     return baseData;
@@ -158,6 +164,8 @@ export default function CertificadoSupervisionDoc({
         crpNro: reportData.crpNro || baseData.crpNro,
         fechaInicio: reportData.fechaInicio || baseData.fechaInicio,
         fechaTerminacion: reportData.fechaTerminacion || baseData.fechaTerminacion,
+        plazoMeses: liveDefaults.plazoMeses ?? baseData.plazoMeses,
+        plazoDias: liveDefaults.plazoDias ?? baseData.plazoDias,
         valorInicial: reportData.valorContrato || baseData.valorInicial,
         valorTotal: reportData.valorContrato || baseData.valorTotal,
         periodoDesde: liveDefaults.periodoDesde || reportData.periodoDesde || baseData.periodoDesde,
@@ -171,6 +179,8 @@ export default function CertificadoSupervisionDoc({
         saldoPorPagar: liveDefaults.saldoPorPagar || baseData.saldoPorPagar,
         valorRubro: liveDefaults.valorRubro || baseData.valorRubro,
         valorAvalado: liveDefaults.valorAvalado || baseData.valorAvalado,
+        fechaRegistroPresupuestal: liveDefaults.fechaRegistroPresupuestal || baseData.fechaRegistroPresupuestal,
+        codigoRubro: liveDefaults.codigoRubro || baseData.codigoRubro,
         expedicionDia: liveDefaults.expedicionDia,
         expedicionMes: liveDefaults.expedicionMes,
         expedicionAno: liveDefaults.expedicionAno,
@@ -183,16 +193,22 @@ export default function CertificadoSupervisionDoc({
     if (reportData?.id || (reportData?.contratistaDocumento && reportData?.informeNro)) {
       supabaseService.getCertificadoSupervision(reportData.id, reportData.contratistaDocumento, reportData.informeNro).then(serverCert => {
         if (serverCert) {
+          const liveDefaults = reportData ? createDefaultCertificadoData(reportData) : null;
           setFormData(prev => ({
             ...prev,
             ...serverCert,
+            // Si el reporte actual tiene plazo explícito, asegurar meses y días calculados
+            ...(liveDefaults && reportData?.plazo ? {
+              plazoMeses: liveDefaults.plazoMeses,
+              plazoDias: liveDefaults.plazoDias
+            } : {})
           }));
         }
       }).catch(err => {
         console.warn('Error fetching server cert in Doc:', err);
       });
     }
-  }, [data, reportData?.id, reportData?.informeNro, reportData?.valorPagar, reportData?.periodoDesde, reportData?.periodoHasta, storageKey]);
+  }, [data, reportData?.id, reportData?.informeNro, reportData?.plazo, reportData?.valorPagar, reportData?.periodoDesde, reportData?.periodoHasta, storageKey]);
 
   // Listener para sincronización en tiempo real desde la calculadora u otros componentes
   useEffect(() => {

@@ -377,16 +377,16 @@ export default function ReportPreview({
                       'fechaPresentacion',
                       'Fecha de Presentación',
                       data.fechaPresentacion,
-                      data.fechaPresentacion,
+                      formatDateSlash(data.fechaPresentacion),
                       'w-[20%]'
                     )}
                     <td className="border border-black px-2 py-1 font-bold w-[15%]">Período del informe:</td>
                     {renderReviewedTd(
                       'periodo',
                       'Período del Informe (Desde - Hasta)',
-                      `DESDE: ${data.periodoDesde} HASTA: ${data.periodoHasta}`,
+                      `DESDE: ${formatDateSlash(data.periodoDesde)} HASTA: ${formatDateSlash(data.periodoHasta)}`,
                       <span className="uppercase font-bold text-[10px]">
-                        DESDE: {data.periodoDesde} HASTA: {data.periodoHasta}
+                        DESDE: {formatDateSlash(data.periodoDesde)} HASTA: {formatDateSlash(data.periodoHasta)}
                       </span>,
                       '',
                       3
@@ -560,7 +560,7 @@ export default function ReportPreview({
                       'fechaPoliza',
                       'Fecha Acta de Aprobación Póliza:',
                       data.fechaPoliza,
-                      data.fechaPoliza,
+                      formatDateSlash(data.fechaPoliza),
                       ''
                     )}
                   </tr>
