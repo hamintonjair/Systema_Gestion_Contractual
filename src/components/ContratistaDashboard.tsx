@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AuthUser, ReportData, EstadoInforme, initialMockData, Obligacion, CertificadoSupervisionData, createDefaultCertificadoData, SoporteFiduciariaData, createDefaultFiduciariaData } from '../types';
-import { formatColombianCurrency, formatFechaAplicacion } from '../utils/formatters';
+import { formatColombianCurrency, formatFechaAplicacion, formatPlazoLetraYNumero } from '../utils/formatters';
 import { supabaseService } from '../services/supabaseService';
 import { supabase } from '../lib/supabase';
 import { isMainReportComment, isCertificateComment } from '../utils/commentUtils';
@@ -441,7 +441,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           crpNro: newCrpNro || user.crpNro || '',
           polizaNro: newPolizaNro || user.polizaNro || '',
           fechaPoliza: formatDateToDDMMYYYY(newFechaPoliza) || newFechaPoliza || '',
-          plazo: newPlazo || user.plazo || '',
+          plazo: newPlazo ? formatPlazoLetraYNumero(newPlazo) : (user.plazo || ''),
           fechaInicio: formatDateToDDMMYYYY(newFechaInicio) || user.fechaInicio || '',
           fechaTerminacion: formatDateToDDMMYYYY(newFechaTerminacion) || user.fechaTerminacion || '',
           supervisorNombre: newSupervisorNombre || user.supervisorNombre || '',
@@ -517,7 +517,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
         id: `inf-${Date.now()}`,
         informeNro: newInformeNro,
         tipoInforme: newTipoInforme,
-        fechaPresentacion: new Date().toLocaleDateString('es-CO'),
+        fechaPresentacion: formattedHasta || new Date().toLocaleDateString('es-CO'),
         periodoDesde: formattedDesde,
         periodoHasta: formattedHasta,
         fechaAplicacion: formatFechaAplicacion(formattedHasta, formattedDesde),
@@ -2283,7 +2283,10 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                         required
                         value={newPlazo}
                         onChange={(e) => setNewPlazo(e.target.value)}
-                        placeholder="Ej. 6 MESES"
+                        onBlur={() => {
+                          if (newPlazo) setNewPlazo(formatPlazoLetraYNumero(newPlazo));
+                        }}
+                        placeholder="Ej. 6 MESES o 6 MESES 8 DÍAS"
                         className="w-full border border-slate-300 rounded-xl p-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                       />
                     </div>

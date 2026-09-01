@@ -295,9 +295,10 @@ export default function ReportEditor({
       nextData.comentariosCampos = updatedComms;
     }
 
-    // Si cambia el período, actualizar automáticamente la Fecha de Aplicación al mes correspondiente si no fue editada manualmente
+    // Si cambia el período, actualizar automáticamente la Fecha de Aplicación al mes correspondiente y la Fecha de Presentación
     if (field === 'periodoHasta' && typeof value === 'string' && value) {
       nextData.fechaAplicacion = formatFechaAplicacion(value, data.periodoDesde);
+      nextData.fechaPresentacion = value;
     } else if (field === 'periodoDesde' && typeof value === 'string' && value && !data.periodoHasta) {
       nextData.fechaAplicacion = formatFechaAplicacion(data.periodoHasta, value);
     }
@@ -1371,10 +1372,10 @@ export default function ReportEditor({
                         handleChange('plazo', formatPlazoLetraYNumero(data.plazo));
                       }
                     }}
-                    placeholder="Ej. 6 MESES o SEIS(6) MESES"
+                    placeholder="Ej. 6 MESES o 6 MESES 8 DÍAS"
                     className={`w-full border border-gray-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 font-bold uppercase ${getFieldHighlightClass('plazo')}`}
                   />
-                  <p className="text-[10px] text-gray-500 mt-0.5">Se formatea en letra y número: SEIS(6) MESES</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Se formatea en letra y número (Ej. SEIS(6) MESES Y OCHO(8) DÍAS)</p>
                   {renderCommentAlert('plazo')}
                 </div>
 

@@ -1,4 +1,5 @@
 import { extraerLetrasYNumeroDeValorPagar, formatearObjetoConPeriodo, formatFechaAnioMesDia, formatFechaFiduciaria, obtenerValoresMonetariosReporte } from './utils/numberToWords';
+import { parsePlazoComponents } from './utils/formatters';
 
 export const extractContratoNroOnly = (str?: string): string => {
   if (!str) return '';
@@ -406,6 +407,8 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
     if (parts[1] && parts[1].trim().length === 4) contratoYear = parts[1].trim();
   }
 
+  const plazoParsed = parsePlazoComponents(rep.plazo);
+
   return {
     reportId: rep.id,
     informeNro: rep.informeNro || '1',
@@ -425,8 +428,8 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
     banco: 'Bancolombia',
     tipoCuenta: 'Ahorro',
     fechaInicio: rep.fechaInicio || '14-ene.-2026',
-    plazoMeses: '6',
-    plazoDias: '0',
+    plazoMeses: String(plazoParsed.meses || '6'),
+    plazoDias: String(plazoParsed.dias ?? '0'),
     fechaTerminacion: rep.fechaTerminacion || '14-jul.-2026',
     valorInicial: rep.valorContrato || '$ 20.029.800',
     adicion1: '-',

@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData, Obligacion, Notificacion, extractContratoNroOnly } from '../types';
-import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
+import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, parsePlazoComponents, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
 import { isMainReportComment } from '../utils/commentUtils';
 import { limpiarNumeroMoneda, formatearNumeroTablaCol } from '../utils/paymentPlanUtils';
 import { convertirNumeroALetras } from '../utils/numberToWords';
@@ -1695,7 +1695,7 @@ export const supabaseService = {
               crpNro: row.contratos?.crp_nro || '191',
               polizaNro: row.contratos?.poliza_nro || 'N/A',
               fechaPoliza: formatDateSlash(row.contratos?.fecha_aprobacion_poliza || 'N/A'),
-              plazo: formatPlazoLetraYNumero(`${row.contratos?.plazo_meses || 6} MESES`),
+              plazo: storedData?.plazo ? formatPlazoLetraYNumero(storedData.plazo) : (row.contratos?.plazo_meses ? formatPlazoLetraYNumero(`${row.contratos.plazo_meses} MESES`) : 'SEIS(6) MESES'),
               fechaInicio: formatDateSlash(row.contratos?.fecha_inicio || '15/01/2026'),
               fechaTerminacion: formatDateSlash(row.contratos?.fecha_terminacion || '14/07/2026'),
               modificaciones: row.modificaciones_contrato || 'N/A',
@@ -1747,8 +1747,8 @@ export const supabaseService = {
         // Actualizar datos del contrato existente (fechas de inicio y terminación, etc.)
         const parsePlazoToMeses = (plazoStr?: string): number => {
           if (!plazoStr) return 6;
-          const match = plazoStr.match(/(\d+)/);
-          return match ? parseInt(match[1], 10) : 6;
+          const parsed = parsePlazoComponents(plazoStr);
+          return parsed.meses || 6;
         };
 
         const parseDateForContract = (dateStr?: string, defaultDate: string = '2026-01-15'): string | null => {
@@ -1822,7 +1822,7 @@ export const supabaseService = {
       const informePayload: any = {
         informe_nro: parseInt(report.informeNro, 10) || 1,
         tipo_informe: report.tipoInforme || 'Mensual',
-        fecha_presentacion: parseDateForPg(report.fechaPresentacion, new Date().toISOString().split('T')[0]),
+        fecha_presentacion: parseDateForPg(report.fechaPresentacion || report.periodoHasta, new Date().toISOString().split('T')[0]),
         periodo_desde: parseDateForPg(report.periodoDesde, '2026-07-01'),
         periodo_hasta: parseDateForPg(report.periodoHasta, '2026-07-31'),
         valor_adicion: limpiarNumeroMoneda(report.valorAdicion),

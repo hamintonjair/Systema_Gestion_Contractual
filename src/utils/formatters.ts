@@ -76,57 +76,134 @@ export const numberToWordsSpanish = (num: number): string => {
 };
 
 /**
- * Formatea el plazo en formato "PALABRA(NUMERO) UNIDAD"
- * Ejemplo: "6 MESES" -> "SEIS(6) MESES"
- * Ejemplo: "1 MES" -> "UN(1) MES"
- * Ejemplo: "30 DÍAS" -> "TREINTA(30) DÍAS"
+ * Parsea los componentes de meses y días de un texto de plazo
+ * Soporta formatos simples ("6 MESES", "20 DÍAS") y compuestos ("6 meses 8 dias", "SEIS(6) MESES Y OCHO(8) DÍAS")
  */
-export const formatPlazoLetraYNumero = (val?: string | number): string => {
-  if (!val) return 'SEIS(6) MESES';
+export const parsePlazoComponents = (val?: string | number): { meses: number; dias: number; text: string } => {
+  if (!val && val !== 0) return { meses: 6, dias: 0, text: 'SEIS(6) MESES' };
   const str = String(val).trim();
-  if (!str) return 'SEIS(6) MESES';
+  if (!str) return { meses: 6, dias: 0, text: 'SEIS(6) MESES' };
 
-  // Si ya viene formateado como "SEIS(6) MESES" o "SEIS (6) MESES"
+  // 1. Si ya viene formateado como compuesto: "SEIS(6) MESES Y OCHO(8) DÍAS" o con espacios
+  const compoundAlreadyMatch = str.match(/([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+)\s*\(\s*(\d+)\s*\)\s*MES(?:ES)?\s*Y\s*([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+)\s*\(\s*(\d+)\s*\)\s*D[IÍ]AS?/i);
+  if (compoundAlreadyMatch) {
+    const m = parseInt(compoundAlreadyMatch[2], 10);
+    const d = parseInt(compoundAlreadyMatch[4], 10);
+    const mWord = numberToWordsSpanish(m).toUpperCase();
+    const dWord = numberToWordsSpanish(d).toUpperCase();
+    const mUnit = m === 1 ? 'MES' : 'MESES';
+    const dUnit = d === 1 ? 'DÍA' : 'DÍAS';
+    return {
+      meses: m,
+      dias: d,
+      text: `${mWord}(${m}) ${mUnit} Y ${dWord}(${d}) ${dUnit}`
+    };
+  }
+
+  // 2. Si ya viene formateado simple: "SEIS(6) MESES" o "OCHO(8) DÍAS"
   const alreadyFormattedMatch = str.match(/^([A-ZÁÉÍÓÚÑa-záéíóúñ\s]+)\s*\(\s*(\d+)\s*\)\s*([A-ZÁÉÍÓÚÑa-záéíóúñ\s]*)$/);
   if (alreadyFormattedMatch) {
     const word = alreadyFormattedMatch[1].trim().toUpperCase();
-    const num = alreadyFormattedMatch[2].trim();
-    const unit = alreadyFormattedMatch[3].trim().toUpperCase() || (num === '1' ? 'MES' : 'MESES');
-    return `${word}(${num}) ${unit}`.trim();
+    const num = parseInt(alreadyFormattedMatch[2].trim(), 10);
+    const rawUnit = alreadyFormattedMatch[3].trim().toUpperCase();
+    const isDay = rawUnit.includes('DIA') || rawUnit.includes('DÍA');
+    const unit = isDay ? (num === 1 ? 'DÍA' : 'DÍAS') : (num === 1 ? 'MES' : 'MESES');
+    return {
+      meses: isDay ? 0 : num,
+      dias: isDay ? num : 0,
+      text: `${word}(${num}) ${unit}`.trim()
+    };
   }
 
-  // Extraer número y unidad
+  // 3. Extraer meses y días de texto libre (ej: "6 meses 8 dias", "6 meses y 8 días", "6m 8d")
+  const mesesMatch = str.match(/(\d+)\s*(?:mes|meses|m\b)/i);
+  const diasMatch = str.match(/(\d+)\s*(?:d[ií]a|d[ií]as|d\b)/i);
+
+  if (mesesMatch && diasMatch) {
+    const m = parseInt(mesesMatch[1], 10);
+    const d = parseInt(diasMatch[1], 10);
+    const mWord = numberToWordsSpanish(m).toUpperCase();
+    const dWord = numberToWordsSpanish(d).toUpperCase();
+    const mUnit = m === 1 ? 'MES' : 'MESES';
+    const dUnit = d === 1 ? 'DÍA' : 'DÍAS';
+    return {
+      meses: m,
+      dias: d,
+      text: `${mWord}(${m}) ${mUnit} Y ${dWord}(${d}) ${dUnit}`
+    };
+  }
+
+  if (mesesMatch && !diasMatch) {
+    const m = parseInt(mesesMatch[1], 10);
+    const mWord = numberToWordsSpanish(m).toUpperCase();
+    const mUnit = m === 1 ? 'MES' : 'MESES';
+    return {
+      meses: m,
+      dias: 0,
+      text: `${mWord}(${m}) ${mUnit}`
+    };
+  }
+
+  if (diasMatch && !mesesMatch) {
+    const d = parseInt(diasMatch[1], 10);
+    const dWord = numberToWordsSpanish(d).toUpperCase();
+    const dUnit = d === 1 ? 'DÍA' : 'DÍAS';
+    return {
+      meses: 0,
+      dias: d,
+      text: `${dWord}(${d}) ${dUnit}`
+    };
+  }
+
+  // 4. Si solo contiene un número aislado (ej: "6" o "6.0")
   const numMatch = str.match(/\d+/);
   if (!numMatch) {
     const wordsMatch = str.toUpperCase();
-    if (wordsMatch.includes('UN') || wordsMatch.includes('UNO')) return 'UN(1) MES';
-    if (wordsMatch.includes('DOS')) return 'DOS(2) MESES';
-    if (wordsMatch.includes('TRES')) return 'TRES(3) MESES';
-    if (wordsMatch.includes('CUATRO')) return 'CUATRO(4) MESES';
-    if (wordsMatch.includes('CINCO')) return 'CINCO(5) MESES';
-    if (wordsMatch.includes('SEIS')) return 'SEIS(6) MESES';
-    if (wordsMatch.includes('SIETE')) return 'SIETE(7) MESES';
-    if (wordsMatch.includes('OCHO')) return 'OCHO(8) MESES';
-    if (wordsMatch.includes('NUEVE')) return 'NUEVE(9) MESES';
-    if (wordsMatch.includes('DIEZ')) return 'DIEZ(10) MESES';
-    if (wordsMatch.includes('ONCE')) return 'ONCE(11) MESES';
-    if (wordsMatch.includes('DOCE')) return 'DOCE(12) MESES';
-    return str.toUpperCase();
+    if (wordsMatch.includes('UN') || wordsMatch.includes('UNO')) return { meses: 1, dias: 0, text: 'UN(1) MES' };
+    if (wordsMatch.includes('DOS')) return { meses: 2, dias: 0, text: 'DOS(2) MESES' };
+    if (wordsMatch.includes('TRES')) return { meses: 3, dias: 0, text: 'TRES(3) MESES' };
+    if (wordsMatch.includes('CUATRO')) return { meses: 4, dias: 0, text: 'CUATRO(4) MESES' };
+    if (wordsMatch.includes('CINCO')) return { meses: 5, dias: 0, text: 'CINCO(5) MESES' };
+    if (wordsMatch.includes('SEIS')) return { meses: 6, dias: 0, text: 'SEIS(6) MESES' };
+    if (wordsMatch.includes('SIETE')) return { meses: 7, dias: 0, text: 'SIETE(7) MESES' };
+    if (wordsMatch.includes('OCHO')) return { meses: 8, dias: 0, text: 'OCHO(8) MESES' };
+    if (wordsMatch.includes('NUEVE')) return { meses: 9, dias: 0, text: 'NUEVE(9) MESES' };
+    if (wordsMatch.includes('DIEZ')) return { meses: 10, dias: 0, text: 'DIEZ(10) MESES' };
+    if (wordsMatch.includes('ONCE')) return { meses: 11, dias: 0, text: 'ONCE(11) MESES' };
+    if (wordsMatch.includes('DOCE')) return { meses: 12, dias: 0, text: 'DOCE(12) MESES' };
+    return { meses: 6, dias: 0, text: str.toUpperCase() };
   }
 
   const num = parseInt(numMatch[0], 10);
-  const word = numberToWordsSpanish(num);
+  const word = numberToWordsSpanish(num).toUpperCase();
 
   // Determinar unidad (MESES, DÍAS, AÑOS)
   const lower = str.toLowerCase();
   let unit = num === 1 ? 'MES' : 'MESES';
+  let isDays = false;
   if (lower.includes('dia') || lower.includes('día')) {
     unit = num === 1 ? 'DÍA' : 'DÍAS';
+    isDays = true;
   } else if (lower.includes('año') || lower.includes('ano')) {
     unit = num === 1 ? 'AÑO' : 'AÑOS';
   }
 
-  return `${word}(${num}) ${unit}`;
+  return {
+    meses: isDays ? 0 : num,
+    dias: isDays ? num : 0,
+    text: `${word}(${num}) ${unit}`
+  };
+};
+
+/**
+ * Formatea el plazo en formato formal en letras y números
+ * Ejemplo: "6 MESES" -> "SEIS(6) MESES"
+ * Ejemplo: "6 meses 8 dias" -> "SEIS(6) MESES Y OCHO(8) DÍAS"
+ * Ejemplo: "1 MES" -> "UN(1) MES"
+ * Ejemplo: "30 DÍAS" -> "TREINTA(30) DÍAS"
+ */
+export const formatPlazoLetraYNumero = (val?: string | number): string => {
+  return parsePlazoComponents(val).text;
 };
 
 /**
