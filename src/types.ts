@@ -45,6 +45,8 @@ export interface AuthUser {
   tipoCuenta?: string;
   ciudad?: string;
   ciudadCuenta?: string;
+  barrio?: string;
+  direccion?: string;
   fechaRegistroPresupuestal?: string;
   codigoRubro?: string;
   createdAt?: string;
@@ -79,6 +81,8 @@ export const DEMO_USERS: AuthUser[] = [
     banco: 'BANCOLOMBIA',
     tipoCuenta: 'AHORRO',
     ciudad: 'CHOCÓ',
+    barrio: 'BARRIO BUENOS AIRES',
+    direccion: 'BARRIO BUENOS AIRES',
     fechaRegistroPresupuestal: '14/01/2026',
     codigoRubro: '2.3.2.02.02.008.04.01.02',
   },
@@ -258,6 +262,9 @@ export interface ReportData {
   tipoCuenta?: string;
   ciudad?: string;
   ciudadCuenta?: string;
+  barrio?: string;
+  direccion?: string;
+  contratistaDireccion?: string;
   fechaRegistroPresupuestal?: string;
   codigoRubro?: string;
 }
@@ -667,7 +674,7 @@ export const createDefaultFiduciariaData = (report?: ReportData): SoporteFiducia
     fecha: fechaFiduciaria,
     nombresApellidos: rep.contratistaNombre || 'Haminton Mena Mena',
     cedula: rep.contratistaDocumento || '80.772.379',
-    direccion: 'Barrio buenos aires',
+    direccion: rep?.barrio || rep?.direccion || rep?.contratistaDireccion || 'BARRIO BUENOS AIRES',
     telefono: rep.contratistaTelefono || '3124943527',
     sumaTotal: sumaTotalConCentavos,
     valorLetras: valorLetras,
@@ -776,7 +783,7 @@ export const createDefaultAutorizacionDesembolsoData = (report?: ReportData): Au
     tipoCuenta: (rep?.tipoCuenta || 'AHORRO').toUpperCase(),
     banco: (rep?.banco || 'BANCOLOMBIA').toUpperCase(),
     ciudad: (rep?.ciudad || rep?.ciudadCuenta || 'CHOCÓ').toUpperCase(),
-    direccion: 'BARRIO BUENOS AIRES',
+    direccion: (rep?.barrio || rep?.direccion || rep?.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
     telefono: rep?.contratistaTelefono || '3124943527',
     concepto: 'PRESTACION DE SERVICIOS',
     contratoNro: rep?.contratoNro ? rep.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',

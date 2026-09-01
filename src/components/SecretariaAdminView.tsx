@@ -286,6 +286,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
   const [nuevoCorreo, setNuevoCorreo] = useState('');
   const [nuevaPassword, setNuevaPassword] = useState('Contratista2026*');
   const [nuevoTelefono, setNuevoTelefono] = useState('');
+  const [nuevoBarrio, setNuevoBarrio] = useState('');
   const [nuevoCargo, setNuevoCargo] = useState('Contratista de Prestación de Servicios');
 
   // Form Edit Contractor
@@ -294,7 +295,13 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
   const [editCorreo, setEditCorreo] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editTelefono, setEditTelefono] = useState('');
+  const [editBarrio, setEditBarrio] = useState('');
   const [editCargo, setEditCargo] = useState('');
+
+  const adminTabsRef = React.useRef<HTMLDivElement>(null);
+  const scrollAdminTabs = (dir: 'left' | 'right') => {
+    adminTabsRef.current?.scrollBy({ left: dir === 'left' ? -250 : 250, behavior: 'smooth' });
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -372,6 +379,8 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       email: nuevoCorreo,
       password: nuevaPassword,
       telefono: nuevoTelefono,
+      barrio: nuevoBarrio,
+      direccion: nuevoBarrio,
       cargo: nuevoCargo || 'Contratista de Prestación de Servicios',
       contratoNro: '',
       secretariaId: user.secretariaId || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
@@ -391,6 +400,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       setNuevoCorreo('');
       setNuevaPassword('Contratista2026*');
       setNuevoTelefono('');
+      setNuevoBarrio('');
       setNuevoCargo('Contratista de Prestación de Servicios');
     }
     setLoading(false);
@@ -403,6 +413,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     setEditCorreo(c.email || '');
     setEditPassword(c.password || 'Contratista2026*');
     setEditTelefono(c.telefono || '');
+    setEditBarrio(c.barrio || c.direccion || '');
     setEditCargo(c.cargo || 'Contratista de Prestación de Servicios');
   };
 
@@ -417,6 +428,8 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       email: editCorreo,
       password: editPassword,
       telefono: editTelefono,
+      barrio: editBarrio,
+      direccion: editBarrio,
       cargo: editCargo,
     });
 
@@ -1555,6 +1568,17 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                   </div>
 
                   <div className="sm:col-span-2">
+                    <label className="block font-semibold text-gray-700 mb-1">Barrio / Dirección de Residencia</label>
+                    <input
+                      type="text"
+                      placeholder="ej. BARRIO TOMAS PEREZ o BARRIO BUENOS AIRES"
+                      value={nuevoBarrio}
+                      onChange={(e) => setNuevoBarrio(e.target.value.toUpperCase())}
+                      className="w-full border border-gray-300 rounded-lg p-2.5 font-bold uppercase focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
                     <label className="block font-semibold text-gray-700 mb-1">Cargo / Función Principal</label>
                     <input
                       type="text"
@@ -1674,12 +1698,21 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
 
               return (
                 <>
-                  <div className="bg-white px-4 py-2.5 border-b border-slate-200 shadow-xs shrink-0 overflow-x-auto">
-                    <div className="flex items-center gap-2 min-w-max">
+                  <div className="bg-white px-2 sm:px-4 py-2 border-b border-slate-200 shadow-xs shrink-0 flex items-center gap-1.5 sm:gap-2">
+                    <button
+                      type="button"
+                      onClick={() => scrollAdminTabs('left')}
+                      className="p-1.5 sm:p-2 rounded-xl text-slate-500 hover:text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 transition-colors shrink-0 border border-slate-200 hover:border-emerald-300 shadow-xs"
+                      title="Desplazar pestañas a la izquierda"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+
+                    <div ref={adminTabsRef} className="flex items-center gap-2 overflow-x-auto py-0.5 scrollbar-none scroll-smooth flex-1">
                       
                       <button
                         onClick={() => setAdminModuleTab('informe')}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
                           adminModuleTab === 'informe'
                             ? 'bg-[#006b33] text-white shadow-sm'
                             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1700,7 +1733,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
 
                       <button
                         onClick={() => setAdminModuleTab('supervision')}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
                           adminModuleTab === 'supervision'
                             ? 'bg-[#006b33] text-white shadow-sm'
                             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1721,7 +1754,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
 
                       <button
                         onClick={() => setAdminModuleTab('fiduciaria')}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
                           adminModuleTab === 'fiduciaria'
                             ? 'bg-[#006b33] text-white shadow-sm'
                             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1742,7 +1775,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
 
                       <button
                         onClick={() => setAdminModuleTab('juramento')}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
                           adminModuleTab === 'juramento'
                             ? 'bg-[#006b33] text-white shadow-sm'
                             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1763,7 +1796,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
 
                       <button
                         onClick={() => setAdminModuleTab('desembolso')}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
                           adminModuleTab === 'desembolso'
                             ? 'bg-[#006b33] text-white shadow-sm'
                             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1783,6 +1816,15 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                       </button>
 
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => scrollAdminTabs('right')}
+                      className="p-1.5 sm:p-2 rounded-xl text-slate-500 hover:text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 transition-colors shrink-0 border border-slate-200 hover:border-emerald-300 shadow-xs"
+                      title="Desplazar pestañas a la derecha"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
                   </div>
 
                   {/* Banner Informativo de Revisión y Estado de Subsanación */}
@@ -2010,6 +2052,19 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                   onChange={(e) => setEditCorreo(e.target.value)}
                   placeholder="contratista@quibdo-choco.gov.co"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Barrio / Dirección de Residencia
+                </label>
+                <input
+                  type="text"
+                  value={editBarrio}
+                  onChange={(e) => setEditBarrio(e.target.value.toUpperCase())}
+                  placeholder="BARRIO TOMAS PEREZ o BARRIO BUENOS AIRES"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 uppercase font-medium"
                 />
               </div>
 

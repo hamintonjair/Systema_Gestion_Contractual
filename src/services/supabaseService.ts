@@ -760,6 +760,8 @@ export const supabaseService = {
             secretariaCodigo: row.sec_secretarias?.codigo || '',
             cargo: row.cargo || 'Contratista de Prestación de Servicios',
             telefono: row.telefono || '',
+            barrio: row.barrio || row.direccion || '',
+            direccion: row.direccion || row.barrio || '',
             createdAt: row.created_at || new Date().toISOString(),
           };
         });
