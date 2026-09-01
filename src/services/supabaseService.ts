@@ -1349,7 +1349,8 @@ export const supabaseService = {
             secretaria_id,
             profiles:contratista_id (
               nombre_completo,
-              documento_identidad
+              documento_identidad,
+              direccion
             ),
             sec_secretarias:secretaria_id (
               nombre
@@ -1452,7 +1453,8 @@ export const supabaseService = {
               nombre_completo,
               documento_identidad,
               email,
-              telefono
+              telefono,
+              direccion
             ),
             sec_secretarias:secretaria_id (
               id,
@@ -1576,9 +1578,9 @@ export const supabaseService = {
           tipoCuenta: storedData?.tipoCuenta || (row.contratos as any)?.tipo_cuenta || 'AHORRO',
           ciudad: storedData?.ciudad || storedData?.ciudadCuenta || (row.contratos as any)?.ciudad || 'CHOCÓ',
           ciudadCuenta: storedData?.ciudadCuenta || storedData?.ciudad || (row.contratos as any)?.ciudad || 'CHOCÓ',
-          barrio: storedData?.barrio || storedData?.direccion || (row.contratos?.profiles as any)?.barrio || (row.contratos?.profiles as any)?.direccion || '',
-          direccion: storedData?.direccion || storedData?.barrio || (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || '',
-          contratistaDireccion: storedData?.contratistaDireccion || storedData?.barrio || storedData?.direccion || (row.contratos?.profiles as any)?.barrio || (row.contratos?.profiles as any)?.direccion || '',
+          barrio: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.barrio || storedData?.direccion || '',
+          direccion: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.direccion || storedData?.barrio || '',
+          contratistaDireccion: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.contratistaDireccion || storedData?.barrio || storedData?.direccion || '',
           fechaRegistroPresupuestal: storedData?.fechaRegistroPresupuestal ? formatDateSlash(storedData.fechaRegistroPresupuestal) : '14/01/2026',
           codigoRubro: storedData?.codigoRubro || '2.3.2.02.02.008.04.01.02',
           syncedToDb: true,
@@ -1630,7 +1632,8 @@ export const supabaseService = {
               nombre_completo,
               documento_identidad,
               email,
-              telefono
+              telefono,
+              direccion
             ),
             sec_secretarias:secretaria_id (
               id,
@@ -1765,9 +1768,9 @@ export const supabaseService = {
               tipoCuenta: storedData?.tipoCuenta || (row.contratos as any)?.tipo_cuenta || 'AHORRO',
               ciudad: storedData?.ciudad || storedData?.ciudadCuenta || (row.contratos as any)?.ciudad || 'CHOCÓ',
               ciudadCuenta: storedData?.ciudadCuenta || storedData?.ciudad || (row.contratos as any)?.ciudad || 'CHOCÓ',
-              barrio: storedData?.barrio || storedData?.direccion || (row.contratos?.profiles as any)?.barrio || (row.contratos?.profiles as any)?.direccion || '',
-              direccion: storedData?.direccion || storedData?.barrio || (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || '',
-              contratistaDireccion: storedData?.contratistaDireccion || storedData?.barrio || storedData?.direccion || (row.contratos?.profiles as any)?.barrio || (row.contratos?.profiles as any)?.direccion || '',
+              barrio: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.barrio || storedData?.direccion || '',
+              direccion: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.direccion || storedData?.barrio || '',
+              contratistaDireccion: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.contratistaDireccion || storedData?.barrio || storedData?.direccion || '',
               fechaRegistroPresupuestal: storedData?.fechaRegistroPresupuestal ? formatDateSlash(storedData.fechaRegistroPresupuestal) : '14/01/2026',
               codigoRubro: storedData?.codigoRubro || '2.3.2.02.02.008.04.01.02',
               syncedToDb: true,
@@ -2735,6 +2738,22 @@ export const supabaseService = {
         if (existingByDoc?.id) existingId = existingByDoc.id;
       }
 
+      if (contratoId) {
+        const contractUpdate: any = {};
+        if (data?.nroCuenta) contractUpdate.numero_cuenta = data.nroCuenta;
+        if (data?.banco) contractUpdate.banco = data.banco;
+        if (data?.tipoCuenta) contractUpdate.tipo_cuenta = data.tipoCuenta;
+        if (data?.ciudad) contractUpdate.ciudad = data.ciudad;
+        if (Object.keys(contractUpdate).length > 0) {
+          await supabase.from('contratos').update(contractUpdate).eq('id', contratoId);
+        }
+      }
+      const dirValFid = data?.direccion;
+      const docValFid = cleanDoc || docKeyToUse;
+      if (dirValFid && docValFid) {
+        await supabase.from('profiles').update({ direccion: dirValFid }).or(`documento_identidad.eq.${docValFid},documento_identidad.eq.${docKeyToUse}`);
+      }
+
       if (existingId) {
         const { error: updateErr } = await supabase
           .from('soportes_fiduciaria')
@@ -2992,6 +3011,22 @@ export const supabaseService = {
           .limit(1)
           .maybeSingle();
         if (existingByDoc?.id) existingId = existingByDoc.id;
+      }
+
+      if (contratoId) {
+        const contractUpdate: any = {};
+        if (data?.nroCuenta) contractUpdate.numero_cuenta = data.nroCuenta;
+        if (data?.banco) contractUpdate.banco = data.banco;
+        if (data?.tipoCuenta) contractUpdate.tipo_cuenta = data.tipoCuenta;
+        if (data?.ciudad) contractUpdate.ciudad = data.ciudad;
+        if (Object.keys(contractUpdate).length > 0) {
+          await supabase.from('contratos').update(contractUpdate).eq('id', contratoId);
+        }
+      }
+      const dirValDes = data?.direccion;
+      const docValDes = cleanDoc || docKeyToUse;
+      if (dirValDes && docValDes) {
+        await supabase.from('profiles').update({ direccion: dirValDes }).or(`documento_identidad.eq.${docValDes},documento_identidad.eq.${docKeyToUse}`);
       }
 
       if (existingId) {

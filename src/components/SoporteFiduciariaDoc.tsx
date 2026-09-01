@@ -154,6 +154,8 @@ export default function SoporteFiduciariaDoc({
             nombresApellidos: reportData.contratistaNombre || baseData.nombresApellidos,
             cedula: reportData.contratistaDocumento || baseData.cedula,
             telefono: reportData.contratistaTelefono || baseData.telefono,
+            direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || baseData.direccion || 'BARRIO BUENOS AIRES').toUpperCase(),
+            ciudad: (reportData.ciudad || reportData.ciudadCuenta || baseData.ciudad || 'CHOCÓ').toUpperCase(),
             sumaTotal: sumaTotalConCentavos,
             valorLetras: valorLetras,
             subTotal: valorNumeroFormateado,
@@ -169,7 +171,7 @@ export default function SoporteFiduciariaDoc({
       }
     };
     loadData();
-  }, [data, reportData?.id, reportData?.informeNro, reportData?.valorPagar, reportData?.valorContrato, reportData?.valorMensual, reportData?.periodoDesde, reportData?.periodoHasta, reportData?.fechaPresentacion, storageKey]);
+  }, [data, reportData?.id, reportData?.informeNro, reportData?.contratistaNombre, reportData?.contratistaDocumento, reportData?.contratistaTelefono, reportData?.barrio, reportData?.direccion, reportData?.ciudad, reportData?.numeroCuenta, reportData?.banco, reportData?.tipoCuenta, reportData?.valorPagar, reportData?.valorContrato, reportData?.valorMensual, reportData?.periodoDesde, reportData?.periodoHasta, reportData?.fechaPresentacion, storageKey]);
 
   useEffect(() => {
     const handleSyncEvent = (e: any) => {
