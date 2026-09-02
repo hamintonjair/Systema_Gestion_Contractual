@@ -3,7 +3,6 @@ import { SoporteFiduciariaData, ReportData, createDefaultFiduciariaData, FieldCo
 import { obtenerValoresMonetariosReporte, convertirNumeroALetras, formatFechaFiduciaria } from '../utils/numberToWords';
 import { limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
 import { supabaseService } from '../services/supabaseService';
-import { openWhatsAppForCertificate } from '../utils/whatsappNotifier';
 import FieldCommentModal from './FieldCommentModal';
 import { Printer, Download, Edit3, Check, Save, RotateCcw, Image as ImageIcon, Sparkles, MessageSquare, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -786,24 +785,6 @@ export default function SoporteFiduciariaDoc({
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => openWhatsAppForCertificate({
-                    docName: 'Soporte Fiduciaria / Pagos',
-                    informeNro: reportData?.informeNro || '1',
-                    contratoNro: reportData?.contratoNro || '',
-                    contratistaNombre: reportData?.contratistaNombre || 'Contratista',
-                    telefono: reportData?.contratistaTelefono || '',
-                    comentario: fidComment.comentario,
-                    isSubsanado: fidComment.corregido,
-                    supervisorNombre: authorName || 'Supervisora'
-                  })}
-                  className="px-3 py-1.5 bg-[#25D366] hover:bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                  title="Enviar aviso por WhatsApp"
-                >
-                  <MessageSquare size={13} />
-                  <span>WhatsApp</span>
-                </button>
                 <button
                   type="button"
                   onClick={() => openCommentModal('soporte_fiduciaria', 'Soporte Fiduciaria', 'Soporte Fiduciaria y Adquisiciones')}

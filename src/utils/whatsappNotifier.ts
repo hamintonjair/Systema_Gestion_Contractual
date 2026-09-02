@@ -1,6 +1,7 @@
 import { FieldComment, ReportData } from '../types';
 
 export interface WhatsAppNotificationPayload {
+  informeId?: string;
   tipo: 'aprobado' | 'devuelto' | 'recordatorio';
   contratistaNombre: string;
   contratistaTelefono?: string;

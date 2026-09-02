@@ -621,6 +621,10 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     const updated: ReportData = { ...report, estado: 'Enviado' };
     setReportsList(prev => prev.map(r => r.informeNro === report.informeNro ? updated : r));
     await supabaseService.saveFullInforme(updated, user);
+    
+    // Marcar observaciones previas como resueltas al radicar
+    await supabaseService.marcarNotificacionesInformeResueltas(user.documentoIdentidad, report.informeNro, report.id);
+
     await supabaseService.crearNotificacion({
       user_id: user.supervisorDocumento || 'supervisor',
       titulo: `Nuevo Informe Radicado #${report.informeNro}`,

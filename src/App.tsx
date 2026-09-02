@@ -141,6 +141,10 @@ export default function App() {
       reportToLoad.estado = 'Devuelto';
     }
 
+    if (currentUser?.documentoIdentidad) {
+      supabaseService.marcarNotificacionesInformeResueltas(currentUser.documentoIdentidad, reportToLoad.informeNro, reportToLoad.id).catch(e => {});
+    }
+
     setActiveReportData(reportToLoad);
     if (reportToLoad.estado === 'Borrador' && !reportToLoad.syncedToDb) {
       setHasUnsavedChanges(true);
@@ -338,6 +342,18 @@ export default function App() {
         syncedToDb: true
       }));
       showToast('🚀 ¡Informe Radicado y Reenviado a la Secretaría Exitosamente!');
+      if (currentUser?.documentoIdentidad) {
+        await supabaseService.marcarNotificacionesInformeResueltas(currentUser.documentoIdentidad, activeReportData.informeNro, activeReportData.id);
+        await supabaseService.crearNotificacion({
+          user_id: currentUser.supervisorDocumento || 'supervisor',
+          titulo: `Nuevo Informe Radicado #${activeReportData.informeNro}`,
+          mensaje: `El contratista ${currentUser.nombreCompleto} ha radicado el Informe #${activeReportData.informeNro} correspondiente al período ${activeReportData.periodoDesde} - ${activeReportData.periodoHasta}.`,
+          tipo: 'radicado',
+          leida: false,
+          informe_nro: activeReportData.informeNro,
+          report_id: activeReportData.id
+        }).catch(e => console.warn('Error creating notification:', e));
+      }
       // Notificar en tiempo real al panel del administrador
       window.dispatchEvent(new CustomEvent('informe_radicado_event'));
     } else {
@@ -385,8 +401,9 @@ export default function App() {
 
     // 2. Intentar buscar en almacenamiento local del contratista específico
     const userDocKey = informe.contratista_documento ? `_${informe.contratista_documento}` : '';
-    const saved = localStorage.getItem(`informe_data${userDocKey}_${informe.informe_nro}`) ||
-                  localStorage.getItem(`informe_data_${informe.informe_nro}`);
+    const saved = userDocKey
+      ? localStorage.getItem(`informe_data${userDocKey}_${informe.informe_nro}`)
+      : localStorage.getItem(`informe_data_${informe.informe_nro}`);
     if (saved) {
       try {
         setActiveReportData(JSON.parse(saved));

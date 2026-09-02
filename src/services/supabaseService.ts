@@ -20,26 +20,33 @@ const getStoredComments = (docKey?: string, informeNro?: string): Record<string,
   if (typeof localStorage === 'undefined') return {};
   try {
     if (docKey && informeNro) {
-      const raw = localStorage.getItem(`informe_comentarios_${docKey}_${informeNro}`);
+      const raw = localStorage.getItem(`informe_comentarios_${docKey}_${informeNro}`) || 
+                  localStorage.getItem(`informe_comments_${docKey}_${informeNro}`);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && Object.keys(parsed).length > 0) return parsed;
       }
-      const rawData = localStorage.getItem(`informe_data_${docKey}_${informeNro}`) || localStorage.getItem(`alcaldia_quibdo_report_${docKey}_${informeNro}`);
+      const rawData = localStorage.getItem(`informe_data_${docKey}_${informeNro}`) || 
+                      localStorage.getItem(`alcaldia_quibdo_report_${docKey}_${informeNro}`);
       if (rawData) {
         const parsed = JSON.parse(rawData);
         if (parsed?.comentariosCampos && Object.keys(parsed.comentariosCampos).length > 0) {
           return parsed.comentariosCampos;
         }
       }
+      // CRITICAL: When docKey is present, do NOT fall back to global keys.
+      // This prevents Contractor B from loading Contractor A's comments (as they share the same informeNro).
+      return {};
     }
     if (informeNro) {
-      const raw = localStorage.getItem(`informe_comentarios_${informeNro}`);
+      const raw = localStorage.getItem(`informe_comentarios_${informeNro}`) || 
+                  localStorage.getItem(`informe_comments_${informeNro}`);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && Object.keys(parsed).length > 0) return parsed;
       }
-      const rawData = localStorage.getItem(`informe_data_${informeNro}`) || localStorage.getItem(`alcaldia_quibdo_report_${informeNro}`);
+      const rawData = localStorage.getItem(`informe_data_${informeNro}`) || 
+                      localStorage.getItem(`alcaldia_quibdo_report_${informeNro}`);
       if (rawData) {
         const parsed = JSON.parse(rawData);
         if (parsed?.comentariosCampos && Object.keys(parsed.comentariosCampos).length > 0) {
@@ -56,11 +63,15 @@ const getStoredReportData = (docKey?: string, informeNro?: string): Partial<Repo
   if (typeof localStorage === 'undefined') return null;
   try {
     if (docKey && informeNro) {
-      const raw = localStorage.getItem(`alcaldia_quibdo_report_${docKey}_${informeNro}`);
+      const raw = localStorage.getItem(`informe_data_${docKey}_${informeNro}`) ||
+                  localStorage.getItem(`alcaldia_quibdo_report_${docKey}_${informeNro}`);
       if (raw) return JSON.parse(raw);
+      // DO NOT fall back to global keys when docKey is provided!
+      return null;
     }
     if (informeNro) {
-      const raw = localStorage.getItem(`alcaldia_quibdo_report_${informeNro}`);
+      const raw = localStorage.getItem(`informe_data_${informeNro}`) ||
+                  localStorage.getItem(`alcaldia_quibdo_report_${informeNro}`);
       if (raw) return JSON.parse(raw);
     }
   } catch (e) {}
@@ -2139,8 +2150,11 @@ export const supabaseService = {
       if (report.comentariosCampos && typeof localStorage !== 'undefined') {
         if (contractorDoc) {
           localStorage.setItem(`informe_comentarios_${contractorDoc}_${report.informeNro}`, JSON.stringify(report.comentariosCampos));
+          localStorage.setItem(`informe_comments_${contractorDoc}_${report.informeNro}`, JSON.stringify(report.comentariosCampos));
+        } else {
+          localStorage.setItem(`informe_comentarios_${report.informeNro}`, JSON.stringify(report.comentariosCampos));
+          localStorage.setItem(`informe_comments_${report.informeNro}`, JSON.stringify(report.comentariosCampos));
         }
-        localStorage.setItem(`informe_comentarios_${report.informeNro}`, JSON.stringify(report.comentariosCampos));
       }
 
       if (contratoId && isUuid(contratoId)) {
@@ -2308,8 +2322,9 @@ export const supabaseService = {
       if (typeof localStorage !== 'undefined') {
         if (contractorDoc) {
           localStorage.setItem(`alcaldia_quibdo_report_${contractorDoc}_${report.informeNro}`, JSON.stringify(updatedReportWithDb));
+        } else {
+          localStorage.setItem(`alcaldia_quibdo_report_${report.informeNro}`, JSON.stringify(updatedReportWithDb));
         }
-        localStorage.setItem(`alcaldia_quibdo_report_${report.informeNro}`, JSON.stringify(updatedReportWithDb));
       }
 
       // Sincronizar automáticamente Certificado de Supervisión, Soporte Fiduciaria y Autorización de Desembolso en Supabase
@@ -2353,6 +2368,9 @@ export const supabaseService = {
     if (newStatus === 'Devuelto' && pendingMain.length === 0 && pendingComments.length > 0) {
       statusToSave = 'Enviado';
     }
+
+    // Marcar como leídas las notificaciones de radicado de este informe para el supervisor
+    this.marcarNotificacionesRadicadasComoLeidas(informeNro, reportId).catch(err => console.warn('Error marking radicado notifs as read:', err));
 
     try {
       if (isUuid(reportId)) {
@@ -2398,19 +2416,31 @@ export const supabaseService = {
       const docKey = contractorDoc ? `_${contractorDoc}` : '';
       if (contractorDoc) {
         localStorage.setItem(`informe_comments_${contractorDoc}_${informeNro}`, JSON.stringify(comments));
+        localStorage.setItem(`informe_comentarios_${contractorDoc}_${informeNro}`, JSON.stringify(comments));
+      } else {
+        localStorage.setItem(`informe_comments_${informeNro}`, JSON.stringify(comments));
+        localStorage.setItem(`informe_comentarios_${informeNro}`, JSON.stringify(comments));
       }
-      localStorage.setItem(`informe_comments_${informeNro}`, JSON.stringify(comments));
 
       const localKey = `informe_data${docKey}_${informeNro}`;
-      const saved = localStorage.getItem(localKey) || localStorage.getItem(`informe_data_${informeNro}`);
+      const saved = localStorage.getItem(localKey);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
           parsed.comentariosCampos = comments;
           parsed.estado = statusToSave;
           localStorage.setItem(localKey, JSON.stringify(parsed));
-          localStorage.setItem(`informe_data_${informeNro}`, JSON.stringify(parsed));
         } catch (e) {}
+      } else if (!contractorDoc) {
+        const globalSaved = localStorage.getItem(`informe_data_${informeNro}`);
+        if (globalSaved) {
+          try {
+            const parsed = JSON.parse(globalSaved);
+            parsed.comentariosCampos = comments;
+            parsed.estado = statusToSave;
+            localStorage.setItem(`informe_data_${informeNro}`, JSON.stringify(parsed));
+          } catch (e) {}
+        }
       }
     }
 
@@ -2442,6 +2472,9 @@ export const supabaseService = {
         informe_nro: informeNro,
         report_id: isUuid(reportId) ? reportId : undefined
       }).catch(err => console.warn('Error creating contractor notification:', err));
+    } else if (contractorDoc && pendingComments.length === 0) {
+      // Si ya no quedan observaciones pendientes, marcar como leídas/resueltas las notificaciones de devolución previas
+      this.marcarNotificacionesInformeResueltas(contractorDoc, informeNro, reportId).catch(err => console.warn('Error resolving notifications:', err));
     }
 
     // 2. Notificación para la Supervisora si el contratista marcó observaciones como SUBSANADAS
@@ -2480,7 +2513,7 @@ export const supabaseService = {
     return true;
   },
 
-  // 10. Eliminar Informe Completo (En Supabase, Almacenamiento de Fotos, Certificaciones, Documentos Asociados y Ejecutar Depuración de 7 Meses)
+  // 10. Eliminar Informe Completo (En Supabase, Almacenamiento de Fotos, Certificaciones, Documentos Asociados y Notificaciones)
   async deleteFullInforme(
     reportId?: string, 
     informeNro?: string, 
@@ -2527,6 +2560,7 @@ export const supabaseService = {
       // 2. Eliminar de Supabase por reportId UUID
       if (reportId && isUuid(reportId)) {
         await purgeInformeTables(reportId);
+        await supabase.from('notificaciones').delete().eq('report_id', reportId);
       }
 
       // 3. Eliminar por número de informe y documento del contratista (con aislamiento estricto)
@@ -2557,7 +2591,10 @@ export const supabaseService = {
         await supabase.from('soportes_fiduciaria').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
         await supabase.from('declaraciones_renta').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
         await supabase.from('autorizaciones_desembolso').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
+        
+        // Limpiar notificaciones de contratista y supervisión vinculadas a este informe
         await supabase.from('notificaciones').delete().eq('user_id', contractorDoc).eq('informe_nro', informeNro);
+        await supabase.from('notificaciones').delete().eq('user_id', 'supervisor').eq('informe_nro', informeNro);
 
         // Limpiar completamente las memorias y cachés de LocalStorage para este contratista e informe
         if (typeof localStorage !== 'undefined') {
@@ -2594,15 +2631,18 @@ export const supabaseService = {
 
           keysToDelete.forEach(k => localStorage.removeItem(k));
 
-          const key = `notificaciones_${contractorDoc}`;
-          const saved = localStorage.getItem(key);
-          if (saved) {
-            try {
-              const list: Notificacion[] = JSON.parse(saved);
-              const filtered = list.filter(n => n.informe_nro !== informeNro);
-              localStorage.setItem(key, JSON.stringify(filtered));
-            } catch (e) {}
-          }
+          // Limpiar de localStorage las notificaciones de este informe para contratista y supervisor
+          const notifKeys = [`notificaciones_${contractorDoc}`, `notificaciones_${cleanDoc}`, 'notificaciones_supervisor'];
+          notifKeys.forEach(k => {
+            const saved = localStorage.getItem(k);
+            if (saved) {
+              try {
+                const list: Notificacion[] = JSON.parse(saved);
+                const filtered = list.filter(n => n.informe_nro !== informeNro && (!reportId || n.report_id !== reportId));
+                localStorage.setItem(k, JSON.stringify(filtered));
+              } catch (e) {}
+            }
+          });
         }
       }
     } catch (err) {
@@ -2621,14 +2661,26 @@ export const supabaseService = {
     try {
       if (isUuid(id)) {
         const { error } = await supabase
+          .from('notificaciones')
+          .update({ leida: true })
+          .eq('report_id', id)
+          .eq('tipo', 'radicado');
+        
+        const { error: updErr } = await supabase
           .from('informes_mensuales')
           .update({ estado: mapStatusToDb(nuevoEstado) })
           .eq('id', id);
-        if (error) throw error;
+        if (updErr) throw updErr;
       }
+
+      // Marcar como leídas las de radicado
+      await this.marcarNotificacionesRadicadasComoLeidas(informeNro, id);
 
       if (contractorDoc && nuevoEstado === 'Aprobado') {
         const nro = informeNro || '1';
+        // Marcar observaciones previas como resueltas
+        await this.marcarNotificacionesInformeResueltas(contractorDoc, nro, id);
+
         this.crearNotificacion({
           user_id: contractorDoc,
           titulo: `¡Informe #${nro} Aprobado!`,
@@ -3485,7 +3537,21 @@ export const supabaseService = {
       leida: false,
     };
 
-    // 1. Guardar en Supabase
+    // 1. Limpiar/consolidar notificaciones previas no leídas del mismo tipo para este mismo informe
+    try {
+      if (notif.informe_nro && (notif.tipo === 'devolucion' || notif.tipo === 'radicado')) {
+        await supabase
+          .from('notificaciones')
+          .delete()
+          .eq('user_id', notif.user_id)
+          .eq('informe_nro', notif.informe_nro)
+          .eq('tipo', notif.tipo);
+      }
+    } catch (e) {
+      console.warn('Error deduplicating notification in Supabase:', e);
+    }
+
+    // 2. Guardar en Supabase
     try {
       const { data, error } = await supabase
         .from('notificaciones')
@@ -3507,24 +3573,128 @@ export const supabaseService = {
       console.warn('Error saving notification to Supabase:', e);
     }
 
-    // 2. Guardar en LocalStorage aislado del usuario
+    // 3. Guardar en LocalStorage aislado del usuario (reemplazando anteriores del mismo tipo si aplica)
     if (typeof localStorage !== 'undefined') {
       const key = `notificaciones_${notif.user_id}`;
       const saved = localStorage.getItem(key);
       let list: Notificacion[] = [];
       if (saved) {
-        try { list = JSON.parse(saved); } catch (e) {}
+        try { 
+          list = JSON.parse(saved); 
+          if (notif.informe_nro && (notif.tipo === 'devolucion' || notif.tipo === 'radicado')) {
+            list = list.filter(n => !(n.informe_nro === notif.informe_nro && n.tipo === notif.tipo));
+          }
+        } catch (e) {}
       }
       list.unshift(newNotif);
       localStorage.setItem(key, JSON.stringify(list.slice(0, 50)));
     }
 
-    // 3. Emitir evento para actualización instantánea en la interfaz
+    // 4. Emitir evento para actualización instantánea en la interfaz
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('notificaciones_actualizadas', { detail: newNotif }));
     }
 
     return newNotif;
+  },
+
+  // 23.1. Marcar notificaciones de un informe como resueltas/leídas (cuando se subsana, radica o aprueba)
+  async marcarNotificacionesInformeResueltas(userDoc?: string, informeNro?: string, reportId?: string): Promise<boolean> {
+    if (!userDoc && !reportId && !informeNro) return false;
+    try {
+      if (userDoc && informeNro) {
+        await supabase
+          .from('notificaciones')
+          .update({ leida: true })
+          .eq('user_id', userDoc)
+          .eq('informe_nro', informeNro)
+          .eq('tipo', 'devolucion');
+      }
+      if (reportId && isUuid(reportId)) {
+        await supabase
+          .from('notificaciones')
+          .update({ leida: true })
+          .eq('report_id', reportId)
+          .eq('tipo', 'devolucion');
+      }
+    } catch (e) {
+      console.warn('Error resolving report notifications in Supabase:', e);
+    }
+
+    if (typeof localStorage !== 'undefined') {
+      const keys = [userDoc, 'supervisor'].filter(Boolean) as string[];
+      for (const k of keys) {
+        const storageKey = `notificaciones_${k}`;
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          try {
+            const list: Notificacion[] = JSON.parse(saved);
+            const updated = list.map(n => {
+              if (
+                (informeNro && n.informe_nro === informeNro && n.tipo === 'devolucion') || 
+                (reportId && n.report_id === reportId && n.tipo === 'devolucion')
+              ) {
+                return { ...n, leida: true };
+              }
+              return n;
+            });
+            localStorage.setItem(storageKey, JSON.stringify(updated));
+          } catch (e) {}
+        }
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('notificaciones_actualizadas'));
+    }
+    return true;
+  },
+
+  // 23.2. Marcar notificaciones de radicado de un informe como leídas (para el supervisor/secretaría)
+  async marcarNotificacionesRadicadasComoLeidas(informeNro?: string, reportId?: string): Promise<boolean> {
+    if (!reportId && !informeNro) return false;
+    try {
+      let query = supabase
+        .from('notificaciones')
+        .update({ leida: true })
+        .eq('tipo', 'radicado');
+
+      if (reportId && isUuid(reportId)) {
+        await query.eq('report_id', reportId);
+      } else if (informeNro) {
+        await query.eq('informe_nro', informeNro);
+      }
+    } catch (e) {
+      console.warn('Error resolving radicado notifications in Supabase:', e);
+    }
+
+    if (typeof localStorage !== 'undefined') {
+      const keys = ['supervisor', 'supervisor_apoyo', 'admin'];
+      for (const k of keys) {
+        const storageKey = `notificaciones_${k}`;
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          try {
+            const list: Notificacion[] = JSON.parse(saved);
+            const updated = list.map(n => {
+              if (
+                (informeNro && n.informe_nro === informeNro && n.tipo === 'radicado') || 
+                (reportId && n.report_id === reportId && n.tipo === 'radicado')
+              ) {
+                return { ...n, leida: true };
+              }
+              return n;
+            });
+            localStorage.setItem(storageKey, JSON.stringify(updated));
+          } catch (e) {}
+        }
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('notificaciones_actualizadas'));
+    }
+    return true;
   },
 
   // 24. Marcar Notificación como Leída

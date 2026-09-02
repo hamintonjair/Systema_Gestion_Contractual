@@ -109,6 +109,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     item: InformeSummary | ReportData | AuthUser,
     forcedTipo?: 'aprobado' | 'devuelto' | 'recordatorio'
   ) => {
+    let informeId = '';
     let contratistaNombre = '';
     let contratistaDocumento = '';
     let contratistaTelefono = '';
@@ -121,6 +122,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
 
     // Si es ReportData (ej. inspectingInforme)
     if ('obligaciones' in item) {
+      informeId = item.id || (inspectingInforme?.id || '');
       contratistaNombre = item.contratistaNombre || '';
       contratistaDocumento = item.contratistaDocumento || '';
       contratistaTelefono = item.contratistaTelefono || '';
@@ -133,6 +135,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     } 
     // Si es InformeSummary (de la tabla de informes)
     else if ('informe_nro' in item) {
+      informeId = item.id || '';
       contratistaNombre = item.contratista_nombre || '';
       contratistaDocumento = item.contratista_documento || '';
       informeNro = String(item.informe_nro || '1');
@@ -160,10 +163,9 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
           comentariosCampos = stored;
         } else {
           const userDocKey = contratistaDocumento ? `_${contratistaDocumento}` : '';
-          const saved = localStorage.getItem(`informe_data${userDocKey}_${informeNro}`) ||
-                        localStorage.getItem(`informe_data_${informeNro}`) ||
-                        localStorage.getItem(`alcaldia_quibdo_report${userDocKey}_${informeNro}`) ||
-                        localStorage.getItem(`alcaldia_quibdo_report_${informeNro}`);
+          const saved = userDocKey
+            ? (localStorage.getItem(`informe_data${userDocKey}_${informeNro}`) || localStorage.getItem(`alcaldia_quibdo_report${userDocKey}_${informeNro}`))
+            : (localStorage.getItem(`informe_data_${informeNro}`) || localStorage.getItem(`alcaldia_quibdo_report_${informeNro}`));
           if (saved) {
             try {
               const parsed = JSON.parse(saved);
@@ -184,6 +186,14 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       estado = 'Enviado';
     }
 
+    // Buscar ID de informe si no está explícito
+    if (!informeId && contratistaDocumento && informeNro) {
+      const found = informes.find(inf => inf.contratista_documento === contratistaDocumento && String(inf.informe_nro) === String(informeNro));
+      if (found) {
+        informeId = found.id;
+      }
+    }
+
     // Buscar teléfono si no está en el informe
     if (!contratistaTelefono && contratistaDocumento) {
       const found = contractors.find(c => c.documentoIdentidad === contratistaDocumento);
@@ -202,6 +212,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     }
 
     setWhatsappPayload({
+      informeId,
       tipo,
       contratistaNombre,
       contratistaDocumento,
@@ -215,6 +226,46 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       comentariosCampos,
       appUrl: typeof window !== 'undefined' ? window.location.origin : undefined
     });
+  };
+
+  const handleApproveFromWhatsApp = async (payload: WhatsAppNotificationPayload) => {
+    let idToApprove = payload.informeId;
+    if (!idToApprove && payload.contratistaDocumento && payload.informeNro) {
+      const found = informes.find(inf => 
+        inf.contratista_documento === payload.contratistaDocumento && 
+        String(inf.informe_nro) === String(payload.informeNro)
+      );
+      if (found) idToApprove = found.id;
+    }
+    if (!idToApprove && inspectingInforme?.id) {
+      idToApprove = inspectingInforme.id;
+    }
+
+    if (idToApprove) {
+      await handleUpdateStatus(idToApprove, 'Aprobado');
+    }
+  };
+
+  const handleStatusChangeFromWhatsApp = async (newTipo: 'aprobado' | 'devuelto' | 'recordatorio', payload: WhatsAppNotificationPayload) => {
+    let targetId = payload.informeId;
+    if (!targetId && payload.contratistaDocumento && payload.informeNro) {
+      const found = informes.find(inf => 
+        inf.contratista_documento === payload.contratistaDocumento && 
+        String(inf.informe_nro) === String(payload.informeNro)
+      );
+      if (found) targetId = found.id;
+    }
+    if (!targetId && inspectingInforme?.id) {
+      targetId = inspectingInforme.id;
+    }
+
+    if (targetId) {
+      if (newTipo === 'aprobado') {
+        await handleUpdateStatus(targetId, 'Aprobado');
+      } else if (newTipo === 'devuelto') {
+        await handleUpdateStatus(targetId, 'Devuelto');
+      }
+    }
   };
 
   const handleUpdatePhoneFromWhatsApp = async (newPhone: string) => {
@@ -234,8 +285,9 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     }
     if (!repData) {
       const userDocKey = item.contratista_documento ? `_${item.contratista_documento}` : '';
-      const saved = localStorage.getItem(`informe_data${userDocKey}_${item.informe_nro}`) ||
-                    localStorage.getItem(`informe_data_${item.informe_nro}`);
+      const saved = userDocKey
+        ? localStorage.getItem(`informe_data${userDocKey}_${item.informe_nro}`)
+        : localStorage.getItem(`informe_data_${item.informe_nro}`);
       if (saved) {
         try {
           repData = JSON.parse(saved);
@@ -541,10 +593,12 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
         estado: newStatus,
         comentariosCampos: newStatus === 'Aprobado' ? {} : inspectingInforme.comentariosCampos 
       });
-      // Sincronizar en almacenamiento local para reflejo inmediato en el panel del contratista
+       // Sincronizar en almacenamiento local para reflejo inmediato en el panel del contratista
       const userDocKey = inspectingInforme.contratistaDocumento ? `_${inspectingInforme.contratistaDocumento}` : '';
       const localKey = `informe_data${userDocKey}_${inspectingInforme.informeNro}`;
-      const saved = localStorage.getItem(localKey) || localStorage.getItem(`informe_data_${inspectingInforme.informeNro}`);
+      const saved = userDocKey
+        ? localStorage.getItem(localKey)
+        : localStorage.getItem(`informe_data_${inspectingInforme.informeNro}`);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -553,7 +607,9 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
             parsed.comentariosCampos = {};
           }
           localStorage.setItem(localKey, JSON.stringify(parsed));
-          localStorage.setItem(`informe_data_${inspectingInforme.informeNro}`, JSON.stringify(parsed));
+          if (!userDocKey) {
+            localStorage.setItem(`informe_data_${inspectingInforme.informeNro}`, JSON.stringify(parsed));
+          }
         } catch (e) {}
       }
     }
@@ -603,7 +659,9 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
     const userDocKey = inspectingInforme.contratistaDocumento ? `_${inspectingInforme.contratistaDocumento}` : '';
     const storageKeyInforme = `informe_data${userDocKey}_${inspectingInforme.informeNro}`;
     localStorage.setItem(storageKeyInforme, JSON.stringify(updatedInforme));
-    localStorage.setItem(`informe_data_${inspectingInforme.informeNro}`, JSON.stringify(updatedInforme));
+    if (!userDocKey) {
+      localStorage.setItem(`informe_data_${inspectingInforme.informeNro}`, JSON.stringify(updatedInforme));
+    }
     localStorage.setItem('last_data_update_timestamp', Date.now().toString());
 
     window.dispatchEvent(new CustomEvent('informe_comments_updated'));
@@ -683,7 +741,9 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
     const userDocKey = inspectingInforme.contratistaDocumento ? `_${inspectingInforme.contratistaDocumento}` : '';
     const storageKeyInforme = `informe_data${userDocKey}_${inspectingInforme.informeNro}`;
     localStorage.setItem(storageKeyInforme, JSON.stringify(updatedInforme));
-    localStorage.setItem(`informe_data_${inspectingInforme.informeNro}`, JSON.stringify(updatedInforme));
+    if (!userDocKey) {
+      localStorage.setItem(`informe_data_${inspectingInforme.informeNro}`, JSON.stringify(updatedInforme));
+    }
     localStorage.setItem('last_data_update_timestamp', Date.now().toString());
 
     window.dispatchEvent(new CustomEvent('informe_comments_updated'));
@@ -700,6 +760,11 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
   const handleOpenInspectModal = async (item: InformeSummary) => {
     if (item.estado === 'Borrador') return; // Protección: Los borradores no radicados no son inspeccionables por la supervisora
     setAdminModuleTab('informe');
+
+    // Marcar notificaciones de radicado de este informe como leídas para el supervisor
+    if (item.informe_nro) {
+      supabaseService.marcarNotificacionesRadicadasComoLeidas(item.informe_nro.toString(), item.id).catch(e => {});
+    }
 
     const matchingContractor = contractors.find(c => 
       (item.contratista_documento && c.documentoIdentidad === item.contratista_documento) || 
@@ -726,8 +791,9 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
 
     // 2. Intentar buscar en almacenamiento local del informe específico (Solo si ya fue radicado/enviado)
     const userDocKey = item.contratista_documento ? `_${item.contratista_documento}` : '';
-    const saved = localStorage.getItem(`informe_data${userDocKey}_${item.informe_nro}`) ||
-                  localStorage.getItem(`informe_data_${item.informe_nro}`);
+    const saved = userDocKey
+      ? localStorage.getItem(`informe_data${userDocKey}_${item.informe_nro}`)
+      : localStorage.getItem(`informe_data_${item.informe_nro}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -2589,6 +2655,8 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
           payload={whatsappPayload}
           onClose={() => setWhatsappPayload(null)}
           onUpdatePhone={handleUpdatePhoneFromWhatsApp}
+          onApproveReport={handleApproveFromWhatsApp}
+          onStatusChange={handleStatusChangeFromWhatsApp}
         />
       )}
 

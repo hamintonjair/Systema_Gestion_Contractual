@@ -3,7 +3,6 @@ import { AutorizacionDesembolsoData, ReportData, createDefaultAutorizacionDesemb
 import { obtenerValoresMonetariosReporte, convertirNumeroALetras, formatearObjetoConPeriodo, formatFechaAnioMesDia } from '../utils/numberToWords';
 import { limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
 import { supabaseService } from '../services/supabaseService';
-import { openWhatsAppForCertificate } from '../utils/whatsappNotifier';
 import FieldCommentModal from './FieldCommentModal';
 import { Printer, Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import QuibdoLogo from './QuibdoLogo';
@@ -683,24 +682,6 @@ export default function AutorizacionDesembolsoDoc({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => openWhatsAppForCertificate({
-                        docName: 'Autorización de Desembolso',
-                        informeNro: reportData?.informeNro || '1',
-                        contratoNro: reportData?.contratoNro || '',
-                        contratistaNombre: reportData?.contratistaNombre || 'Contratista',
-                        telefono: reportData?.contratistaTelefono || '',
-                        comentario: desembComment.comentario,
-                        isSubsanado: desembComment.corregido,
-                        supervisorNombre: authorName || 'Supervisora'
-                      })}
-                      className="px-3 py-1.5 bg-[#25D366] hover:bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                      title="Enviar aviso por WhatsApp"
-                    >
-                      <MessageSquare size={13} />
-                      <span>WhatsApp</span>
-                    </button>
                     <button
                       type="button"
                       onClick={() => openCommentModal('autorizacion_desembolso', 'Autorización Desembolso', 'Autorización de Desembolso')}

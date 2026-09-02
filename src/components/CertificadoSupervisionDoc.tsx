@@ -3,7 +3,6 @@ import { CertificadoSupervisionData, ReportData, createDefaultCertificadoData, F
 import { supabaseService } from '../services/supabaseService';
 import { getDatosLiquidacionPeriodo, limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
 import { formatDateSlash, quitarDecimales } from '../utils/formatters';
-import { openWhatsAppForCertificate } from '../utils/whatsappNotifier';
 import QuibdoLogo from './QuibdoLogo';
 import FieldCommentModal from './FieldCommentModal';
 import { Printer, Download, Edit3, Check, Save, RotateCcw, Sparkles, Image as ImageIcon, Calculator, MessageSquare, AlertTriangle, CheckCircle2 } from 'lucide-react';
@@ -904,24 +903,6 @@ export default function CertificadoSupervisionDoc({
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => openWhatsAppForCertificate({
-                    docName: 'Certificado de Supervisión',
-                    informeNro: reportData?.informeNro || '1',
-                    contratoNro: reportData?.contratoNro || '',
-                    contratistaNombre: reportData?.contratistaNombre || 'Contratista',
-                    telefono: reportData?.contratistaTelefono || '',
-                    comentario: certComment.comentario,
-                    isSubsanado: true,
-                    supervisorNombre: authorName || 'Supervisora'
-                  })}
-                  className="px-3 py-1.5 bg-[#25D366] hover:bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                  title="Enviar notificación por WhatsApp"
-                >
-                  <MessageSquare size={13} />
-                  <span>WhatsApp</span>
-                </button>
                 <button
                   type="button"
                   onClick={() => openCommentModal('certificado_supervision', 'Certificado de Supervisión', 'Certificado Oficial de Supervisión')}

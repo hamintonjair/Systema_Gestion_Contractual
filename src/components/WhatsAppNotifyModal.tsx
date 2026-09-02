@@ -23,9 +23,11 @@ interface Props {
   payload: WhatsAppNotificationPayload;
   onClose: () => void;
   onUpdatePhone?: (phone: string) => void;
+  onApproveReport?: (payload: WhatsAppNotificationPayload) => void | Promise<void>;
+  onStatusChange?: (tipo: 'aprobado' | 'devuelto' | 'recordatorio', payload: WhatsAppNotificationPayload) => void | Promise<void>;
 }
 
-export default function WhatsAppNotifyModal({ payload, onClose, onUpdatePhone }: Props) {
+export default function WhatsAppNotifyModal({ payload, onClose, onUpdatePhone, onApproveReport, onStatusChange }: Props) {
   const [tipo, setTipo] = useState<'aprobado' | 'devuelto' | 'recordatorio'>(payload.tipo);
   const [telefono, setTelefono] = useState<string>(payload.contratistaTelefono || '');
   const [customMessage, setCustomMessage] = useState<string>('');
@@ -46,11 +48,28 @@ export default function WhatsAppNotifyModal({ payload, onClose, onUpdatePhone }:
     if (onUpdatePhone && telefono !== payload.contratistaTelefono) {
       onUpdatePhone(telefono);
     }
+
+    // Si el motivo de la notificación es "Aprobado", ejecutar la función de aprobación inmediata
+    if (tipo === 'aprobado') {
+      if (onApproveReport) {
+        onApproveReport(payload);
+      }
+      if (onStatusChange) {
+        onStatusChange('aprobado', payload);
+      }
+    } else if (tipo === 'devuelto') {
+      if (onStatusChange) {
+        onStatusChange('devuelto', payload);
+      }
+    }
+
     openWhatsAppNotification({
       ...payload,
       tipo,
       contratistaTelefono: telefono
     }, customMessage);
+
+    onClose();
   };
 
   const handleCopy = () => {
@@ -141,6 +160,13 @@ export default function WhatsAppNotifyModal({ payload, onClose, onUpdatePhone }:
                 <span className="text-[11px] text-center">Recordatorio</span>
               </button>
             </div>
+
+            {tipo === 'aprobado' && (
+              <div className="mt-2.5 p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center gap-2 text-[11px] text-emerald-900 font-medium animate-in fade-in">
+                <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
+                <span>Al enviar esta notificación, el informe se marcará automáticamente como <strong>Aprobado para Pago</strong> en el sistema institucional.</span>
+              </div>
+            )}
           </div>
 
           {/* Teléfono del Contratista */}
