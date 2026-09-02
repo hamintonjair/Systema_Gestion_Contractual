@@ -62,9 +62,11 @@ export default function ReportEditor({
   hasUnsavedChanges = false
 }: Props) {
   const [activeTab, setActiveTab] = useState<'general' | 'obligaciones' | 'anexos' | 'suscripcion' | 'impresion'>('general');
+  const [dismissedBanner, setDismissedBanner] = useState(false);
 
   useEffect(() => {
     setActiveTab('general');
+    setDismissedBanner(false);
   }, [data.id, data.informeNro]);
   const [isUploadingFotos, setIsUploadingFotos] = useState(false);
   const [isUploadingMembrete, setIsUploadingMembrete] = useState(false);
@@ -792,30 +794,26 @@ export default function ReportEditor({
       </div>
 
       {/* BANNER DE OBSERVACIONES DE SUPERVISIÓN */}
-      {totalComments > 0 && (
+      {totalComments > 0 && !dismissedBanner && (
         pendientesCount > 0 ? (
-          <div className="bg-amber-50 border-b-2 border-amber-400 p-4 animate-in fade-in">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-3">
+          <div className="bg-amber-50 border-b-2 border-amber-400 p-4 animate-in fade-in relative">
+            <button 
+              onClick={() => setDismissedBanner(true)}
+              className="absolute top-2 right-2 text-amber-500 hover:text-amber-800 hover:bg-amber-200/50 p-1.5 rounded-full transition-colors"
+              title="Ocultar notificación"
+            >
+              <X size={16} />
+            </button>
+            <div className="flex items-start justify-between gap-4 mr-6">
+              <div className="flex items-start gap-3 w-full">
                 <AlertTriangle size={24} className="text-amber-600 shrink-0 mt-0.5" />
-                <div>
+                <div className="w-full">
                   <h3 className="font-black text-amber-950 text-sm md:text-base flex items-center gap-2">
                     {pendientesCount} Campo(s) con Observaciones de la Supervisora
                   </h3>
-                  <p className="text-amber-900 text-xs mt-1 leading-relaxed max-w-3xl">
+                  <p className="text-amber-900 text-xs mt-1 leading-relaxed w-full">
                     La supervisora ha revisado este informe y dejó comentarios para que realices correcciones. Los campos señalados están resaltados en <strong className="font-bold underline">amarillo</strong> en las pestañas correspondientes.
                   </p>
-                  
-                  {/* Resumen de campos */}
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {Object.entries(data.comentariosCampos || {})
-                      .filter(([_, comm]) => !comm.corregido)
-                      .map(([key, comm]) => (
-                        <span key={key} className="inline-flex items-center gap-1 bg-amber-200 text-amber-950 text-[10px] px-2.5 py-1 rounded-md font-bold shadow-sm">
-                          ⚠️ {comm.nombreCampo || comm.fieldName || key}
-                        </span>
-                      ))}
-                  </div>
                 </div>
               </div>
               <div className="hidden sm:flex shrink-0">
@@ -826,14 +824,21 @@ export default function ReportEditor({
             </div>
           </div>
         ) : (
-          <div className="bg-emerald-50 border-b border-emerald-300 p-4 animate-in fade-in">
-            <div className="flex items-center gap-3">
+          <div className="bg-emerald-50 border-b border-emerald-300 p-4 animate-in fade-in relative">
+            <button 
+              onClick={() => setDismissedBanner(true)}
+              className="absolute top-2 right-2 text-emerald-500 hover:text-emerald-800 hover:bg-emerald-200/50 p-1.5 rounded-full transition-colors"
+              title="Ocultar notificación"
+            >
+              <X size={16} />
+            </button>
+            <div className="flex items-center gap-3 mr-6">
               <CheckCircle2 size={24} className="text-emerald-600 shrink-0" />
-              <div>
+              <div className="w-full">
                 <strong className="font-black text-emerald-950 text-sm">
                   🟢 {corregidosCount} Corrección(es) Realizada(s) • Todas las observaciones ajustadas
                 </strong>
-                <p className="text-emerald-900 text-xs mt-0.5">
+                <p className="text-emerald-900 text-xs mt-0.5 w-full">
                   Los campos corregidos se destacan en verde. Guarda los cambios para que la supervisora los re-verifique.
                 </p>
               </div>

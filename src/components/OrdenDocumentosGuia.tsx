@@ -241,7 +241,7 @@ export const OrdenDocumentosGuia: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Positiva */}
           <a
             href="https://operacionesarl.positiva.gov.co/login"
@@ -317,6 +317,32 @@ export const OrdenDocumentosGuia: React.FC = () => {
             </div>
             <span className="text-[10px] font-bold text-emerald-700 mt-3 flex items-center gap-1 group-hover:underline">
               Ir a SuAporte &rarr;
+            </span>
+          </a>
+
+          {/* Nuevo SOI */}
+          <a
+            href="https://servicio.nuevosoi.com.co/soi/index.do?LoginIndependiente=true"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex flex-col justify-between p-3.5 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition-all text-left bg-slate-50/60"
+          >
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                  Planilla SS
+                </span>
+                <ExternalLink size={14} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+              </div>
+              <h4 className="text-xs font-black text-slate-800 group-hover:text-[#006b33] transition-colors">
+                Nuevo SOI
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                Plataforma alternativa para el pago de Seguridad Social.
+              </p>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-700 mt-3 flex items-center gap-1 group-hover:underline">
+              Ir a Nuevo SOI &rarr;
             </span>
           </a>
 
