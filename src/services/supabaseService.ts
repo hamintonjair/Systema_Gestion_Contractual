@@ -157,7 +157,7 @@ const parseObservacionesAndComments = (rawObs?: string): {
   let plazoText: string | undefined;
   let valorMensualText: string | undefined;
 
-  // 1. Extraer __COMMENTS_JSON__: si existe (independientemente de su posición)
+  // 1. Extraer __COMMENTS_JSON__: si existe
   if (current.includes('__COMMENTS_JSON__ :') || current.includes('__COMMENTS_JSON__:')) {
     const isSpaced = current.includes('__COMMENTS_JSON__ :');
     const marker = isSpaced ? '__COMMENTS_JSON__ :' : '__COMMENTS_JSON__:';
@@ -169,64 +169,62 @@ const parseObservacionesAndComments = (rawObs?: string): {
     } catch (e) {
       console.warn('Error parsing __COMMENTS_JSON__:', e);
     }
-    // Remover __COMMENTS_JSON__ del string manteniendo cualquier otro marcador
-    const before = current.slice(0, idx);
-    let extra = '';
-    if (afterComments.includes('__VALOR_PAGAR__:')) {
-      const parts = afterComments.split('__VALOR_PAGAR__:');
-      extra += '\n\n__VALOR_PAGAR__:' + parts[1];
-    }
-    if (afterComments.includes('__PLAZO__:')) {
-      const parts = afterComments.split('__PLAZO__:');
-      extra += '\n\n__PLAZO__:' + parts[1];
-    }
-    if (afterComments.includes('__VALOR_MENSUAL__:')) {
-      const parts = afterComments.split('__VALOR_MENSUAL__:');
-      extra += '\n\n__VALOR_MENSUAL__:' + parts[1];
-    }
-    current = (before + extra).trim();
+    // Remover la sección de comentarios del string actual
+    current = current.slice(0, idx) + afterComments.slice(rawJson.length);
   }
 
   // 2. Extraer __VALOR_PAGAR__: si existe
   if (current.includes('__VALOR_PAGAR__:')) {
     const idx = current.indexOf('__VALOR_PAGAR__:');
     const afterVp = current.slice(idx + '__VALOR_PAGAR__:'.length);
-    const rawVp = afterVp.split('__COMMENTS_JSON__:')[0].split('__PLAZO__:')[0].split('__VALOR_MENSUAL__:')[0].trim();
+    const rawVp = afterVp.split('__COMMENTS_JSON__')[0].split('__PLAZO__:')[0].split('__VALOR_MENSUAL__:')[0].trim();
     try {
       valorPagarText = decodeURIComponent(rawVp);
     } catch (e) {
       valorPagarText = rawVp;
     }
-    current = current.slice(0, idx).trim();
+    // Remover la sección de valor a pagar del string actual
+    current = current.slice(0, idx) + afterVp.slice(rawVp.length);
   }
 
   // 3. Extraer __PLAZO__: si existe
   if (current.includes('__PLAZO__:')) {
     const idx = current.indexOf('__PLAZO__:');
     const afterPl = current.slice(idx + '__PLAZO__:'.length);
-    const rawPl = afterPl.split('__COMMENTS_JSON__:')[0].split('__VALOR_PAGAR__:')[0].split('__VALOR_MENSUAL__:')[0].trim();
+    const rawPl = afterPl.split('__COMMENTS_JSON__')[0].split('__VALOR_PAGAR__:')[0].split('__VALOR_MENSUAL__:')[0].trim();
     try {
       plazoText = decodeURIComponent(rawPl);
     } catch (e) {
       plazoText = rawPl;
     }
-    current = current.slice(0, idx).trim();
+    // Remover la sección de plazo del string actual
+    current = current.slice(0, idx) + afterPl.slice(rawPl.length);
   }
 
   // 4. Extraer __VALOR_MENSUAL__: si existe
   if (current.includes('__VALOR_MENSUAL__:')) {
     const idx = current.indexOf('__VALOR_MENSUAL__:');
     const afterVm = current.slice(idx + '__VALOR_MENSUAL__:'.length);
-    const rawVm = afterVm.split('__COMMENTS_JSON__:')[0].split('__VALOR_PAGAR__:')[0].split('__PLAZO__:')[0].trim();
+    const rawVm = afterVm.split('__COMMENTS_JSON__')[0].split('__VALOR_PAGAR__:')[0].split('__PLAZO__:')[0].trim();
     try {
       valorMensualText = decodeURIComponent(rawVm);
     } catch (e) {
       valorMensualText = rawVm;
     }
-    current = current.slice(0, idx).trim();
+    // Remover la sección de valor mensual del string actual
+    current = current.slice(0, idx) + afterVm.slice(rawVm.length);
   }
 
-  return { cleanObs: current.trim(), comments, valorPagarText, plazoText, valorMensualText };
+  // Limpiar saltos de línea sobrantes y posibles marcadores vacíos
+  const cleanObs = current
+    .replace(/__VALOR_PAGAR__:\s*/g, '')
+    .replace(/__PLAZO__:\s*/g, '')
+    .replace(/__VALOR_MENSUAL__:\s*/g, '')
+    .replace(/__COMMENTS_JSON__:\s*/g, '')
+    .replace(/__COMMENTS_JSON__\s*:\s*/g, '')
+    .trim();
+
+  return { cleanObs, comments, valorPagarText, plazoText, valorMensualText };
 };
 
 const buildObservacionesWithComments = (
