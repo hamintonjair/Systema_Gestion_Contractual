@@ -1639,53 +1639,6 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                     />
                   </div>
 
-                  <div className="sm:col-span-2 pt-2 border-t border-emerald-200/60 mt-2">
-                    <h4 className="text-xs font-bold text-[#006b33] uppercase mb-2">Información Bancaria y Presupuestal (Supervisión y Desembolso)</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Nro. de Cuenta</label>
-                        <input
-                          type="text"
-                          placeholder="Ej. 53686186829"
-                          value={nuevoNumeroCuenta}
-                          onChange={(e) => setNuevoNumeroCuenta(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg p-2.5 font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Banco</label>
-                        <input
-                          type="text"
-                          placeholder="Ej. BANCOLOMBIA"
-                          value={nuevoBanco}
-                          onChange={(e) => setNuevoBanco(e.target.value.toUpperCase())}
-                          className="w-full border border-gray-300 rounded-lg p-2.5 font-bold uppercase focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Tipo de Cuenta</label>
-                        <select
-                          value={nuevoTipoCuenta}
-                          onChange={(e) => setNuevoTipoCuenta(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
-                        >
-                          <option value="AHORRO">AHORRO</option>
-                          <option value="CORRIENTE">CORRIENTE</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Ciudad / Domicilio</label>
-                        <input
-                          type="text"
-                          placeholder="Ej. CHOCÓ o QUIBDÓ"
-                          value={nuevaCiudad}
-                          onChange={(e) => setNuevaCiudad(e.target.value.toUpperCase())}
-                          className="w-full border border-gray-300 rounded-lg p-2.5 font-bold uppercase focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="sm:col-span-2">
                     <label className="block font-semibold text-gray-700 mb-1">Secretaría Asignada</label>
                     <input
@@ -2176,53 +2129,6 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                   placeholder="Contratista de Prestación de Servicios"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500"
                 />
-              </div>
-
-              <div className="bg-emerald-50/50 p-3 rounded-xl border border-emerald-200 space-y-3">
-                <h4 className="text-xs font-bold text-[#006b33] uppercase">Información Bancaria y Presupuestal (Supervisión y Desembolso)</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nro. de Cuenta</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. 53686186829"
-                      value={editNumeroCuenta}
-                      onChange={(e) => setEditNumeroCuenta(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-emerald-500 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Banco</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. BANCOLOMBIA"
-                      value={editBanco}
-                      onChange={(e) => setEditBanco(e.target.value.toUpperCase())}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs uppercase font-medium focus:ring-2 focus:ring-emerald-500 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Cuenta</label>
-                    <select
-                      value={editTipoCuenta}
-                      onChange={(e) => setEditTipoCuenta(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 bg-white"
-                    >
-                      <option value="AHORRO">AHORRO</option>
-                      <option value="CORRIENTE">CORRIENTE</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Ciudad / Domicilio</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. CHOCÓ o QUIBDÓ"
-                      value={editCiudad}
-                      onChange={(e) => setEditCiudad(e.target.value.toUpperCase())}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs uppercase font-medium focus:ring-2 focus:ring-emerald-500 bg-white"
-                    />
-                  </div>
-                </div>
               </div>
 
               <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3">
