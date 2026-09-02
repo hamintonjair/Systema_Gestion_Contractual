@@ -42,51 +42,7 @@ export default function LoginView({ onLoginSuccess }: Props) {
     const passVal = password.trim();
 
     try {
-      // 1. Intentar inicio de sesión real en Supabase Auth si es correo y clave
-      if (passVal && inputVal.includes('@')) {
-        try {
-          const { data, error: authError } = await supabase.auth.signInWithPassword({
-            email: inputVal,
-            password: passVal,
-          });
-
-          let userIdToFetch = data?.user?.id;
-          
-          // Si Supabase devuelve email_not_confirmed significa que la CONTRASEÑA ES CORRECTA
-          if (authError && (authError.message === 'Email not confirmed' || authError.code === 'email_not_confirmed')) {
-             const { data: profs } = await supabase.from('profiles').select('id').ilike('email', inputVal).limit(1);
-             if (profs && profs.length > 0) {
-                userIdToFetch = profs[0].id;
-             }
-          }
-
-          if (userIdToFetch) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*, sec_secretarias(*)')
-              .eq('id', userIdToFetch)
-              .maybeSingle();
-
-            if (profile) {
-              onLoginSuccess({
-                id: profile.id,
-                email: data.user.email || inputVal,
-                nombreCompleto: profile.nombre_completo || 'Usuario Autenticado',
-                documentoIdentidad: profile.documento_identidad || 'Sin documento',
-                role: profile.role || 'contratista',
-                secretariaId: profile.secretaria_id,
-                secretariaNombre: profile.sec_secretarias?.nombre || 'Secretaría Municipal',
-                secretariaCodigo: profile.sec_secretarias?.codigo || '100',
-                telefono: profile.telefono,
-                cargo: profile.cargo,
-              });
-              return;
-            }
-          }
-        } catch (authErr) {}
-      }
-
-      // 2. Buscar directamente en la tabla 'profiles' de Supabase
+      // 1. Buscar directamente en la tabla 'profiles' de Supabase
       try {
         const { data: dbProfiles } = await supabase
           .from('profiles')
@@ -96,31 +52,16 @@ export default function LoginView({ onLoginSuccess }: Props) {
 
         if (dbProfiles && dbProfiles.length > 0) {
           const profile = dbProfiles[0];
-          
-          // 3. Intentar autenticar con Supabase Auth usando el email real del perfil (por si ingresaron con cédula)
-          let authSuccess = false;
-          if (passVal && profile.email) {
-            try {
-              const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                email: profile.email,
-                password: passVal,
-              });
-              if (authData?.user || (authError && (authError.message === 'Email not confirmed' || authError.code === 'email_not_confirmed'))) {
-                authSuccess = true;
-              }
-            } catch (err) {}
-          }
 
-          if (!authSuccess) {
-            const storedPass = supabaseService.getUserPassword(profile.email) || 
-                               supabaseService.getUserPassword(profile.documento_identidad) || 
-                               (profile.role === 'secretaria_admin' ? 'Inclusion2026*' : profile.role === 'super_admin' ? 'Quibdo2026*' : 'Contratista2026*');
+          // 2. Validar contraseña localmente/por defecto (al no usar Supabase Auth)
+          const storedPass = supabaseService.getUserPassword(profile.email) || 
+                             supabaseService.getUserPassword(profile.documento_identidad) || 
+                             (profile.role === 'secretaria_admin' ? 'Inclusion2026*' : profile.role === 'super_admin' ? 'Quibdo2026*' : 'Contratista2026*');
 
-            if (passVal && passVal !== storedPass && passVal !== 'Contratista2026*' && passVal !== 'Admin2026*' && passVal !== 'Inclusion2026*' && passVal !== 'Quibdo2026*') {
-              setErrorMsg('Correo, Cédula o Contraseña incorrectos. Verifica tus datos de acceso.');
-              setLoading(false);
-              return;
-            }
+          if (passVal && passVal !== storedPass && passVal !== 'Contratista2026*' && passVal !== 'Admin2026*' && passVal !== 'Inclusion2026*' && passVal !== 'Quibdo2026*') {
+            setErrorMsg('Correo, Cédula o Contraseña incorrectos. Verifica tus datos de acceso.');
+            setLoading(false);
+            return;
           }
 
           onLoginSuccess({
