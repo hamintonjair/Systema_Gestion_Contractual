@@ -247,6 +247,18 @@ export default function App() {
       const docKey = savedReportWithId.contratistaDocumento || '';
       const nroKey = savedReportWithId.informeNro || '1';
 
+      // Preservar datos de liquidación calculados previamente por la calculadora si existen en localStorage
+      const existingCertRaw = localStorage.getItem(`cert_data_${docKey}_${nroKey}`) || (resolvedId ? localStorage.getItem(`cert_data_${resolvedId}_${nroKey}`) : null);
+      if (existingCertRaw) {
+        try {
+          const exObj = JSON.parse(existingCertRaw);
+          if (exObj?.saldoPorPagar) liveCert.saldoPorPagar = exObj.saldoPorPagar;
+          if (exObj?.porcentajeEjecucion) liveCert.porcentajeEjecucion = exObj.porcentajeEjecucion;
+          if (exObj?.valorRubro) liveCert.valorRubro = exObj.valorRubro;
+          if (exObj?.valorPagadoAcumulado) liveCert.valorPagadoAcumulado = exObj.valorPagadoAcumulado;
+        } catch (e) {}
+      }
+
       localStorage.setItem(`cert_data_${docKey}_${nroKey}`, JSON.stringify(liveCert));
       localStorage.setItem(`cert_data_${nroKey}`, JSON.stringify(liveCert));
 
@@ -262,7 +274,8 @@ export default function App() {
         localStorage.setItem(`desembolso_${resolvedId}_${nroKey}`, JSON.stringify(liveDesembolso));
       }
 
-      supabaseService.saveCertificadoSupervision(liveCert, resolvedId, undefined, savedReportWithId.contratoId).catch(() => {});
+      // No enviar saldo_por_pagar ni porcentaje_ejecucion a Supabase al guardar cambios del informe mensual
+      supabaseService.saveCertificadoSupervision(liveCert, resolvedId, undefined, savedReportWithId.contratoId, { excludeLiquidacion: true }).catch(() => {});
       supabaseService.saveSoporteFiduciaria(resolvedId || '', liveFid, docKey, String(nroKey), savedReportWithId.contratoId).catch(() => {});
       supabaseService.saveAutorizacionDesembolso(resolvedId || '', liveDesembolso, docKey, String(nroKey), savedReportWithId.contratoId).catch(() => {});
 

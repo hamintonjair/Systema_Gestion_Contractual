@@ -115,32 +115,11 @@ const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[
     };
   });
 
-  // Fallback positional distribution for unassigned anexos if obligations have no photos
-  let unassignedAnexos = allAnexos.filter(a => !assignedAnexosIds.has(a.id));
-  if (unassignedAnexos.length > 0) {
-    for (let i = 0; i < obsWithFotos.length && unassignedAnexos.length > 0; i++) {
-      const obs = obsWithFotos[i];
-      if ((obs.fotos?.length || 0) === 0) {
-        const takeCount = Math.min(5, unassignedAnexos.length);
-        const taken = unassignedAnexos.splice(0, takeCount).map((f, fIdx) => ({
-          ...f,
-          obligacionId: obs.id,
-          obligacionIndex: i + 1,
-          titulo: f.titulo || `Evidencia fotográfica ${fIdx + 1} - Obligación #${i + 1}`
-        }));
-        obsWithFotos[i] = {
-          ...obs,
-          fotos: taken
-        };
-      }
-    }
-  }
-
   const flatAnexos: Anexo[] = [];
   obsWithFotos.forEach(obs => {
-    (obs.fotos || []).forEach(f => {
-      flatAnexos.push(f);
-    });
+    if (obs.fotos && obs.fotos.length > 0) {
+      flatAnexos.push(...obs.fotos);
+    }
   });
 
   allAnexos.forEach(a => {
@@ -2326,7 +2305,8 @@ export const supabaseService = {
       // Sincronizar automáticamente Certificado de Supervisión, Soporte Fiduciaria y Autorización de Desembolso en Supabase
       try {
         const certDataToSync = createDefaultCertificadoData(updatedReportWithDb);
-        await this.saveCertificadoSupervision(certDataToSync, informeId, undefined, contratoId);
+        // Excluir saldo_por_pagar y porcentaje_ejecucion al guardar o guardar cambios del informe mensual
+        await this.saveCertificadoSupervision(certDataToSync, informeId, undefined, contratoId, { excludeLiquidacion: true });
 
         const fidDataToSync = createDefaultFiduciariaData(updatedReportWithDb);
         await this.saveSoporteFiduciaria(informeId, fidDataToSync, contractorDoc, String(report.informeNro || '1'), contratoId);
@@ -2569,8 +2549,41 @@ export const supabaseService = {
         await supabase.from('autorizaciones_desembolso').delete().eq('contratista_documento', contractorDoc).eq('pago_nro', informeNro);
         await supabase.from('notificaciones').delete().eq('user_id', contractorDoc).eq('informe_nro', informeNro);
 
-        // Limpiar notificaciones en LocalStorage para este contratista e informe
+        // Limpiar completamente las memorias y cachés de LocalStorage para este contratista e informe
         if (typeof localStorage !== 'undefined') {
+          const cleanDoc = contractorDoc.replace(/[^0-9]/g, '');
+          const keysToDelete = [
+            `alcaldia_quibdo_report_${contractorDoc}_${informeNro}`,
+            `alcaldia_quibdo_report_${cleanDoc}_${informeNro}`,
+            `alcaldia_quibdo_report_${informeNro}`,
+            `informe_data_${contractorDoc}_${informeNro}`,
+            `informe_data_${cleanDoc}_${informeNro}`,
+            `cert_data_${contractorDoc}_${informeNro}`,
+            `cert_data_${cleanDoc}_${informeNro}`,
+            `cert_data_${informeNro}`,
+            `fid_data_${contractorDoc}_${informeNro}`,
+            `fid_data_${cleanDoc}_${informeNro}`,
+            `fid_data_${informeNro}`,
+            `dec_renta_${contractorDoc}_${informeNro}`,
+            `dec_renta_${cleanDoc}_${informeNro}`,
+            `desembolso_${contractorDoc}_${informeNro}`,
+            `desembolso_${cleanDoc}_${informeNro}`,
+            `desembolso_${informeNro}`,
+            `notified_approved_${contractorDoc}_${informeNro}`,
+            `notified_approved_${cleanDoc}_${informeNro}`
+          ];
+
+          if (reportId) {
+            keysToDelete.push(
+              `alcaldia_quibdo_report_${reportId}_${informeNro}`,
+              `cert_data_${reportId}_${informeNro}`,
+              `fid_data_${reportId}_${informeNro}`,
+              `desembolso_${reportId}_${informeNro}`
+            );
+          }
+
+          keysToDelete.forEach(k => localStorage.removeItem(k));
+
           const key = `notificaciones_${contractorDoc}`;
           const saved = localStorage.getItem(key);
           if (saved) {
@@ -2687,7 +2700,8 @@ export const supabaseService = {
     certData: CertificadoSupervisionData, 
     informeId?: string,
     supervisorId?: string,
-    contratoIdParam?: string
+    contratoIdParam?: string,
+    options?: { excludeLiquidacion?: boolean }
   ): Promise<{ success: boolean; id?: string; error?: string }> {
     const docKey = certData.contratistaDocumento || '';
     const cleanDoc = docKey.replace(/[^0-9]/g, '');
@@ -2696,13 +2710,29 @@ export const supabaseService = {
     // 1. Guardar copia en LocalStorage inmediatamente con todas las variantes de clave
     if (typeof localStorage !== 'undefined') {
       const storageKey = `cert_data_${docKey}_${pagoNroStr}`;
-      localStorage.setItem(storageKey, JSON.stringify(certData));
-      if (cleanDoc) {
-        localStorage.setItem(`cert_data_${cleanDoc}_${pagoNroStr}`, JSON.stringify(certData));
+      
+      // Si excludeLiquidacion es true, verificar si ya había datos de liquidación reales en localStorage
+      let mergedCertData = { ...certData };
+      if (options?.excludeLiquidacion) {
+        const prevRaw = localStorage.getItem(storageKey) || (informeId ? localStorage.getItem(`cert_data_${informeId}_${pagoNroStr}`) : null);
+        if (prevRaw) {
+          try {
+            const prevObj = JSON.parse(prevRaw);
+            if (prevObj?.saldoPorPagar) mergedCertData.saldoPorPagar = prevObj.saldoPorPagar;
+            if (prevObj?.porcentajeEjecucion) mergedCertData.porcentajeEjecucion = prevObj.porcentajeEjecucion;
+            if (prevObj?.valorRubro) mergedCertData.valorRubro = prevObj.valorRubro;
+            if (prevObj?.valorPagadoAcumulado) mergedCertData.valorPagadoAcumulado = prevObj.valorPagadoAcumulado;
+          } catch (e) {}
+        }
       }
-      localStorage.setItem(`cert_data_${pagoNroStr}`, JSON.stringify(certData));
+
+      localStorage.setItem(storageKey, JSON.stringify(mergedCertData));
+      if (cleanDoc) {
+        localStorage.setItem(`cert_data_${cleanDoc}_${pagoNroStr}`, JSON.stringify(mergedCertData));
+      }
+      localStorage.setItem(`cert_data_${pagoNroStr}`, JSON.stringify(mergedCertData));
       if (informeId) {
-        localStorage.setItem(`cert_data_${informeId}_${pagoNroStr}`, JSON.stringify(certData));
+        localStorage.setItem(`cert_data_${informeId}_${pagoNroStr}`, JSON.stringify(mergedCertData));
       }
     }
 
@@ -2751,8 +2781,6 @@ export const supabaseService = {
         periodo_certificado: `${certData.periodoDesde || ''} - ${certData.periodoHasta || ''}`,
         valor_autorizado_pago: numTotalAPagar,
         valor_total_contrato: numTotalContrato,
-        saldo_por_pagar: numSaldoPorPagar,
-        porcentaje_ejecucion: certData.porcentajeEjecucion || '',
         observaciones_supervision: certData.objeto || '',
         observaciones_liquidacion: certData.observacionesLiquidacion || '',
         expedicion_dia: certData.expedicionDia || '',
@@ -2762,6 +2790,12 @@ export const supabaseService = {
         certifica_cumplimiento: true,
         updated_at: new Date().toISOString(),
       };
+
+      // Si no se solicita excluir liquidación (o si es guardado directo desde el certificado/calculadora), enviar saldo_por_pagar y porcentaje_ejecucion
+      if (!options?.excludeLiquidacion) {
+        payload.saldo_por_pagar = numSaldoPorPagar;
+        payload.porcentaje_ejecucion = certData.porcentajeEjecucion || '';
+      }
 
       if (resolvedInformeId && isUuid(resolvedInformeId)) {
         payload.informe_id = resolvedInformeId;
