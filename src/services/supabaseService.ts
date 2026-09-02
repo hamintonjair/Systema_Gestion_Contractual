@@ -455,6 +455,9 @@ export const supabaseService = {
       // Quitar parámetros de consulta si los hay
       filePath = filePath.split('?')[0];
 
+      // Decodificar caracteres especiales como %20 para que coincida exactamente con el archivo original en el Storage de Supabase
+      filePath = decodeURIComponent(filePath);
+
       const { error } = await supabase.storage
         .from('anexos')
         .remove([filePath]);
@@ -2599,12 +2602,30 @@ export const supabaseService = {
         // Limpiar completamente las memorias y cachés de LocalStorage para este contratista e informe
         if (typeof localStorage !== 'undefined') {
           const cleanDoc = contractorDoc.replace(/[^0-9]/g, '');
+          
+          // Escanear y remover cualquier llave en localStorage que pertenezca a este número de informe y documento
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key) {
+              const lowerKey = key.toLowerCase();
+              const isTargetReportKey = key.endsWith(`_${informeNro}`) || lowerKey.includes(`_${informeNro}_`) || lowerKey.includes(`_${informeNro}`);
+              const containsContractor = lowerKey.includes(contractorDoc.toLowerCase()) || (cleanDoc && lowerKey.includes(cleanDoc.toLowerCase()));
+              
+              if (isTargetReportKey && containsContractor) {
+                keysToRemove.push(key);
+              }
+            }
+          }
+          keysToRemove.forEach(k => localStorage.removeItem(k));
+
           const keysToDelete = [
             `alcaldia_quibdo_report_${contractorDoc}_${informeNro}`,
             `alcaldia_quibdo_report_${cleanDoc}_${informeNro}`,
             `alcaldia_quibdo_report_${informeNro}`,
             `informe_data_${contractorDoc}_${informeNro}`,
             `informe_data_${cleanDoc}_${informeNro}`,
+            `informe_data_${informeNro}`,
             `cert_data_${contractorDoc}_${informeNro}`,
             `cert_data_${cleanDoc}_${informeNro}`,
             `cert_data_${informeNro}`,
@@ -2617,7 +2638,11 @@ export const supabaseService = {
             `desembolso_${cleanDoc}_${informeNro}`,
             `desembolso_${informeNro}`,
             `notified_approved_${contractorDoc}_${informeNro}`,
-            `notified_approved_${cleanDoc}_${informeNro}`
+            `notified_approved_${cleanDoc}_${informeNro}`,
+            `informe_comments_${contractorDoc}_${informeNro}`,
+            `informe_comments_${cleanDoc}_${informeNro}`,
+            `informe_comentarios_${contractorDoc}_${informeNro}`,
+            `informe_comentarios_${cleanDoc}_${informeNro}`
           ];
 
           if (reportId) {

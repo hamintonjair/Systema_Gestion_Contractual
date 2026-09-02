@@ -560,7 +560,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
       // Eliminar de Supabase cualquier borrador duplicado con este mismo número
       const existingReportWithSameNro = reportsList.find(r => parseInt(r.informeNro || '0', 10) === parseInt(newInformeNro || '0', 10));
-      if (existingReportWithSameNro && existingReportWithSameNro.id && existingReportWithSameNro.id.includes('-')) {
+      if (existingReportWithSameNro && existingReportWithSameNro.id) {
         await supabaseService.deleteFullInforme(
           existingReportWithSameNro.id,
           newInformeNro,
