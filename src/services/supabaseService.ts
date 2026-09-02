@@ -143,17 +143,27 @@ const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[
 };
 
 // Helpers para codificar/decodificar observaciones, comentarios por campo y texto de certificación sin requerir migraciones de BD
-const parseObservacionesAndComments = (rawObs?: string): { cleanObs: string; comments: Record<string, FieldComment>; valorPagarText?: string } => {
+const parseObservacionesAndComments = (rawObs?: string): { 
+  cleanObs: string; 
+  comments: Record<string, FieldComment>; 
+  valorPagarText?: string;
+  plazoText?: string;
+  valorMensualText?: string;
+} => {
   if (!rawObs) return { cleanObs: '', comments: {} };
   let current = rawObs;
   let comments: Record<string, FieldComment> = {};
   let valorPagarText: string | undefined;
+  let plazoText: string | undefined;
+  let valorMensualText: string | undefined;
 
   // 1. Extraer __COMMENTS_JSON__: si existe (independientemente de su posición)
-  if (current.includes('__COMMENTS_JSON__:')) {
-    const idx = current.indexOf('__COMMENTS_JSON__:');
-    const afterComments = current.slice(idx + '__COMMENTS_JSON__:'.length);
-    const rawJson = afterComments.split('__VALOR_PAGAR__:')[0].trim();
+  if (current.includes('__COMMENTS_JSON__ :') || current.includes('__COMMENTS_JSON__:')) {
+    const isSpaced = current.includes('__COMMENTS_JSON__ :');
+    const marker = isSpaced ? '__COMMENTS_JSON__ :' : '__COMMENTS_JSON__:';
+    const idx = current.indexOf(marker);
+    const afterComments = current.slice(idx + marker.length);
+    const rawJson = afterComments.split('__VALOR_PAGAR__:')[0].split('__PLAZO__:')[0].split('__VALOR_MENSUAL__:')[0].trim();
     try {
       comments = JSON.parse(rawJson);
     } catch (e) {
@@ -161,7 +171,19 @@ const parseObservacionesAndComments = (rawObs?: string): { cleanObs: string; com
     }
     // Remover __COMMENTS_JSON__ del string manteniendo cualquier otro marcador
     const before = current.slice(0, idx);
-    const extra = afterComments.includes('__VALOR_PAGAR__:') ? '__VALOR_PAGAR__:' + afterComments.split('__VALOR_PAGAR__:')[1] : '';
+    let extra = '';
+    if (afterComments.includes('__VALOR_PAGAR__:')) {
+      const parts = afterComments.split('__VALOR_PAGAR__:');
+      extra += '\n\n__VALOR_PAGAR__:' + parts[1];
+    }
+    if (afterComments.includes('__PLAZO__:')) {
+      const parts = afterComments.split('__PLAZO__:');
+      extra += '\n\n__PLAZO__:' + parts[1];
+    }
+    if (afterComments.includes('__VALOR_MENSUAL__:')) {
+      const parts = afterComments.split('__VALOR_MENSUAL__:');
+      extra += '\n\n__VALOR_MENSUAL__:' + parts[1];
+    }
     current = (before + extra).trim();
   }
 
@@ -169,7 +191,7 @@ const parseObservacionesAndComments = (rawObs?: string): { cleanObs: string; com
   if (current.includes('__VALOR_PAGAR__:')) {
     const idx = current.indexOf('__VALOR_PAGAR__:');
     const afterVp = current.slice(idx + '__VALOR_PAGAR__:'.length);
-    const rawVp = afterVp.split('__COMMENTS_JSON__:')[0].trim();
+    const rawVp = afterVp.split('__COMMENTS_JSON__:')[0].split('__PLAZO__:')[0].split('__VALOR_MENSUAL__:')[0].trim();
     try {
       valorPagarText = decodeURIComponent(rawVp);
     } catch (e) {
@@ -178,13 +200,51 @@ const parseObservacionesAndComments = (rawObs?: string): { cleanObs: string; com
     current = current.slice(0, idx).trim();
   }
 
-  return { cleanObs: current.trim(), comments, valorPagarText };
+  // 3. Extraer __PLAZO__: si existe
+  if (current.includes('__PLAZO__:')) {
+    const idx = current.indexOf('__PLAZO__:');
+    const afterPl = current.slice(idx + '__PLAZO__:'.length);
+    const rawPl = afterPl.split('__COMMENTS_JSON__:')[0].split('__VALOR_PAGAR__:')[0].split('__VALOR_MENSUAL__:')[0].trim();
+    try {
+      plazoText = decodeURIComponent(rawPl);
+    } catch (e) {
+      plazoText = rawPl;
+    }
+    current = current.slice(0, idx).trim();
+  }
+
+  // 4. Extraer __VALOR_MENSUAL__: si existe
+  if (current.includes('__VALOR_MENSUAL__:')) {
+    const idx = current.indexOf('__VALOR_MENSUAL__:');
+    const afterVm = current.slice(idx + '__VALOR_MENSUAL__:'.length);
+    const rawVm = afterVm.split('__COMMENTS_JSON__:')[0].split('__VALOR_PAGAR__:')[0].split('__PLAZO__:')[0].trim();
+    try {
+      valorMensualText = decodeURIComponent(rawVm);
+    } catch (e) {
+      valorMensualText = rawVm;
+    }
+    current = current.slice(0, idx).trim();
+  }
+
+  return { cleanObs: current.trim(), comments, valorPagarText, plazoText, valorMensualText };
 };
 
-const buildObservacionesWithComments = (cleanObs: string, comments?: Record<string, FieldComment>, valorPagarText?: string): string => {
+const buildObservacionesWithComments = (
+  cleanObs: string, 
+  comments?: Record<string, FieldComment>, 
+  valorPagarText?: string,
+  plazoText?: string,
+  valorMensualText?: string
+): string => {
   let baseObs = cleanObs || '';
   if (valorPagarText && valorPagarText.trim()) {
     baseObs = `${baseObs}\n\n__VALOR_PAGAR__:${encodeURIComponent(valorPagarText.trim())}`;
+  }
+  if (plazoText && plazoText.trim()) {
+    baseObs = `${baseObs}\n\n__PLAZO__:${encodeURIComponent(plazoText.trim())}`;
+  }
+  if (valorMensualText && valorMensualText.trim()) {
+    baseObs = `${baseObs}\n\n__VALOR_MENSUAL__:${encodeURIComponent(valorMensualText.trim())}`;
   }
   if (comments && Object.keys(comments).length > 0) {
     return `${baseObs}\n\n__COMMENTS_JSON__:${JSON.stringify(comments)}`;
@@ -1741,7 +1801,7 @@ export const supabaseService = {
             imagenUrl: a.imagen_url || '',
           }));
 
-        const { cleanObs, comments: obsComments, valorPagarText } = parseObservacionesAndComments(row.observaciones);
+        const { cleanObs, comments: obsComments, valorPagarText, plazoText, valorMensualText } = parseObservacionesAndComments(row.observaciones);
         let dbComments = (row.comentarios_campos && typeof row.comentarios_campos === 'object' && Object.keys(row.comentarios_campos).length > 0)
           ? row.comentarios_campos
           : ((obsComments && typeof obsComments === 'object' && Object.keys(obsComments).length > 0) ? obsComments : null);
@@ -1798,6 +1858,7 @@ export const supabaseService = {
           apoyoSupervisionNombre: row.contratos?.apoyo_supervision_nombre || 'N/A',
           apoyoSupervisionDocumento: row.contratos?.apoyo_supervision_documento || 'N/A',
           valorContrato: formatColombianCurrency(row.contratos?.valor_contrato || '20029800'),
+          valorMensual: valorMensualText || storedData?.valorMensual || '',
           valorAdicion: formatValorAdicion(row.valor_adicion),
           contratoNro: row.contratos?.contrato_nro || '015',
           objeto: row.contratos?.objeto || '',
@@ -1805,7 +1866,7 @@ export const supabaseService = {
           crpNro: row.contratos?.crp_nro || '191',
           polizaNro: row.contratos?.poliza_nro || 'N/A',
           fechaPoliza: formatDateSlash(row.contratos?.fecha_aprobacion_poliza || 'N/A'),
-          plazo: formatPlazoLetraYNumero(`${row.contratos?.plazo_meses || 6} MESES`),
+          plazo: formatPlazoLetraYNumero(plazoText || storedData?.plazo || (row.contratos?.plazo_meses ? `${row.contratos.plazo_meses} MESES` : 'SEIS(6) MESES')),
           fechaInicio: formatDateSlash(row.contratos?.fecha_inicio || '15/01/2026'),
           fechaTerminacion: formatDateSlash(row.contratos?.fecha_terminacion || '14/07/2026'),
           modificaciones: row.modificaciones_contrato || 'N/A',
@@ -1927,7 +1988,7 @@ export const supabaseService = {
                 imagenUrl: a.imagen_url || '',
               }));
 
-            const { cleanObs, comments: obsComments, valorPagarText } = parseObservacionesAndComments(row.observaciones);
+            const { cleanObs, comments: obsComments, valorPagarText, plazoText, valorMensualText } = parseObservacionesAndComments(row.observaciones);
             let dbComments = (row.comentarios_campos && typeof row.comentarios_campos === 'object' && Object.keys(row.comentarios_campos).length > 0)
               ? row.comentarios_campos
               : ((obsComments && typeof obsComments === 'object' && Object.keys(obsComments).length > 0) ? obsComments : null);
@@ -1986,6 +2047,7 @@ export const supabaseService = {
               apoyoSupervisionNombre: row.contratos?.apoyo_supervision_nombre || 'N/A',
               apoyoSupervisionDocumento: row.contratos?.apoyo_supervision_documento || 'N/A',
               valorContrato: formatColombianCurrency(row.contratos?.valor_contrato || '20029800'),
+              valorMensual: valorMensualText || storedData?.valorMensual || '',
               valorAdicion: formatValorAdicion(row.valor_adicion),
               contratoNro: row.contratos?.contrato_nro || '015',
               objeto: row.contratos?.objeto || '',
@@ -1993,7 +2055,7 @@ export const supabaseService = {
               crpNro: row.contratos?.crp_nro || '191',
               polizaNro: row.contratos?.poliza_nro || 'N/A',
               fechaPoliza: formatDateSlash(row.contratos?.fecha_aprobacion_poliza || 'N/A'),
-              plazo: storedData?.plazo ? formatPlazoLetraYNumero(storedData.plazo) : (row.contratos?.plazo_meses ? formatPlazoLetraYNumero(`${row.contratos.plazo_meses} MESES`) : 'SEIS(6) MESES'),
+              plazo: formatPlazoLetraYNumero(plazoText || storedData?.plazo || (row.contratos?.plazo_meses ? `${row.contratos.plazo_meses} MESES` : 'SEIS(6) MESES')),
               fechaInicio: formatDateSlash(row.contratos?.fecha_inicio || '15/01/2026'),
               fechaTerminacion: formatDateSlash(row.contratos?.fecha_terminacion || '14/07/2026'),
               modificaciones: row.modificaciones_contrato || 'N/A',
@@ -2133,7 +2195,7 @@ export const supabaseService = {
 
       const contractorDoc = report.contratistaDocumento || user?.documentoIdentidad;
       const cleanObsText = report.observaciones !== undefined && report.observaciones !== null ? report.observaciones : '';
-      const fullObsPayload = buildObservacionesWithComments(cleanObsText, report.comentariosCampos, report.valorPagar);
+      const fullObsPayload = buildObservacionesWithComments(cleanObsText, report.comentariosCampos, report.valorPagar, report.plazo, report.valorMensual);
 
       const parsedValorPagar = limpiarNumeroMoneda(report.valorPagar) || 3338300;
 
@@ -2383,8 +2445,8 @@ export const supabaseService = {
           .eq('id', reportId)
           .maybeSingle();
 
-        const { cleanObs, valorPagarText } = parseObservacionesAndComments(currentReport?.observaciones);
-        const newObsWithComments = buildObservacionesWithComments(cleanObs, comments, valorPagarText);
+        const { cleanObs, valorPagarText, plazoText, valorMensualText } = parseObservacionesAndComments(currentReport?.observaciones);
+        const newObsWithComments = buildObservacionesWithComments(cleanObs, comments, valorPagarText, plazoText, valorMensualText);
 
         const updatePayload: any = { 
           observaciones: newObsWithComments,

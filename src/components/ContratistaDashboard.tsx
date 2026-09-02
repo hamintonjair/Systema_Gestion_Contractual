@@ -441,7 +441,8 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     return dateStr;
   };
 
-  const existingValorMensual = reportsList.find(r => r.valorMensual)?.valorMensual || user.valorMensual;
+  const firstReport = reportsList.find(r => String(r.informeNro) === '1');
+  const existingValorMensual = firstReport?.valorMensual || reportsList.find(r => r.valorMensual)?.valorMensual || user.valorMensual;
 
   // Crear nuevo informe con lógica de Precarga Inteligente (Primer Informe vs. Siguientes)
   const handleCreateNewReport = async (e: React.FormEvent) => {

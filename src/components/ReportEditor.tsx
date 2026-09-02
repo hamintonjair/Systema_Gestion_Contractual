@@ -175,8 +175,8 @@ export default function ReportEditor({
     const vTotal = data.valorContrato || '$ 16.200.000';
     let vMensual = data.valorMensual || '';
     
-    // Si el valor mensual no está configurado o tiene el valor de muestra ($ 3.338.300) que no coincide con el contrato actual
-    if ((!vMensual || vMensual === '$ 3.338.300') && data.valorContrato) {
+    // Si el valor mensual no está configurado, calcularlo dinámicamente
+    if (!vMensual && data.valorContrato) {
       const vTotalNum = limpiarNumeroMoneda(data.valorContrato);
       if (vTotalNum === 16200000) {
         vMensual = '$ 3.600.000';
