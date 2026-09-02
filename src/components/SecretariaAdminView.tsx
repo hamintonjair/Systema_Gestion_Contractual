@@ -284,7 +284,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevaCedula, setNuevaCedula] = useState('');
   const [nuevoCorreo, setNuevoCorreo] = useState('');
-  const [nuevaPassword, setNuevaPassword] = useState('Contratista2026*');
+  const [nuevaPassword, setNuevaPassword] = useState('');
   const [nuevoTelefono, setNuevoTelefono] = useState('');
   const [nuevoBarrio, setNuevoBarrio] = useState('');
   const [nuevoCargo, setNuevoCargo] = useState('Contratista de Prestación de Servicios');
@@ -378,14 +378,14 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
 
   const handleCreateContractorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoNombre || !nuevaCedula || !nuevoCorreo || !nuevaPassword) return;
+    if (!nuevoNombre || !nuevaCedula || !nuevoCorreo) return;
 
     setLoading(true);
     const result = await supabaseService.createContractor({
       nombreCompleto: nuevoNombre,
       documentoIdentidad: nuevaCedula,
       email: nuevoCorreo,
-      password: nuevaPassword,
+      password: nuevaPassword.trim() || 'Contratista2026*',
       telefono: nuevoTelefono,
       barrio: nuevoBarrio,
       direccion: nuevoBarrio,
@@ -410,7 +410,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       setNuevoNombre('');
       setNuevaCedula('');
       setNuevoCorreo('');
-      setNuevaPassword('Contratista2026*');
+      setNuevaPassword('');
       setNuevoTelefono('');
       setNuevoBarrio('');
       setNuevoCargo('Contratista de Prestación de Servicios');
@@ -427,7 +427,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     setEditNombre(c.nombreCompleto || '');
     setEditCedula(c.documentoIdentidad || '');
     setEditCorreo(c.email || '');
-    setEditPassword(c.password || 'Contratista2026*');
+    setEditPassword('');
     setEditTelefono(c.telefono || '');
     setEditBarrio(c.barrio || c.direccion || '');
     setEditCargo(c.cargo || 'Contratista de Prestación de Servicios');
@@ -446,7 +446,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       nombreCompleto: editNombre,
       documentoIdentidad: editCedula,
       email: editCorreo,
-      password: editPassword,
+      password: editPassword.trim() || undefined,
       telefono: editTelefono,
       barrio: editBarrio,
       direccion: editBarrio,
@@ -1607,13 +1607,13 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Contraseña Inicial de Acceso *</label>
+                    <label className="block font-semibold text-gray-700 mb-1">Contraseña Inicial de Acceso</label>
                     <input
                       type="text"
-                      required
+                      placeholder="ej. Escribe la contraseña de acceso"
                       value={nuevaPassword}
                       onChange={(e) => setNuevaPassword(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg p-2.5 font-mono font-bold text-emerald-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
+                      className="w-full border border-gray-300 rounded-lg p-2.5 font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
                     />
                   </div>
 
@@ -2234,8 +2234,8 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                   type="text"
                   value={editPassword}
                   onChange={(e) => setEditPassword(e.target.value)}
-                  placeholder="Contratista2026*"
-                  className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-xs focus:ring-2 focus:ring-amber-500 font-mono font-bold text-gray-800"
+                  placeholder="Dejar en blanco para mantener la clave actual"
+                  className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-xs focus:ring-2 focus:ring-amber-500 font-mono text-gray-800"
                 />
                 <p className="text-[11px] text-amber-800 mt-1">
                   Deja la contraseña actual o escribe una nueva para cambiar las credenciales de ingreso del contratista.
