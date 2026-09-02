@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { AuthUser, InformeSummary, EstadoInforme, ReportData, FieldComment, createDefaultCertificadoData, CertificadoSupervisionData } from '../types';
+import { AuthUser, UserRole, InformeSummary, EstadoInforme, ReportData, FieldComment, createDefaultCertificadoData, CertificadoSupervisionData } from '../types';
 import { supabaseService } from '../services/supabaseService';
 import { supabase } from '../lib/supabase';
-import { formatFechaAplicacion, formatDateSlash } from '../utils/formatters';
+import { formatFechaAplicacion, formatDateSlash, formatColombianCurrency } from '../utils/formatters';
 import { isMainReportComment } from '../utils/commentUtils';
 import CertificadoSupervisionDoc from './CertificadoSupervisionDoc';
 import SoporteFiduciariaDoc from './SoporteFiduciariaDoc';
@@ -43,6 +43,8 @@ import {
   Check,
   Trash2,
   Edit,
+  FileEdit,
+  X,
   Shield,
   ShieldCheck,
   Layers,
@@ -58,9 +60,10 @@ interface Props {
   user: AuthUser;
   onSelectInformeToView: (informe: InformeSummary) => void;
   onPrintInforme: (informe: InformeSummary) => void;
+  onGoToContractorDashboard?: () => void;
 }
 
-export default function SecretariaAdminView({ user, onSelectInformeToView, onPrintInforme }: Props) {
+export default function SecretariaAdminView({ user, onSelectInformeToView, onPrintInforme, onGoToContractorDashboard }: Props) {
   const [activeTab, setActiveTab] = useState<'informes' | 'aprobados' | 'contratistas'>('informes');
   
   // Informes State
@@ -76,10 +79,16 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
   // Contratistas Pagination State
   const [currentPageContractors, setCurrentPageContractors] = useState(1);
   const [pageSizeContractors, setPageSizeContractors] = useState(10);
+  const [contractorSearchTerm, setContractorSearchTerm] = useState('');
+  const [contractorRoleFilter, setContractorRoleFilter] = useState<string>('todos');
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter]);
+
+  useEffect(() => {
+    setCurrentPageContractors(1);
+  }, [contractorSearchTerm, contractorRoleFilter]);
 
   // Contratistas State
   const [contractors, setContractors] = useState<AuthUser[]>([]);
@@ -285,6 +294,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Form New Contractor (Solo datos de usuario y credenciales)
+  const [nuevoRol, setNuevoRol] = useState<UserRole>('contratista');
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevaCedula, setNuevaCedula] = useState('');
   const [nuevoCorreo, setNuevoCorreo] = useState('');
@@ -292,12 +302,13 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
   const [nuevoTelefono, setNuevoTelefono] = useState('');
   const [nuevoBarrio, setNuevoBarrio] = useState('');
   const [nuevoCargo, setNuevoCargo] = useState('Contratista de Prestación de Servicios');
-  const [nuevoNumeroCuenta, setNuevoNumeroCuenta] = useState('53686186829');
-  const [nuevoBanco, setNuevoBanco] = useState('BANCOLOMBIA');
+  const [nuevoNumeroCuenta, setNuevoNumeroCuenta] = useState('');
+  const [nuevoBanco, setNuevoBanco] = useState('');
   const [nuevoTipoCuenta, setNuevoTipoCuenta] = useState('AHORRO');
   const [nuevaCiudad, setNuevaCiudad] = useState('CHOCÓ');
 
   // Form Edit Contractor
+  const [editRol, setEditRol] = useState<UserRole>('contratista');
   const [editNombre, setEditNombre] = useState('');
   const [editCedula, setEditCedula] = useState('');
   const [editCorreo, setEditCorreo] = useState('');
@@ -385,19 +396,21 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     if (!nuevoNombre || !nuevaCedula || !nuevoCorreo) return;
 
     setLoading(true);
+    const assignedPassword = nuevaPassword.trim() || undefined;
     const result = await supabaseService.createContractor({
+      role: nuevoRol,
       nombreCompleto: nuevoNombre,
       documentoIdentidad: nuevaCedula,
       email: nuevoCorreo,
-      password: nuevaPassword.trim() || 'Contratista2026*',
+      password: assignedPassword,
       telefono: nuevoTelefono,
       barrio: nuevoBarrio,
       direccion: nuevoBarrio,
-      cargo: nuevoCargo || 'Contratista de Prestación de Servicios',
-      numeroCuenta: nuevoNumeroCuenta,
-      banco: nuevoBanco,
+      cargo: nuevoCargo || (nuevoRol === 'secretaria_admin' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios'),
+      numeroCuenta: nuevoNumeroCuenta || undefined,
+      banco: nuevoBanco || undefined,
       tipoCuenta: nuevoTipoCuenta,
-      ciudad: nuevaCiudad,
+      ciudad: nuevaCiudad || 'CHOCÓ',
       contratoNro: '',
       secretariaId: user.secretariaId || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
       secretariaNombre: user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social',
@@ -411,6 +424,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       setContractors(updated);
       setShowAddContractorModal(false);
       // Reset form
+      setNuevoRol('contratista');
       setNuevoNombre('');
       setNuevaCedula('');
       setNuevoCorreo('');
@@ -418,27 +432,28 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       setNuevoTelefono('');
       setNuevoBarrio('');
       setNuevoCargo('Contratista de Prestación de Servicios');
-      setNuevoNumeroCuenta('53686186829');
-      setNuevoBanco('BANCOLOMBIA');
+      setNuevoNumeroCuenta('');
+      setNuevoBanco('');
       setNuevoTipoCuenta('AHORRO');
       setNuevaCiudad('CHOCÓ');
     } else {
-      alert(result.error || 'Ocurrió un error al crear el contratista. Por favor, intenta de nuevo.');
+      alert(result.error || 'Ocurrió un error al crear el usuario. Por favor, intenta de nuevo.');
     }
     setLoading(false);
   };
 
   const handleOpenEditModal = (c: AuthUser) => {
     setEditingContractor(c);
+    setEditRol(c.role || 'contratista');
     setEditNombre(c.nombreCompleto || '');
     setEditCedula(c.documentoIdentidad || '');
     setEditCorreo(c.email || '');
-    setEditPassword('');
+    setEditPassword(c.password || '');
     setEditTelefono(c.telefono || '');
     setEditBarrio(c.barrio || c.direccion || '');
-    setEditCargo(c.cargo || 'Contratista de Prestación de Servicios');
-    setEditNumeroCuenta(c.numeroCuenta || '53686186829');
-    setEditBanco(c.banco || 'BANCOLOMBIA');
+    setEditCargo(c.cargo || (c.role === 'secretaria_admin' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios'));
+    setEditNumeroCuenta(c.numeroCuenta || '');
+    setEditBanco(c.banco || '');
     setEditTipoCuenta(c.tipoCuenta || 'AHORRO');
     setEditCiudad(c.ciudad || 'CHOCÓ');
   };
@@ -449,6 +464,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
 
     setLoading(true);
     await supabaseService.updateContractor(editingContractor.id, {
+      role: editRol,
       nombreCompleto: editNombre,
       documentoIdentidad: editCedula,
       email: editCorreo,
@@ -486,13 +502,14 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
 
   const handleCopyCredentials = (c: AuthUser) => {
     const credText = `🏛️ ALCALDÍA DE QUIBDÓ - CREDENCIALES DE ACCESO
-Contratista: ${c.nombreCompleto}
+Usuario / Funcionario: ${c.nombreCompleto}
 Cédula: ${c.documentoIdentidad}
+Rol: ${c.role === 'secretaria_admin' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista'}
 Secretaría: ${c.secretariaNombre || user.secretariaNombre}
-Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratista'}
+Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vinculado'}
 
 🔐 Usuario / Correo: ${c.email}
-🔑 Contraseña: ${c.password || 'Contratista2026*'}`;
+🔑 Contraseña: ${c.password ? c.password : 'Protegida en Base de Datos (Ingreso con Cédula o clave registrada)'}`;
 
     navigator.clipboard.writeText(credText);
     setCopiedId(c.id);
@@ -808,12 +825,31 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
   const endIndex = Math.min(startIndex + pageSize, filteredInformes.length);
   const paginatedInformes = filteredInformes.slice(startIndex, startIndex + pageSize);
 
+  // Filtrado de Contratistas por Búsqueda y Rol
+  const filteredContractors = contractors.filter(c => {
+    const term = contractorSearchTerm.trim().toLowerCase();
+    const matchesSearch = !term || (
+      (c.nombreCompleto && c.nombreCompleto.toLowerCase().includes(term)) ||
+      (c.documentoIdentidad && c.documentoIdentidad.toLowerCase().includes(term)) ||
+      (c.email && c.email.toLowerCase().includes(term)) ||
+      (c.contratoNro && c.contratoNro.toLowerCase().includes(term)) ||
+      (c.telefono && c.telefono.toLowerCase().includes(term)) ||
+      (c.cargo && c.cargo.toLowerCase().includes(term))
+    );
+
+    const matchesRole = 
+      contractorRoleFilter === 'todos' || 
+      (c.role || 'contratista') === contractorRoleFilter;
+
+    return matchesSearch && matchesRole;
+  });
+
   // Paginación de Contratistas
-  const totalContractors = contractors.length;
+  const totalContractors = filteredContractors.length;
   const totalPagesContractors = Math.ceil(totalContractors / pageSizeContractors) || 1;
   const validCurrentPageContractors = Math.min(currentPageContractors, totalPagesContractors);
   const startIndexContractors = (validCurrentPageContractors - 1) * pageSizeContractors;
-  const paginatedContractors = contractors.slice(startIndexContractors, startIndexContractors + pageSizeContractors);
+  const paginatedContractors = filteredContractors.slice(startIndexContractors, startIndexContractors + pageSizeContractors);
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
@@ -829,7 +865,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
             {user.secretariaNombre || 'Secretaría de Inclusión y Cohesión Social'}
           </h2>
           <p className="text-xs text-gray-600 mt-1">
-            Supervisor(a): <strong className="text-gray-900">{user.nombreCompleto}</strong> (C.C. {user.documentoIdentidad}) • {user.cargo || 'Secretaria de Despacho'}
+            Supervisor(a): <strong className="text-gray-900">{user.nombreCompleto}</strong> (C.C. {user.documentoIdentidad}) • {user.cargo || 'Supervisor / Apoyo a la Supervisión'}
           </p>
         </div>
 
@@ -844,6 +880,39 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
           </div>
         </div>
       </div>
+
+      {/* Acceso Rápido al Módulo de Contratista Personal para el Supervisor */}
+      {onGoToContractorDashboard && (
+        <div className="bg-gradient-to-r from-emerald-900 via-[#006b33] to-emerald-950 text-white p-4 sm:p-5 rounded-2xl border border-emerald-700 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-300 shrink-0">
+              <FileText size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white">
+                  ¿Deseas radicar tu propia cuenta de cobro mensual?
+                </h3>
+                <span className="text-[10px] uppercase font-extrabold bg-amber-400 text-gray-950 px-2 py-0.5 rounded-full">
+                  Módulo Contratista
+                </span>
+              </div>
+              <p className="text-xs text-emerald-100/90 mt-0.5 leading-relaxed">
+                Como supervisor(a) y contratista de la administración, dispones de todos los módulos personales: informe mensual de cumplimiento, fotografías de soporte y formato de cobro.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onGoToContractorDashboard}
+            className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-gray-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <FileEdit size={15} />
+            <span>Mis Informes y Cuenta de Cobro</span>
+          </button>
+        </div>
+      )}
 
       {/* Selector de Pestañas Principales */}
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 rounded-xl shadow-xs">
@@ -1400,9 +1469,75 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
             </button>
           </div>
 
-          {/* Listado de Tarjetas de Contratistas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {paginatedContractors.map((c) => (
+          {/* Barra de Búsqueda y Filtros de Contratistas */}
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="relative w-full sm:w-96">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre, cédula, correo, contrato o cargo..."
+                value={contractorSearchTerm}
+                onChange={(e) => setContractorSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-9 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+              {contractorSearchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setContractorSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                  title="Limpiar búsqueda"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <div className="flex items-center gap-2">
+                <Filter size={15} className="text-gray-500" />
+                <span className="text-xs font-medium text-gray-700">Rol:</span>
+                <select
+                  value={contractorRoleFilter}
+                  onChange={(e) => setContractorRoleFilter(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white font-medium"
+                >
+                  <option value="todos">Todos los roles ({contractors.length})</option>
+                  <option value="contratista">Solo Contratistas ({contractors.filter(c => (c.role || 'contratista') === 'contratista').length})</option>
+                  <option value="secretaria_admin">Solo Supervisores ({contractors.filter(c => c.role === 'secretaria_admin').length})</option>
+                </select>
+              </div>
+
+              <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                {filteredContractors.length} {filteredContractors.length === 1 ? 'usuario' : 'usuarios'}
+              </span>
+            </div>
+          </div>
+
+          {/* Listado de Tarjetas de Contratistas o Estado Vacío */}
+          {filteredContractors.length === 0 ? (
+            <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center">
+              <Users size={36} className="mx-auto text-gray-300 mb-2" />
+              <h4 className="font-bold text-gray-700 text-sm">No se encontraron contratistas o usuarios</h4>
+              <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+                {contractorSearchTerm || contractorRoleFilter !== 'todos'
+                  ? `No hay coincidencias para el filtro aplicado. Intenta con otro término o restablece los filtros.`
+                  : 'Aún no hay contratistas vinculados a esta secretaría.'}
+              </p>
+              {(contractorSearchTerm || contractorRoleFilter !== 'todos') && (
+                <button
+                  onClick={() => {
+                    setContractorSearchTerm('');
+                    setContractorRoleFilter('todos');
+                  }}
+                  className="mt-3 px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg text-xs font-bold transition-colors"
+                >
+                  Restablecer búsqueda y filtros
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {paginatedContractors.map((c) => (
               <div 
                 key={c.id} 
                 className="bg-white rounded-xl border border-gray-200 shadow-xs p-5 hover:border-emerald-500 transition-all flex flex-col justify-between space-y-4"
@@ -1410,17 +1545,28 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`w-2.5 h-2.5 rounded-full ${c.role === 'secretaria_admin' ? 'bg-blue-600' : 'bg-emerald-500'}`}></span>
                         <h4 className="font-bold text-gray-900 text-sm">{c.nombreCompleto}</h4>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          c.role === 'secretaria_admin'
+                            ? 'bg-blue-100 text-blue-900 border-blue-300'
+                            : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                        }`}>
+                          {c.role === 'secretaria_admin' ? '🔍 Supervisor / Apoyo' : '📝 Contratista'}
+                        </span>
                       </div>
                       <p className="text-xs text-gray-500 font-mono mt-0.5">
                         C.C. {c.documentoIdentidad} • Tel. {c.telefono || 'Sin teléfono'}
                       </p>
                     </div>
 
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono">
-                      {c.contratoNro ? `Contrato #${c.contratoNro}` : 'Contrato por registrar'}
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold font-mono border ${
+                      c.contratoNro
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-gray-100 text-gray-600 border-gray-200'
+                    }`}>
+                      {c.contratoNro ? `Contrato #${c.contratoNro}` : 'Sin Contrato'}
                     </span>
                   </div>
 
@@ -1430,7 +1576,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                       <span className="flex items-center gap-1.5 font-sans font-semibold text-[11px] text-gray-500">
                         <Mail size={13} className="text-emerald-700" /> Correo:
                       </span>
-                      <span className="text-gray-900 font-semibold">{c.email}</span>
+                      <span className="text-gray-900 font-semibold">{c.email || 'Sin correo registrado'}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-gray-700">
@@ -1438,36 +1584,50 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                         <KeyRound size={13} className="text-amber-600" /> Contraseña:
                       </span>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-900">
-                          {visiblePasswords[c.id] ? (c.password || 'Contratista2026*') : '••••••••••••'}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => togglePasswordVisibility(c.id)}
-                          className="text-gray-400 hover:text-gray-700"
-                          title="Mostrar/Ocultar contraseña"
-                        >
-                          {visiblePasswords[c.id] ? <EyeOff size={13} /> : <Eye size={13} />}
-                        </button>
+                        {c.password ? (
+                          <>
+                            <span className="font-bold text-gray-900">
+                              {visiblePasswords[c.id] ? c.password : '••••••••••••'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => togglePasswordVisibility(c.id)}
+                              className="text-gray-400 hover:text-gray-700 p-0.5 rounded hover:bg-gray-200 transition-colors"
+                              title="Mostrar/Ocultar contraseña"
+                            >
+                              {visiblePasswords[c.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-[10px] font-sans text-gray-600 bg-white px-2 py-0.5 rounded border border-gray-200 flex items-center gap-1 font-medium shadow-2xs">
+                            <Shield size={11} className="text-emerald-600" /> Protegida en BD
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Datos de Rol / Contrato */}
-                  <div className="mt-3 space-y-1 text-xs text-gray-600">
+                  <div className="mt-3 space-y-1.5 text-xs text-gray-600">
                     <p className="line-clamp-2 text-[11px] leading-relaxed text-gray-700">
                       <span className="font-semibold text-gray-900">Cargo / Función: </span>
-                      {c.cargo || c.objetoContrato || 'Contratista de Prestación de Servicios'}
+                      {c.cargo || c.objetoContrato || (c.role === 'secretaria_admin' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios')}
                     </p>
-                    <div className="pt-2 flex flex-wrap gap-2 text-[11px]">
-                      {c.valorContrato && (
-                        <span className="bg-emerald-50 px-2 py-0.5 rounded text-emerald-900 font-semibold">
-                          Valor: {c.valorContrato}
+                    <div className="pt-1 flex flex-wrap items-center gap-2 text-[11px]">
+                      {c.valorContrato && Number(c.valorContrato.toString().replace(/[^0-9]/g, '')) > 0 ? (
+                        <span className="bg-emerald-50 px-2 py-0.5 rounded text-emerald-900 font-semibold border border-emerald-200">
+                          Valor: {formatColombianCurrency(c.valorContrato)}
+                        </span>
+                      ) : null}
+                      {c.contratoNro ? (
+                        <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-700 font-medium border border-gray-200">
+                          Contrato Nro. {c.contratoNro}
+                        </span>
+                      ) : (
+                        <span className="bg-gray-50 text-gray-500 px-2 py-0.5 rounded text-[10px] border border-gray-200">
+                          Sin contrato vinculado
                         </span>
                       )}
-                      <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600">
-                        {c.contratoNro ? `Contrato Nro. ${c.contratoNro}` : 'Detalles contractuales gestionados por el contratista'}
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -1528,7 +1688,8 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
 
               </div>
             ))}
-          </div>
+            </div>
+          )}
           
           {/* Paginación de Contratistas */}
           {totalPagesContractors > 1 && (
@@ -1624,12 +1785,78 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Selector de Rol */}
                   <div className="sm:col-span-2">
-                    <label className="block font-semibold text-gray-700 mb-1">Nombre Completo del Contratista *</label>
+                    <label className="block font-semibold text-gray-800 mb-1.5">
+                      Tipo de Perfil / Rol en la Plataforma *
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                        nuevoRol === 'contratista'
+                          ? 'border-emerald-600 bg-emerald-50/90 text-emerald-950 font-bold shadow-xs'
+                          : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="nuevoRol"
+                          value="contratista"
+                          checked={nuevoRol === 'contratista'}
+                          onChange={() => {
+                            setNuevoRol('contratista');
+                            if (nuevoCargo === 'Supervisor / Apoyo a la Supervisión' || !nuevoCargo) {
+                              setNuevoCargo('Contratista de Prestación de Servicios');
+                            }
+                          }}
+                          className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                            <span>📝 Contratista</span>
+                          </div>
+                          <p className="text-[11px] font-normal text-gray-600 mt-0.5 leading-snug">
+                            Diligencia informes mensuales, sube evidencias fotográficas y radica cuentas de cobro.
+                          </p>
+                        </div>
+                      </label>
+
+                      <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                        nuevoRol === 'secretaria_admin'
+                          ? 'border-blue-600 bg-blue-50/90 text-blue-950 font-bold shadow-xs'
+                          : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="nuevoRol"
+                          value="secretaria_admin"
+                          checked={nuevoRol === 'secretaria_admin'}
+                          onChange={() => {
+                            setNuevoRol('secretaria_admin');
+                            if (nuevoCargo === 'Contratista de Prestación de Servicios' || !nuevoCargo) {
+                              setNuevoCargo('Supervisor / Apoyo a la Supervisión');
+                            }
+                          }}
+                          className="mt-0.5 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900">
+                            <span>🔍 Supervisor / Apoyo (Doble Rol)</span>
+                          </div>
+                          <p className="text-[11px] font-normal text-gray-600 mt-0.5 leading-snug">
+                            Revisa informes de contratistas de la secretaría y <strong>mantiene sus módulos de contratista</strong> para crear su propia cuenta de cobro mensual.
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold text-gray-700 mb-1">
+                      {nuevoRol === 'secretaria_admin' ? 'Nombre Completo del Supervisor / Apoyo *' : 'Nombre Completo del Contratista *'}
+                    </label>
                     <input
                       type="text"
                       required
-                      placeholder="ej. JUAN CARLOS MURILLO CÓRDOBA"
+                      placeholder={nuevoRol === 'secretaria_admin' ? 'ej. MARÍA ELENA PALACIOS RENTERÍA' : 'ej. JUAN CARLOS MURILLO CÓRDOBA'}
                       value={nuevoNombre}
                       onChange={(e) => setNuevoNombre(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg p-2.5 font-bold uppercase focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
@@ -2113,9 +2340,73 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar por el contratist
             </div>
 
             <form onSubmit={handleUpdateContractorSubmit} className="mt-4 space-y-4">
+              {/* Selector de Rol */}
+              <div>
+                <label className="block text-xs font-bold text-gray-800 mb-1.5">
+                  Tipo de Perfil / Rol en la Plataforma <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <label className={`flex items-start gap-2.5 p-2.5 rounded-xl border-2 cursor-pointer transition-all ${
+                    editRol === 'contratista'
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-xs'
+                      : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="editRol"
+                      value="contratista"
+                      checked={editRol === 'contratista'}
+                      onChange={() => {
+                        setEditRol('contratista');
+                        if (editCargo === 'Supervisor / Apoyo a la Supervisión' || !editCargo) {
+                          setEditCargo('Contratista de Prestación de Servicios');
+                        }
+                      }}
+                      className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div>
+                      <div className="flex items-center gap-1 text-xs font-bold text-emerald-900">
+                        <span>📝 Contratista</span>
+                      </div>
+                      <p className="text-[10px] font-normal text-gray-500 leading-tight mt-0.5">
+                        Diligencia y radica informes mensuales.
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className={`flex items-start gap-2.5 p-2.5 rounded-xl border-2 cursor-pointer transition-all ${
+                    editRol === 'secretaria_admin'
+                      ? 'border-blue-600 bg-blue-50 text-blue-950 font-bold shadow-xs'
+                      : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="editRol"
+                      value="secretaria_admin"
+                      checked={editRol === 'secretaria_admin'}
+                      onChange={() => {
+                        setEditRol('secretaria_admin');
+                        if (editCargo === 'Contratista de Prestación de Servicios' || !editCargo) {
+                          setEditCargo('Supervisor / Apoyo a la Supervisión');
+                        }
+                      }}
+                      className="mt-0.5 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="flex items-center gap-1 text-xs font-bold text-blue-900">
+                        <span>🔍 Supervisor / Apoyo (Doble Rol)</span>
+                      </div>
+                      <p className="text-[10px] font-normal text-gray-600 leading-tight mt-0.5">
+                        Revisa informes y mantiene sus módulos de contratista para su cuenta de cobro.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Nombre Completo del Contratista <span className="text-red-500">*</span>
+                  Nombre Completo <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"

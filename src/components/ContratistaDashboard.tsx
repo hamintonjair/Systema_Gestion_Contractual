@@ -54,11 +54,12 @@ interface Props {
   onOpenReportEditor: (report: ReportData) => void;
   onDirectPrint: (report: ReportData) => void;
   onUserUpdated?: (user: AuthUser) => void;
+  onGoToAdminView?: () => void;
 }
 
 export type ContratistaModuleTab = 'informe' | 'supervision' | 'fiduciaria' | 'juramento' | 'desembolso' | 'orden';
 
-export default function ContratistaDashboard({ user, onOpenReportEditor, onDirectPrint, onUserUpdated }: Props) {
+export default function ContratistaDashboard({ user, onOpenReportEditor, onDirectPrint, onUserUpdated, onGoToAdminView }: Props) {
   const [activeModuleTab, setActiveModuleTab] = useState<ContratistaModuleTab>('informe');
   const moduleTabsRef = React.useRef<HTMLDivElement>(null);
   const scrollModuleTabs = (dir: 'left' | 'right') => {
@@ -788,6 +789,39 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       
+      {/* Banner de Acceso Rápido al Rol de Supervisor (Si el usuario tiene rol secretaria_admin o super_admin) */}
+      {(user.role === 'secretaria_admin' || user.role === 'super_admin') && onGoToAdminView && (
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-white p-4 sm:p-5 rounded-2xl border border-blue-500/40 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 shrink-0">
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-extrabold bg-blue-400 text-blue-950 px-2 py-0.5 rounded-full">
+                  Rol Activo: Supervisor
+                </span>
+                <h3 className="text-sm font-bold text-white">
+                  {user.secretariaNombre || 'Secretaría Asignada'}
+                </h3>
+              </div>
+              <p className="text-xs text-blue-100/80 mt-0.5 leading-relaxed">
+                Estás visualizando tus <strong>módulos personales de contratista</strong> (cuenta de cobro e informes). Para revisar informes de los contratistas de tu secretaría, ingresa al panel de supervisión.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onGoToAdminView}
+            className="px-4 py-2.5 bg-blue-500 hover:bg-blue-400 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <Building size={15} />
+            <span>Ir a Panel de Supervisión Secretaría →</span>
+          </button>
+        </div>
+      )}
+
       {/* Banner Principal del Contratista */}
       <div className="relative z-20 bg-gradient-to-br from-[#00381a] via-[#005226] to-[#012612] text-white p-6 sm:p-8 rounded-2xl border border-emerald-800 shadow-xl">
         {/* Franja Superior Tricolor */}

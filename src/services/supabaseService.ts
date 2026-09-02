@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData, Obligacion, Notificacion, extractContratoNroOnly } from '../types';
+import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, UserRole, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData, Obligacion, Notificacion, extractContratoNroOnly } from '../types';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, parsePlazoComponents, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
 import { isMainReportComment } from '../utils/commentUtils';
 import { limpiarNumeroMoneda, formatearNumeroTablaCol } from '../utils/paymentPlanUtils';
@@ -701,21 +701,21 @@ export const supabaseService = {
     }
   },
 
-  // 4. Obtener Contratistas en Tiempo Real de Supabase
+  // 4. Obtener Contratistas y Supervisores en Tiempo Real de Supabase
   async getContractors(secretariaId?: string): Promise<AuthUser[]> {
     let contractorsFromDb: AuthUser[] = [];
     try {
       let { data, error } = await supabase
         .from('profiles')
         .select('*, sec_secretarias(*), contratos(*)')
-        .eq('role', 'contratista')
+        .in('role', ['contratista', 'secretaria_admin'])
         .order('created_at', { ascending: false });
 
       if (error || !data || data.length === 0) {
         const fallback = await supabase
           .from('profiles')
           .select('*, contratos(*)')
-          .eq('role', 'contratista');
+          .in('role', ['contratista', 'secretaria_admin']);
         if (!fallback.error && fallback.data) {
           data = fallback.data;
           error = null;
@@ -726,27 +726,29 @@ export const supabaseService = {
         contractorsFromDb = data.map((row: any) => {
           const doc = row.documento_identidad || '';
           const mail = row.email || '';
-          const pass = this.getUserPassword(mail) || this.getUserPassword(doc) || 'Contratista2026*';
+          const userRole = (row.role as any) || 'contratista';
+          // Obtener la contraseña asignada si fue guardada previamente; si no, dejar vacío para indicar que está protegida en Auth
+          const pass = this.getUserPassword(mail) || this.getUserPassword(doc) || '';
           const cont = Array.isArray(row.contratos) ? row.contratos[0] : row.contratos;
 
           return {
             id: row.id,
             email: mail,
             password: pass,
-            nombreCompleto: row.nombre_completo || 'CONTRATISTA REGISTRADO',
+            nombreCompleto: row.nombre_completo || 'USUARIO REGISTRADO',
             documentoIdentidad: doc,
-            role: 'contratista' as const,
+            role: userRole,
             secretariaId: row.secretaria_id || '',
             secretariaNombre: row.sec_secretarias?.nombre || '',
             secretariaCodigo: row.sec_secretarias?.codigo || '',
-            cargo: row.cargo || 'Contratista de Prestación de Servicios',
+            cargo: row.cargo || (userRole === 'secretaria_admin' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios'),
             telefono: row.telefono || '',
             barrio: row.direccion || '',
             direccion: row.direccion || '',
-            numeroCuenta: cont?.numero_cuenta || '53686186829',
-            banco: cont?.banco || 'BANCOLOMBIA',
+            numeroCuenta: cont?.numero_cuenta || '',
+            banco: cont?.banco || '',
             tipoCuenta: cont?.tipo_cuenta || 'AHORRO',
-            ciudad: cont?.ciudad || 'CHOCÓ',
+            ciudad: cont?.ciudad || '',
             contratoNro: cont?.contrato_nro || '',
             objetoContrato: cont?.objeto || '',
             valorContrato: cont?.valor_contrato ? String(cont.valor_contrato) : '',
@@ -778,7 +780,7 @@ export const supabaseService = {
 
     const stored = localStorage.getItem(STORAGE_USERS_KEY);
     const customUsers: AuthUser[] = stored ? JSON.parse(stored) : [];
-    const localContractors = customUsers.filter(u => u.role === 'contratista');
+    const localContractors = customUsers.filter(u => u.role === 'contratista' || u.role === 'secretaria_admin');
     localContractors.forEach(c => {
       const key = (c.documentoIdentidad || c.email || c.id).replace(/\./g, '').trim().toLowerCase();
       if (key) {
@@ -806,16 +808,17 @@ export const supabaseService = {
     return allContractors;
   },
 
-  // 5. Crear Contratista en Supabase (Tabla 'profiles')
+  // 5. Crear Contratista o Supervisor en Supabase (Tabla 'profiles')
   async createContractor(
-    contractorData: Omit<AuthUser, 'id' | 'role'>
+    contractorData: Omit<AuthUser, 'id'> | (Omit<AuthUser, 'id' | 'role'> & { role?: UserRole })
   ): Promise<{ success: boolean; data: AuthUser; error?: string }> {
     const rawEmail = contractorData.email.trim();
     const rawDoc = contractorData.documentoIdentidad.trim().replace(/\./g, '');
-    const pass = contractorData.password?.trim() || 'Contratista2026*';
+    const userRole: UserRole = (contractorData as any).role || 'contratista';
+    const pass = contractorData.password?.trim() || (userRole === 'secretaria_admin' ? 'Supervisor2026*' : 'Contratista2026*');
     const fullName = contractorData.nombreCompleto.trim().toUpperCase();
     const phone = contractorData.telefono?.trim() || '';
-    const cargo = contractorData.cargo?.trim() || 'Contratista de Prestación de Servicios';
+    const cargo = contractorData.cargo?.trim() || (userRole === 'secretaria_admin' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios');
 
     // Resolver UUID real de la secretaría
     const secUuid = await this.resolveSecretariaUuid(contractorData.secretariaId || contractorData.secretariaCodigo || contractorData.secretariaNombre);
@@ -835,7 +838,7 @@ export const supabaseService = {
       console.warn('Notice checking existing profile:', e);
     }
 
-    let createdId: string = `usr-contratista-${Date.now()}`;
+    let createdId: string = `usr-${userRole}-${Date.now()}`;
     let dbErrorMsg: string | undefined;
 
     if (existingProfile) {
@@ -843,6 +846,7 @@ export const supabaseService = {
       createdId = existingProfile.id;
       try {
         const updatePayload: any = {
+          role: userRole,
           nombre_completo: fullName,
           telefono: phone,
           direccion: contractorData.direccion || contractorData.barrio || '',
@@ -867,7 +871,7 @@ export const supabaseService = {
       
       const profilePayload: any = {
         id: finalUserId,
-        role: 'contratista',
+        role: userRole,
         nombre_completo: fullName,
         documento_identidad: rawDoc,
         email: rawEmail,
@@ -897,107 +901,112 @@ export const supabaseService = {
       }
     }
 
-    // 2. Crear o actualizar contrato vinculado en la tabla 'contratos' de Supabase
-    try {
-      const cleanNumeric = (val?: string | number): number => {
-        if (typeof val === 'number') return val;
-        if (!val) return 20029800;
-        const cleaned = val.toString().replace(/[^0-9]/g, '');
-        return parseInt(cleaned, 10) || 20029800;
-      };
-
-      const parseDateForPg = (dateStr?: string, defaultDate: string = '2026-01-15'): string | null => {
-        if (!dateStr || dateStr === 'N/A') return null;
-        if (dateStr.includes('/')) {
-          const parts = dateStr.split('/');
-          if (parts.length === 3) {
-            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-          }
-        }
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-        return defaultDate;
-      };
-
-      const validContratistaId = (createdId && isUuid(createdId)) ? createdId : null;
-      const secId = await this.resolveSecretariaUuid(contractorData.secretariaId, contractorData.secretariaNombre);
-      const contratoNro = contractorData.contratoNro || '015';
-
-      // Buscar si ya existe contrato registrado para evitar 409 Conflict
-      let existingContrato: any = null;
+    // 2. Crear o actualizar contrato vinculado en la tabla 'contratos' de Supabase (SOLO si se proporcionaron datos de contrato)
+    if (contractorData.contratoNro || contractorData.valorContrato || contractorData.objetoContrato) {
       try {
-        if (validContratistaId) {
-          const { data: cData } = await supabase
+        const cleanNumeric = (val?: string | number): number | null => {
+          if (typeof val === 'number') return val;
+          if (!val) return null;
+          const cleaned = val.toString().replace(/[^0-9]/g, '');
+          const parsed = parseInt(cleaned, 10);
+          return isNaN(parsed) ? null : parsed;
+        };
+
+        const parseDateForPg = (dateStr?: string): string | null => {
+          if (!dateStr || dateStr === 'N/A') return null;
+          if (dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+              return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+          }
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+          return null;
+        };
+
+        const validContratistaId = (createdId && isUuid(createdId)) ? createdId : null;
+        const secId = await this.resolveSecretariaUuid(contractorData.secretariaId, contractorData.secretariaNombre);
+        const contratoNro = contractorData.contratoNro ? contractorData.contratoNro.trim() : null;
+
+        // Buscar si ya existe contrato registrado
+        let existingContrato: any = null;
+        try {
+          if (validContratistaId) {
+            const { data: cData } = await supabase
+              .from('contratos')
+              .select('id')
+              .eq('contratista_id', validContratistaId)
+              .limit(1);
+            if (cData && cData.length > 0) {
+              existingContrato = cData[0];
+            }
+          }
+          if (!existingContrato && contratoNro) {
+            const { data: cDataNro } = await supabase
+              .from('contratos')
+              .select('id')
+              .eq('contrato_nro', contratoNro)
+              .limit(1);
+            if (cDataNro && cDataNro.length > 0) {
+              existingContrato = cDataNro[0];
+            }
+          }
+        } catch (cCheckErr) {
+          console.warn('Notice checking existing contrato:', cCheckErr);
+        }
+
+        const contratoPayload: any = {
+          contratista_id: validContratistaId,
+          secretaria_id: secId,
+          contrato_nro: contratoNro || '',
+          objeto: contractorData.objetoContrato || '',
+          valor_contrato: cleanNumeric(contractorData.valorContrato),
+          cdp_nro: contractorData.cdpNro || null,
+          crp_nro: contractorData.crpNro || null,
+          poliza_nro: contractorData.polizaNro && contractorData.polizaNro !== 'N/A' ? contractorData.polizaNro : null,
+          fecha_aprobacion_poliza: parseDateForPg((contractorData as any).fechaPoliza),
+          plazo_meses: (contractorData as any).plazoMeses ? Number((contractorData as any).plazoMeses) : null,
+          fecha_inicio: parseDateForPg(contractorData.fechaInicio),
+          fecha_terminacion: parseDateForPg(contractorData.fechaTerminacion),
+          supervisor_nombre: contractorData.supervisorNombre || null,
+          supervisor_documento: contractorData.supervisorDocumento || null,
+          apoyo_supervision_nombre: contractorData.apoyoSupervisionNombre && contractorData.apoyoSupervisionNombre !== 'N/A' ? contractorData.apoyoSupervisionNombre : null,
+          apoyo_supervision_documento: contractorData.apoyoSupervisionDocumento && contractorData.apoyoSupervisionDocumento !== 'N/A' ? contractorData.apoyoSupervisionDocumento : null,
+          numero_cuenta: contractorData.numeroCuenta || null,
+          banco: contractorData.banco || null,
+          tipo_cuenta: contractorData.tipoCuenta || 'AHORRO',
+          ciudad: contractorData.ciudad || null,
+          vigencia: 2026,
+        };
+
+        if (existingContrato) {
+          await supabase
             .from('contratos')
-            .select('id')
-            .eq('contratista_id', validContratistaId)
-            .limit(1);
-          if (cData && cData.length > 0) {
-            existingContrato = cData[0];
+            .update(contratoPayload)
+            .eq('id', existingContrato.id);
+        } else {
+          const { error: cErr } = await supabase
+            .from('contratos')
+            .insert([contratoPayload]);
+          if (cErr) {
+            console.warn('Contrato insert warning:', cErr.message);
           }
         }
-        if (!existingContrato && contractorData.contratoNro) {
-          const { data: cDataNro } = await supabase
-            .from('contratos')
-            .select('id')
-            .eq('contrato_nro', contractorData.contratoNro)
-            .limit(1);
-          if (cDataNro && cDataNro.length > 0) {
-            existingContrato = cDataNro[0];
-          }
-        }
-      } catch (cCheckErr) {
-        console.warn('Notice checking existing contrato:', cCheckErr);
+      } catch (e) {
+        console.warn('Notice creating initial contract:', e);
       }
-
-      const contratoPayload: any = {
-        contratista_id: validContratistaId,
-        secretaria_id: secId,
-        contrato_nro: contratoNro,
-        objeto: contractorData.objetoContrato || 'PRESTAR LOS SERVICIOS PROFESIONALES Y DE APOYO A LA GESTIÓN EN EL MUNICIPIO DE QUIBDÓ.',
-        valor_contrato: cleanNumeric(contractorData.valorContrato),
-        cdp_nro: contractorData.cdpNro || '137',
-        crp_nro: contractorData.crpNro || '191',
-        poliza_nro: contractorData.polizaNro && contractorData.polizaNro !== 'N/A' ? contractorData.polizaNro : null,
-        fecha_aprobacion_poliza: parseDateForPg((contractorData as any).fechaPoliza, '2026-01-15'),
-        plazo_meses: 6,
-        fecha_inicio: parseDateForPg(contractorData.fechaInicio, '2026-01-15') || '2026-01-15',
-        fecha_terminacion: parseDateForPg(contractorData.fechaTerminacion, '2026-07-14') || '2026-07-14',
-        supervisor_nombre: contractorData.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA',
-        supervisor_documento: contractorData.supervisorDocumento || '35.602.521',
-        apoyo_supervision_nombre: contractorData.apoyoSupervisionNombre && contractorData.apoyoSupervisionNombre !== 'N/A' ? contractorData.apoyoSupervisionNombre : null,
-        apoyo_supervision_documento: contractorData.apoyoSupervisionDocumento && contractorData.apoyoSupervisionDocumento !== 'N/A' ? contractorData.apoyoSupervisionDocumento : null,
-        numero_cuenta: contractorData.numeroCuenta || '53686186829',
-        banco: contractorData.banco || 'BANCOLOMBIA',
-        tipo_cuenta: contractorData.tipoCuenta || 'AHORRO',
-        ciudad: contractorData.ciudad || 'CHOCÓ',
-        vigencia: 2026,
-      };
-
-      if (existingContrato) {
-        await supabase
-          .from('contratos')
-          .update(contratoPayload)
-          .eq('id', existingContrato.id);
-      } else {
-        const { error: cErr } = await supabase
-          .from('contratos')
-          .insert([contratoPayload]);
-        if (cErr) {
-          console.warn('Contrato insert warning:', cErr.message);
-        }
-      }
-    } catch (e) {
-      console.warn('Notice creating initial contract:', e);
     }
 
-    // 3. Guardar credenciales para inicio de sesión
-    this.saveUserPassword(rawEmail, pass);
-    this.saveUserPassword(rawDoc, pass);
+    // 3. Guardar credenciales para inicio de sesión si se definió contraseña
+    if (pass) {
+      this.saveUserPassword(rawEmail, pass);
+      this.saveUserPassword(rawDoc, pass);
+    }
 
     const newContractor: AuthUser = {
       ...contractorData,
       id: createdId,
-      role: 'contratista',
+      role: userRole,
       password: pass,
       nombreCompleto: fullName,
       email: rawEmail,
@@ -1139,6 +1148,7 @@ export const supabaseService = {
       if (rawDoc) profileUpdatePayload.documento_identidad = rawDoc;
       if (rawEmail) profileUpdatePayload.email = rawEmail;
       if (phone !== undefined) profileUpdatePayload.telefono = phone;
+      if (updateData.role) profileUpdatePayload.role = updateData.role;
       if (updateData.direccion !== undefined || updateData.barrio !== undefined) {
         profileUpdatePayload.direccion = updateData.direccion || updateData.barrio || '';
       }

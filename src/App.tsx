@@ -545,14 +545,15 @@ export default function App() {
       {/* CUERPO PRINCIPAL SEGÚN EL ROL Y LA VISTA ACTIVA */}
       <div className="flex-1 overflow-hidden flex flex-col print:overflow-visible">
         
-        {/* VISTA 1: DASHBOARD DEL CONTRATISTA (Gestión de todos sus informes) */}
-        {currentView === 'dashboard' && currentUser.role === 'contratista' && (
+        {/* VISTA 1: DASHBOARD DEL CONTRATISTA (Gestión de todos sus informes y cuentas de cobro personales) */}
+        {currentView === 'dashboard' && (
           <div className="flex-1 overflow-y-auto bg-gray-50 print:hidden">
             <ContratistaDashboard
               user={currentUser}
               onOpenReportEditor={handleOpenReportEditor}
               onDirectPrint={handleDirectPrint}
               onUserUpdated={handleUserUpdated}
+              onGoToAdminView={currentUser.role === 'secretaria_admin' || currentUser.role === 'super_admin' ? () => handleViewChange('admin') : undefined}
             />
           </div>
         )}
@@ -593,6 +594,7 @@ export default function App() {
               user={currentUser}
               onSelectInformeToView={handleSelectInformeToView}
               onPrintInforme={handlePrintFromAdmin}
+              onGoToContractorDashboard={() => handleViewChange('dashboard')}
             />
           </div>
         )}

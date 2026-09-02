@@ -110,8 +110,40 @@ export default function Navbar({
           {/* Navegación y Perfil de Usuario */}
           <div className="flex items-center gap-2 sm:gap-3">
             
-            {/* Botón para regresar a "Mis Informes" si el contratista está editando */}
-            {currentUser.role === 'contratista' && currentView === 'editor' && (
+            {/* Selector de Modo Rápido para Supervisores/Secretaría Admin (Contratista <-> Supervisión) */}
+            {currentUser.role === 'secretaria_admin' && (
+              <div className="hidden md:flex items-center bg-emerald-950/80 p-1 rounded-xl border border-emerald-700/60 shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => onViewChange('dashboard')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    currentView === 'dashboard' || (currentView === 'editor' && !hasUnsavedChanges)
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-emerald-300 hover:text-white hover:bg-emerald-900/60'
+                  }`}
+                  title="Gestiona tus propios informes mensuales, obligaciones y cuentas de cobro"
+                >
+                  <FileText size={14} />
+                  <span>Mis Cuentas de Cobro</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onViewChange('admin')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    currentView === 'admin'
+                      ? 'bg-[#006b33] text-white shadow-sm border border-emerald-400/40'
+                      : 'text-emerald-300 hover:text-white hover:bg-emerald-900/60'
+                  }`}
+                  title="Revisar informes de contratistas, observaciones y expedir certificados"
+                >
+                  <ShieldCheck size={14} />
+                  <span>Supervisión Secretaría</span>
+                </button>
+              </div>
+            )}
+
+            {/* Botón para regresar a "Mis Informes" si el usuario está editando */}
+            {currentView === 'editor' && (
               <button
                 onClick={() => onViewChange('dashboard')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-900/80 hover:bg-emerald-800 text-emerald-100 border border-emerald-700/60 transition-colors"
@@ -222,12 +254,52 @@ export default function Navbar({
 
                   {/* Opciones del Menú */}
                   <div className="p-1.5 space-y-1 border-b border-gray-100">
+                    {currentUser.role === 'secretaria_admin' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setShowUserDropdown(false);
+                            onViewChange('dashboard');
+                          }}
+                          className={`w-full px-3 py-2 text-left text-xs font-bold rounded-lg flex items-center gap-2 transition-colors ${
+                            currentView === 'dashboard'
+                              ? 'bg-emerald-100 text-emerald-950 font-black'
+                              : 'text-gray-800 hover:bg-emerald-50'
+                          }`}
+                        >
+                          <FileText size={15} className="text-emerald-700 shrink-0" />
+                          <div className="flex-1">
+                            <p className="leading-tight">Mis Cuentas de Cobro</p>
+                            <p className="text-[10px] font-normal text-gray-500">Módulos de contratista personales</p>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setShowUserDropdown(false);
+                            onViewChange('admin');
+                          }}
+                          className={`w-full px-3 py-2 text-left text-xs font-bold rounded-lg flex items-center gap-2 transition-colors ${
+                            currentView === 'admin'
+                              ? 'bg-emerald-100 text-emerald-950 font-black'
+                              : 'text-gray-800 hover:bg-emerald-50'
+                          }`}
+                        >
+                          <ShieldCheck size={15} className="text-emerald-700 shrink-0" />
+                          <div className="flex-1">
+                            <p className="leading-tight">Supervisión de Secretaría</p>
+                            <p className="text-[10px] font-normal text-gray-500">Revisión de contratistas y certificados</p>
+                          </div>
+                        </button>
+                      </>
+                    )}
+
                     <button
                       onClick={() => {
                         setShowUserDropdown(false);
                         setShowProfileModal(true);
                       }}
-                      className="w-full px-3 py-2 text-left text-xs font-bold text-emerald-900 hover:bg-emerald-50 rounded-lg flex items-center gap-2 transition-colors"
+                      className="w-full px-3 py-2 text-left text-xs font-bold text-gray-800 hover:bg-gray-100 rounded-lg flex items-center gap-2 transition-colors"
                     >
                       <User size={15} className="text-emerald-700" />
                       <span>Mi Perfil de Usuario</span>
