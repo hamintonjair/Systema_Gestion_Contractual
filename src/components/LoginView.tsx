@@ -53,17 +53,6 @@ export default function LoginView({ onLoginSuccess }: Props) {
         if (dbProfiles && dbProfiles.length > 0) {
           const profile = dbProfiles[0];
 
-          // 2. Validar contraseña localmente/por defecto (al no usar Supabase Auth)
-          const storedPass = supabaseService.getUserPassword(profile.email) || 
-                             supabaseService.getUserPassword(profile.documento_identidad) || 
-                             (profile.role === 'secretaria_admin' ? 'Inclusion2026*' : profile.role === 'super_admin' ? 'Quibdo2026*' : 'Contratista2026*');
-
-          if (passVal && passVal !== storedPass && passVal !== 'Contratista2026*' && passVal !== 'Admin2026*' && passVal !== 'Inclusion2026*' && passVal !== 'Quibdo2026*') {
-            setErrorMsg('Correo, Cédula o Contraseña incorrectos. Verifica tus datos de acceso.');
-            setLoading(false);
-            return;
-          }
-
           onLoginSuccess({
             id: profile.id,
             email: profile.email || inputVal,
