@@ -50,6 +50,7 @@ export interface AuthUser {
   fechaRegistroPresupuestal?: string;
   codigoRubro?: string;
   createdAt?: string;
+  isSyncedToDb?: boolean;
 }
 
 export const DEMO_USERS: AuthUser[] = [

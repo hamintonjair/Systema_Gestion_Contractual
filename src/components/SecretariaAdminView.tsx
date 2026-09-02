@@ -418,6 +418,8 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       setNuevoBanco('BANCOLOMBIA');
       setNuevoTipoCuenta('AHORRO');
       setNuevaCiudad('CHOCÓ');
+    } else {
+      alert(result.error || 'Ocurrió un error al crear el contratista. Por favor, intenta de nuevo.');
     }
     setLoading(false);
   };

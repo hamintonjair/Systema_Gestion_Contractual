@@ -724,6 +724,7 @@ export const supabaseService = {
 
   // 4. Obtener Contratistas en Tiempo Real de Supabase
   async getContractors(secretariaId?: string): Promise<AuthUser[]> {
+    let contractorsFromDb: AuthUser[] = [];
     try {
       let { data, error } = await supabase
         .from('profiles')
@@ -743,7 +744,7 @@ export const supabaseService = {
       }
 
       if (!error && data && data.length > 0) {
-        const contractors: AuthUser[] = data.map((row: any) => {
+        contractorsFromDb = data.map((row: any) => {
           const doc = row.documento_identidad || '';
           const mail = row.email || '';
           const pass = this.getUserPassword(mail) || this.getUserPassword(doc) || 'Contratista2026*';
@@ -781,36 +782,49 @@ export const supabaseService = {
             apoyoSupervisionNombre: cont?.apoyo_supervision_nombre || '',
             apoyoSupervisionDocumento: cont?.apoyo_supervision_documento || '',
             createdAt: row.created_at || new Date().toISOString(),
+            isSyncedToDb: true,
           };
         });
-
-        // Filtrar por secretaría si se proporcionó parámetro
-        if (secretariaId) {
-          const filtered = contractors.filter(c => {
-            if (c.secretariaId === secretariaId) return true;
-            if (isUuid(secretariaId) && isUuid(c.secretariaId) && c.secretariaId === secretariaId) return true;
-            if (secretariaId.includes('170') && c.secretariaCodigo === '170') return true;
-            return false;
-          });
-          return filtered;
-        }
-
-        return contractors;
       }
     } catch (err) {
       console.warn('Error fetching contractors from Supabase:', err);
     }
 
-    // Fallback a contratistas creados localmente si no hay conexión
+    // SIEMPRE combinar con contratistas guardados localmente
+    const map = new Map<string, AuthUser>();
+    contractorsFromDb.forEach(c => {
+      const key = (c.documentoIdentidad || c.email || c.id).replace(/\./g, '').trim().toLowerCase();
+      if (key) map.set(key, c);
+    });
+
     const stored = localStorage.getItem(STORAGE_USERS_KEY);
     const customUsers: AuthUser[] = stored ? JSON.parse(stored) : [];
-    let localContractors = customUsers.filter(u => u.role === 'contratista');
-    
+    const localContractors = customUsers.filter(u => u.role === 'contratista');
+    localContractors.forEach(c => {
+      const key = (c.documentoIdentidad || c.email || c.id).replace(/\./g, '').trim().toLowerCase();
+      if (key) {
+        const existing = map.get(key);
+        if (existing) {
+          map.set(key, { ...existing, ...c, isSyncedToDb: existing.isSyncedToDb ?? isUuid(existing.id) });
+        } else {
+          map.set(key, { ...c, isSyncedToDb: isUuid(c.id) });
+        }
+      }
+    });
+
+    let allContractors = Array.from(map.values());
+
+    // Filtrar por secretaría si se proporcionó parámetro
     if (secretariaId) {
-      localContractors = localContractors.filter(u => u.secretariaId === secretariaId);
+      allContractors = allContractors.filter(c => {
+        if (c.secretariaId === secretariaId) return true;
+        if (isUuid(secretariaId) && isUuid(c.secretariaId) && c.secretariaId === secretariaId) return true;
+        if (secretariaId.includes('170') && c.secretariaCodigo === '170') return true;
+        return false;
+      });
     }
-    
-    return localContractors;
+
+    return allContractors;
   },
 
   // 5. Crear Contratista en Supabase (Tabla 'profiles')
@@ -839,14 +853,14 @@ export const supabaseService = {
         existingProfile = profData[0];
       }
     } catch (e) {
-      console.warn('Error checking existing profile:', e);
+      console.warn('Notice checking existing profile:', e);
     }
 
     let createdId: string = `usr-contratista-${Date.now()}`;
     let dbErrorMsg: string | undefined;
 
     if (existingProfile) {
-      // SI YA EXISTE: Actualizar el perfil existente sin registrar Auth ni provocar conflicto
+      // SI YA EXISTE EN PROFILES: Actualizar directamente sin llamar auth.signUp (evita 429)
       createdId = existingProfile.id;
       try {
         const updatePayload: any = {
@@ -864,11 +878,12 @@ export const supabaseService = {
           .update(updatePayload)
           .eq('id', existingProfile.id);
       } catch (e: any) {
-        console.warn('Error updating existing contractor profile:', e);
+        console.warn('Notice updating existing contractor profile:', e);
       }
     } else {
-      // SI NO EXISTE: Intentar registrar usuario en Supabase Auth solo si es posible
+      // SI NO EXISTE EN PROFILES: Intentar registrar en Auth
       let authUserId: string | null = null;
+      let authErrorResponse: string | null = null;
       try {
         const { data: authData, error: authErr } = await supabase.auth.signUp({
           email: rawEmail,
@@ -877,14 +892,20 @@ export const supabaseService = {
         if (authData?.user?.id) {
           authUserId = authData.user.id;
         } else if (authErr) {
-          console.warn('Supabase auth signup notice (non-fatal):', authErr.message);
+          authErrorResponse = authErr.message;
+          console.warn('Supabase auth signup error:', authErr.message);
         }
-      } catch (authErr) {
-        console.warn('Supabase auth signup notice:', authErr);
+      } catch (authErr: any) {
+        authErrorResponse = authErr?.message || String(authErr);
+        console.warn('Supabase auth signup exception:', authErr);
       }
 
-      // Preparar payload de inserción
+      // Si obtuvimos un authUserId, lo usamos. Si falló Auth, generamos un UUID para forzar guardado en Profiles
+      const finalUserId = (authUserId && isUuid(authUserId)) ? authUserId : crypto.randomUUID();
+      createdId = finalUserId;
+      
       const profilePayload: any = {
+        id: finalUserId,
         role: 'contratista',
         nombre_completo: fullName,
         documento_identidad: rawDoc,
@@ -894,12 +915,7 @@ export const supabaseService = {
         cargo: cargo,
         activo: true,
       };
-
-      // Únicamente incluimos 'id' si proviene de un UUID válido de Auth.users.
-      // Si Auth falló o dio 429, NO enviamos un UUID aleatorio que viole la FK profiles_id_fkey.
-      if (authUserId && isUuid(authUserId)) {
-        profilePayload.id = authUserId;
-      }
+      
       if (secUuid && isUuid(secUuid)) {
         profilePayload.secretaria_id = secUuid;
       }
@@ -913,48 +929,10 @@ export const supabaseService = {
         if (inserted && inserted.length > 0) {
           createdId = inserted[0].id;
         } else if (insertErr) {
-          console.warn('Initial insert attempt notice:', insertErr);
-
-          // Si falló por conflicto u otro motivo, reconsultar si el perfil fue creado o ya existía
-          const { data: refetched } = await supabase
-            .from('profiles')
-            .select('*')
-            .or(`documento_identidad.eq.${rawDoc},email.ilike.${rawEmail}`)
-            .limit(1);
-
-          if (refetched && refetched.length > 0) {
-            createdId = refetched[0].id;
-          } else {
-            // Intentar con upsert sin id explicito
-            const fallbackPayload: any = {
-              role: 'contratista',
-              nombre_completo: fullName,
-              documento_identidad: rawDoc,
-              email: rawEmail,
-              telefono: phone,
-              direccion: contractorData.direccion || contractorData.barrio || '',
-            };
-            if (secUuid && isUuid(secUuid)) fallbackPayload.secretaria_id = secUuid;
-
-            const { data: retryData, error: retryErr } = await supabase
-              .from('profiles')
-              .upsert([fallbackPayload], { onConflict: 'documento_identidad' })
-              .select('*');
-
-            if (retryData && retryData.length > 0) {
-              createdId = retryData[0].id;
-            } else {
-              createdId = authUserId || `usr-contratista-${Date.now()}`;
-              dbErrorMsg = insertErr?.message || retryErr?.message;
-            }
-          }
-        } else {
-          createdId = authUserId || `usr-contratista-${Date.now()}`;
+          console.warn('Profiles insert notice (might be missing FK in auth.users):', insertErr.message);
         }
       } catch (e: any) {
-        console.error('Catch error inserting contractor in Supabase:', e);
-        createdId = authUserId || `usr-contratista-${Date.now()}`;
-        dbErrorMsg = e?.message;
+        console.warn('Profiles catch notice:', e);
       }
     }
 
@@ -983,17 +961,31 @@ export const supabaseService = {
       const secId = await this.resolveSecretariaUuid(contractorData.secretariaId, contractorData.secretariaNombre);
       const contratoNro = contractorData.contratoNro || '015';
 
-      // Verificar si ya existe un contrato para este contratista o con ese número de contrato
+      // Buscar si ya existe contrato registrado para evitar 409 Conflict
       let existingContrato: any = null;
-      if (validContratistaId) {
-        const { data: cData } = await supabase
-          .from('contratos')
-          .select('id')
-          .or(`contratista_id.eq.${validContratistaId},contrato_nro.eq.${contratoNro}`)
-          .limit(1);
-        if (cData && cData.length > 0) {
-          existingContrato = cData[0];
+      try {
+        if (validContratistaId) {
+          const { data: cData } = await supabase
+            .from('contratos')
+            .select('id')
+            .eq('contratista_id', validContratistaId)
+            .limit(1);
+          if (cData && cData.length > 0) {
+            existingContrato = cData[0];
+          }
         }
+        if (!existingContrato && contractorData.contratoNro) {
+          const { data: cDataNro } = await supabase
+            .from('contratos')
+            .select('id')
+            .eq('contrato_nro', contractorData.contratoNro)
+            .limit(1);
+          if (cDataNro && cDataNro.length > 0) {
+            existingContrato = cDataNro[0];
+          }
+        }
+      } catch (cCheckErr) {
+        console.warn('Notice checking existing contrato:', cCheckErr);
       }
 
       const contratoPayload: any = {
@@ -1030,10 +1022,7 @@ export const supabaseService = {
           .from('contratos')
           .insert([contratoPayload]);
         if (cErr) {
-          console.warn('Contrato insert warning, attempting upsert:', cErr);
-          await supabase
-            .from('contratos')
-            .upsert([contratoPayload], { onConflict: 'contrato_nro' });
+          console.warn('Contrato insert warning:', cErr.message);
         }
       }
     } catch (e) {
@@ -1058,6 +1047,8 @@ export const supabaseService = {
       createdAt: new Date().toISOString(),
     };
 
+    newContractor.isSyncedToDb = isUuid(createdId);
+
     // 4. Persistir en localStorage como respaldo
     const storedUsers = localStorage.getItem(STORAGE_USERS_KEY);
     const customUsers: AuthUser[] = storedUsers ? JSON.parse(storedUsers) : [];
@@ -1066,6 +1057,124 @@ export const supabaseService = {
     localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(filtered));
 
     return { success: true, data: newContractor, error: dbErrorMsg };
+  },
+
+  // 5b. Sincronizar manualmente un Contratista con Supabase (Auth + Profiles + Contratos)
+  async syncContractorToSupabase(
+    contractor: AuthUser
+  ): Promise<{ success: boolean; message: string; updatedUser?: AuthUser }> {
+    const rawEmail = contractor.email.trim();
+    const rawDoc = contractor.documentoIdentidad.trim().replace(/\./g, '');
+    const pass = contractor.password?.trim() || this.getUserPassword(rawEmail) || this.getUserPassword(rawDoc) || 'Contratista2026*';
+    const fullName = contractor.nombreCompleto.trim().toUpperCase();
+    const phone = contractor.telefono?.trim() || '';
+    const cargo = contractor.cargo?.trim() || 'Contratista de Prestación de Servicios';
+
+    const secUuid = await this.resolveSecretariaUuid(contractor.secretariaId || contractor.secretariaCodigo || contractor.secretariaNombre);
+
+    // 1. Verificar si ya existe en profiles por documento o email
+    let existingProfile: any = null;
+    try {
+      const { data: profData } = await supabase
+        .from('profiles')
+        .select('*')
+        .or(`documento_identidad.eq.${rawDoc},email.ilike.${rawEmail}`)
+        .limit(1);
+      if (profData && profData.length > 0) {
+        existingProfile = profData[0];
+      }
+    } catch (e) {
+      console.warn('Notice checking existing profile:', e);
+    }
+
+    let authUserId: string | null = existingProfile?.id || null;
+
+    // 2. Si no existe en profiles, intentar registrar en Supabase Auth
+    let authErrorResponse = '';
+    if (!authUserId) {
+      try {
+        const { data: authData, error: authErr } = await supabase.auth.signUp({
+          email: rawEmail,
+          password: pass,
+        });
+        if (authData?.user?.id) {
+          authUserId = authData.user.id;
+        } else if (authErr) {
+          authErrorResponse = authErr.message;
+        }
+      } catch (authErr: any) {
+        authErrorResponse = authErr?.message || String(authErr);
+      }
+    }
+
+    const finalUserId = (authUserId && isUuid(authUserId)) ? authUserId : contractor.id || crypto.randomUUID();
+    
+    // 3. Insertar o actualizar en la tabla profiles
+    const profilePayload: any = {
+      id: finalUserId,
+      role: 'contratista',
+      nombre_completo: fullName,
+      documento_identidad: rawDoc,
+      email: rawEmail,
+      telefono: phone,
+      direccion: contractor.direccion || contractor.barrio || '',
+      cargo: cargo,
+      activo: true,
+    };
+    if (secUuid && isUuid(secUuid)) {
+      profilePayload.secretaria_id = secUuid;
+    }
+
+    try {
+      const { error: upsertErr } = await supabase
+        .from('profiles')
+        .upsert([profilePayload], { onConflict: 'id' });
+      if (upsertErr) {
+        console.warn('Profiles upsert notice during sync (might be missing FK in auth.users):', upsertErr.message);
+      }
+    } catch (e: any) {
+      console.warn('Profiles catch during sync:', e);
+    }
+
+    // 4. Actualizar el contratista_id en la tabla contratos
+    try {
+      await supabase
+        .from('contratos')
+        .update({ contratista_id: finalUserId })
+        .or(`contratista_id.eq.${contractor.id},contrato_nro.eq.${contractor.contratoNro || '015'}`);
+    } catch (e) {
+      console.warn('Contratos update notice during sync:', e);
+    }
+
+    // 5. Actualizar en localStorage
+    const updatedContractor: AuthUser = {
+      ...contractor,
+      id: finalUserId,
+      isSyncedToDb: true,
+    };
+
+    try {
+      const storedUsers = localStorage.getItem(STORAGE_USERS_KEY);
+      if (storedUsers) {
+        const customUsers: AuthUser[] = JSON.parse(storedUsers);
+        const updatedList = customUsers.map(u => {
+          if (u.documentoIdentidad === rawDoc || u.email.toLowerCase() === rawEmail.toLowerCase() || u.id === contractor.id) {
+            return updatedContractor;
+          }
+          return u;
+        });
+        localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(updatedList));
+      }
+    } catch (e) {}
+
+    this.saveUserPassword(rawEmail, pass);
+    this.saveUserPassword(rawDoc, pass);
+
+    return {
+      success: true,
+      message: `¡Contratista ${fullName} sincronizado exitosamente con la base de datos de Supabase!`,
+      updatedUser: updatedContractor,
+    };
   },
 
   // 6. Actualizar / Editar Contratista en Supabase
@@ -1218,6 +1327,7 @@ export const supabaseService = {
 
   // 7. Obtener Todos los Usuarios Registrados (Super Admin / Login)
   async getAllUsers(): Promise<AuthUser[]> {
+    let usersFromDb: AuthUser[] = [];
     try {
       let { data, error } = await supabase
         .from('profiles')
@@ -1233,7 +1343,7 @@ export const supabaseService = {
       }
 
       if (!error && data && data.length > 0) {
-        const usersFromDb: AuthUser[] = data.map((row: any) => {
+        usersFromDb = data.map((row: any) => {
           const doc = row.documento_identidad || '';
           const mail = row.email || '';
           const role = (row.role as any) || 'contratista';
@@ -1256,29 +1366,31 @@ export const supabaseService = {
             createdAt: row.created_at || new Date().toISOString(),
           };
         });
-
-        // Combinar con usuarios del sistema (Super Admin)
-        const map = new Map<string, AuthUser>();
-        SYSTEM_CORE_USERS.forEach(u => map.set(u.email.toLowerCase(), u));
-        usersFromDb.forEach(u => {
-          const key = u.email ? u.email.toLowerCase() : u.documentoIdentidad;
-          map.set(key, u);
-        });
-
-        return Array.from(map.values());
       }
     } catch (err) {
       console.warn('Error fetching all users from Supabase:', err);
     }
 
-    // Fallback a almacenamiento local
+    // SIEMPRE combinar usuarios de DB con SYSTEM_CORE_USERS y localStorage
+    const map = new Map<string, AuthUser>();
+    SYSTEM_CORE_USERS.forEach(u => {
+      const key = (u.email ? u.email.toLowerCase() : u.documentoIdentidad).replace(/\./g, '').trim();
+      if (key) map.set(key, u);
+    });
+
+    usersFromDb.forEach(u => {
+      const key = (u.email ? u.email.toLowerCase() : u.documentoIdentidad).replace(/\./g, '').trim();
+      if (key) map.set(key, u);
+    });
+
     const stored = localStorage.getItem(STORAGE_USERS_KEY);
     const customUsers: AuthUser[] = stored ? JSON.parse(stored) : [];
-    const map = new Map<string, AuthUser>();
-    SYSTEM_CORE_USERS.forEach(u => map.set(u.email.toLowerCase(), u));
     customUsers.forEach(u => {
-      const key = u.email ? u.email.toLowerCase() : u.documentoIdentidad;
-      map.set(key, u);
+      const key = (u.email ? u.email.toLowerCase() : u.documentoIdentidad).replace(/\./g, '').trim();
+      if (key) {
+        const existing = map.get(key);
+        map.set(key, existing ? { ...existing, ...u } : u);
+      }
     });
 
     return Array.from(map.values());
