@@ -881,27 +881,9 @@ export const supabaseService = {
         console.warn('Notice updating existing contractor profile:', e);
       }
     } else {
-      // SI NO EXISTE EN PROFILES: Intentar registrar en Auth
-      let authUserId: string | null = null;
-      let authErrorResponse: string | null = null;
-      try {
-        const { data: authData, error: authErr } = await supabase.auth.signUp({
-          email: rawEmail,
-          password: pass,
-        });
-        if (authData?.user?.id) {
-          authUserId = authData.user.id;
-        } else if (authErr) {
-          authErrorResponse = authErr.message;
-          console.warn('Supabase auth signup error:', authErr.message);
-        }
-      } catch (authErr: any) {
-        authErrorResponse = authErr?.message || String(authErr);
-        console.warn('Supabase auth signup exception:', authErr);
-      }
-
-      // Si obtuvimos un authUserId, lo usamos. Si falló Auth, generamos un UUID para forzar guardado en Profiles
-      const finalUserId = (authUserId && isUuid(authUserId)) ? authUserId : crypto.randomUUID();
+      // SI NO EXISTE EN PROFILES: Insertamos directamente sin pasar por auth.users
+      // IMPORTANTE: Esto requiere haber eliminado la FK en la base de datos de Supabase.
+      const finalUserId = crypto.randomUUID();
       createdId = finalUserId;
       
       const profilePayload: any = {
@@ -1089,24 +1071,7 @@ export const supabaseService = {
 
     let authUserId: string | null = existingProfile?.id || null;
 
-    // 2. Si no existe en profiles, intentar registrar en Supabase Auth
-    let authErrorResponse = '';
-    if (!authUserId) {
-      try {
-        const { data: authData, error: authErr } = await supabase.auth.signUp({
-          email: rawEmail,
-          password: pass,
-        });
-        if (authData?.user?.id) {
-          authUserId = authData.user.id;
-        } else if (authErr) {
-          authErrorResponse = authErr.message;
-        }
-      } catch (authErr: any) {
-        authErrorResponse = authErr?.message || String(authErr);
-      }
-    }
-
+    // 2. Si no existe en profiles, insertamos directamente
     const finalUserId = (authUserId && isUuid(authUserId)) ? authUserId : contractor.id || crypto.randomUUID();
     
     // 3. Insertar o actualizar en la tabla profiles
