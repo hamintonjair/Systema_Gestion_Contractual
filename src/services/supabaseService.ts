@@ -827,26 +827,63 @@ export const supabaseService = {
     // Resolver UUID real de la secretaría
     const secUuid = await this.resolveSecretariaUuid(contractorData.secretariaId || contractorData.secretariaCodigo || contractorData.secretariaNombre);
 
-    // Intentar registrar usuario en Supabase Auth si es posible
-    let authUserId: string | null = null;
+    // 1. Verificar si ya existe un perfil en Supabase 'profiles' (por documento o email)
+    let existingProfile: any = null;
     try {
-      const { data: authData } = await supabase.auth.signUp({
-        email: rawEmail,
-        password: pass,
-      });
-      if (authData?.user?.id) {
-        authUserId = authData.user.id;
+      const { data: profData } = await supabase
+        .from('profiles')
+        .select('*')
+        .or(`documento_identidad.eq.${rawDoc},email.ilike.${rawEmail}`)
+        .limit(1);
+      if (profData && profData.length > 0) {
+        existingProfile = profData[0];
       }
-    } catch (authErr) {
-      console.warn('Supabase auth signup notice:', authErr);
+    } catch (e) {
+      console.warn('Error checking existing profile:', e);
     }
 
-    const newGeneratedId = authUserId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `usr-contratista-${Date.now()}`);
-    let createdId = newGeneratedId;
+    let createdId: string = `usr-contratista-${Date.now()}`;
     let dbErrorMsg: string | undefined;
 
-    try {
-      // Inserción en la tabla profiles con columnas reales existentes
+    if (existingProfile) {
+      // SI YA EXISTE: Actualizar el perfil existente sin registrar Auth ni provocar conflicto
+      createdId = existingProfile.id;
+      try {
+        const updatePayload: any = {
+          nombre_completo: fullName,
+          telefono: phone,
+          direccion: contractorData.direccion || contractorData.barrio || '',
+          cargo: cargo,
+          activo: true,
+        };
+        if (secUuid && isUuid(secUuid)) {
+          updatePayload.secretaria_id = secUuid;
+        }
+        await supabase
+          .from('profiles')
+          .update(updatePayload)
+          .eq('id', existingProfile.id);
+      } catch (e: any) {
+        console.warn('Error updating existing contractor profile:', e);
+      }
+    } else {
+      // SI NO EXISTE: Intentar registrar usuario en Supabase Auth solo si es posible
+      let authUserId: string | null = null;
+      try {
+        const { data: authData, error: authErr } = await supabase.auth.signUp({
+          email: rawEmail,
+          password: pass,
+        });
+        if (authData?.user?.id) {
+          authUserId = authData.user.id;
+        } else if (authErr) {
+          console.warn('Supabase auth signup notice (non-fatal):', authErr.message);
+        }
+      } catch (authErr) {
+        console.warn('Supabase auth signup notice:', authErr);
+      }
+
+      // Preparar payload de inserción
       const profilePayload: any = {
         role: 'contratista',
         nombre_completo: fullName,
@@ -858,54 +895,70 @@ export const supabaseService = {
         activo: true,
       };
 
-      if (isUuid(newGeneratedId)) {
-        profilePayload.id = newGeneratedId;
+      // Únicamente incluimos 'id' si proviene de un UUID válido de Auth.users.
+      // Si Auth falló o dio 429, NO enviamos un UUID aleatorio que viole la FK profiles_id_fkey.
+      if (authUserId && isUuid(authUserId)) {
+        profilePayload.id = authUserId;
       }
-
       if (secUuid && isUuid(secUuid)) {
         profilePayload.secretaria_id = secUuid;
       }
 
-      const { data: inserted, error: insertErr } = await supabase
-        .from('profiles')
-        .insert([profilePayload])
-        .select('*');
-
-      if (inserted && inserted.length > 0) {
-        createdId = inserted[0].id;
-      } else if (insertErr) {
-        console.warn('Initial insert attempt warning:', insertErr);
-
-        // Intento con payload simplificado por si alguna columna opcional no está presente
-        const fallbackPayload: any = {
-          role: 'contratista',
-          nombre_completo: fullName,
-          documento_identidad: rawDoc,
-          email: rawEmail,
-          telefono: phone,
-          direccion: contractorData.direccion || contractorData.barrio || '',
-        };
-        if (isUuid(newGeneratedId)) fallbackPayload.id = newGeneratedId;
-        if (secUuid && isUuid(secUuid)) fallbackPayload.secretaria_id = secUuid;
-
-        const { data: retryData, error: retryErr } = await supabase
+      try {
+        const { data: inserted, error: insertErr } = await supabase
           .from('profiles')
-          .upsert([fallbackPayload], { onConflict: 'documento_identidad' })
+          .insert([profilePayload])
           .select('*');
 
-        if (retryData && retryData.length > 0) {
-          createdId = retryData[0].id;
+        if (inserted && inserted.length > 0) {
+          createdId = inserted[0].id;
+        } else if (insertErr) {
+          console.warn('Initial insert attempt notice:', insertErr);
+
+          // Si falló por conflicto u otro motivo, reconsultar si el perfil fue creado o ya existía
+          const { data: refetched } = await supabase
+            .from('profiles')
+            .select('*')
+            .or(`documento_identidad.eq.${rawDoc},email.ilike.${rawEmail}`)
+            .limit(1);
+
+          if (refetched && refetched.length > 0) {
+            createdId = refetched[0].id;
+          } else {
+            // Intentar con upsert sin id explicito
+            const fallbackPayload: any = {
+              role: 'contratista',
+              nombre_completo: fullName,
+              documento_identidad: rawDoc,
+              email: rawEmail,
+              telefono: phone,
+              direccion: contractorData.direccion || contractorData.barrio || '',
+            };
+            if (secUuid && isUuid(secUuid)) fallbackPayload.secretaria_id = secUuid;
+
+            const { data: retryData, error: retryErr } = await supabase
+              .from('profiles')
+              .upsert([fallbackPayload], { onConflict: 'documento_identidad' })
+              .select('*');
+
+            if (retryData && retryData.length > 0) {
+              createdId = retryData[0].id;
+            } else {
+              createdId = authUserId || `usr-contratista-${Date.now()}`;
+              dbErrorMsg = insertErr?.message || retryErr?.message;
+            }
+          }
         } else {
-          dbErrorMsg = insertErr.message || retryErr?.message;
-          console.warn('Supabase profiles fallback notice:', dbErrorMsg);
+          createdId = authUserId || `usr-contratista-${Date.now()}`;
         }
+      } catch (e: any) {
+        console.error('Catch error inserting contractor in Supabase:', e);
+        createdId = authUserId || `usr-contratista-${Date.now()}`;
+        dbErrorMsg = e?.message;
       }
-    } catch (e: any) {
-      console.error('Catch error inserting contractor in Supabase:', e);
-      dbErrorMsg = e?.message;
     }
 
-    // 2. Crear contrato vinculado en la tabla 'contratos' de Supabase
+    // 2. Crear o actualizar contrato vinculado en la tabla 'contratos' de Supabase
     try {
       const cleanNumeric = (val?: string | number): number => {
         if (typeof val === 'number') return val;
@@ -928,32 +981,61 @@ export const supabaseService = {
 
       const validContratistaId = (createdId && isUuid(createdId)) ? createdId : null;
       const secId = await this.resolveSecretariaUuid(contractorData.secretariaId, contractorData.secretariaNombre);
+      const contratoNro = contractorData.contratoNro || '015';
 
-      await supabase
-        .from('contratos')
-        .insert([{
-          contratista_id: validContratistaId,
-          secretaria_id: secId,
-          contrato_nro: contractorData.contratoNro || '015',
-          objeto: contractorData.objetoContrato || 'PRESTAR LOS SERVICIOS PROFESIONALES Y DE APOYO A LA GESTIÓN EN EL MUNICIPIO DE QUIBDÓ.',
-          valor_contrato: cleanNumeric(contractorData.valorContrato),
-          cdp_nro: contractorData.cdpNro || '137',
-          crp_nro: contractorData.crpNro || '191',
-          poliza_nro: contractorData.polizaNro && contractorData.polizaNro !== 'N/A' ? contractorData.polizaNro : null,
-          fecha_aprobacion_poliza: parseDateForPg((contractorData as any).fechaPoliza, '2026-01-15'),
-          plazo_meses: 6,
-          fecha_inicio: parseDateForPg(contractorData.fechaInicio, '2026-01-15') || '2026-01-15',
-          fecha_terminacion: parseDateForPg(contractorData.fechaTerminacion, '2026-07-14') || '2026-07-14',
-          supervisor_nombre: contractorData.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA',
-          supervisor_documento: contractorData.supervisorDocumento || '35.602.521',
-          apoyo_supervision_nombre: contractorData.apoyoSupervisionNombre && contractorData.apoyoSupervisionNombre !== 'N/A' ? contractorData.apoyoSupervisionNombre : null,
-          apoyo_supervision_documento: contractorData.apoyoSupervisionDocumento && contractorData.apoyoSupervisionDocumento !== 'N/A' ? contractorData.apoyoSupervisionDocumento : null,
-          numero_cuenta: contractorData.numeroCuenta || '53686186829',
-          banco: contractorData.banco || 'BANCOLOMBIA',
-          tipo_cuenta: contractorData.tipoCuenta || 'AHORRO',
-          ciudad: contractorData.ciudad || 'CHOCÓ',
-          vigencia: 2026,
-        }]);
+      // Verificar si ya existe un contrato para este contratista o con ese número de contrato
+      let existingContrato: any = null;
+      if (validContratistaId) {
+        const { data: cData } = await supabase
+          .from('contratos')
+          .select('id')
+          .or(`contratista_id.eq.${validContratistaId},contrato_nro.eq.${contratoNro}`)
+          .limit(1);
+        if (cData && cData.length > 0) {
+          existingContrato = cData[0];
+        }
+      }
+
+      const contratoPayload: any = {
+        contratista_id: validContratistaId,
+        secretaria_id: secId,
+        contrato_nro: contratoNro,
+        objeto: contractorData.objetoContrato || 'PRESTAR LOS SERVICIOS PROFESIONALES Y DE APOYO A LA GESTIÓN EN EL MUNICIPIO DE QUIBDÓ.',
+        valor_contrato: cleanNumeric(contractorData.valorContrato),
+        cdp_nro: contractorData.cdpNro || '137',
+        crp_nro: contractorData.crpNro || '191',
+        poliza_nro: contractorData.polizaNro && contractorData.polizaNro !== 'N/A' ? contractorData.polizaNro : null,
+        fecha_aprobacion_poliza: parseDateForPg((contractorData as any).fechaPoliza, '2026-01-15'),
+        plazo_meses: 6,
+        fecha_inicio: parseDateForPg(contractorData.fechaInicio, '2026-01-15') || '2026-01-15',
+        fecha_terminacion: parseDateForPg(contractorData.fechaTerminacion, '2026-07-14') || '2026-07-14',
+        supervisor_nombre: contractorData.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA',
+        supervisor_documento: contractorData.supervisorDocumento || '35.602.521',
+        apoyo_supervision_nombre: contractorData.apoyoSupervisionNombre && contractorData.apoyoSupervisionNombre !== 'N/A' ? contractorData.apoyoSupervisionNombre : null,
+        apoyo_supervision_documento: contractorData.apoyoSupervisionDocumento && contractorData.apoyoSupervisionDocumento !== 'N/A' ? contractorData.apoyoSupervisionDocumento : null,
+        numero_cuenta: contractorData.numeroCuenta || '53686186829',
+        banco: contractorData.banco || 'BANCOLOMBIA',
+        tipo_cuenta: contractorData.tipoCuenta || 'AHORRO',
+        ciudad: contractorData.ciudad || 'CHOCÓ',
+        vigencia: 2026,
+      };
+
+      if (existingContrato) {
+        await supabase
+          .from('contratos')
+          .update(contratoPayload)
+          .eq('id', existingContrato.id);
+      } else {
+        const { error: cErr } = await supabase
+          .from('contratos')
+          .insert([contratoPayload]);
+        if (cErr) {
+          console.warn('Contrato insert warning, attempting upsert:', cErr);
+          await supabase
+            .from('contratos')
+            .upsert([contratoPayload], { onConflict: 'contrato_nro' });
+        }
+      }
     } catch (e) {
       console.warn('Notice creating initial contract:', e);
     }
@@ -976,7 +1058,7 @@ export const supabaseService = {
       createdAt: new Date().toISOString(),
     };
 
-    // 3. Persistir en localStorage como respaldo
+    // 4. Persistir en localStorage como respaldo
     const storedUsers = localStorage.getItem(STORAGE_USERS_KEY);
     const customUsers: AuthUser[] = storedUsers ? JSON.parse(storedUsers) : [];
     const filtered = customUsers.filter(u => u.documentoIdentidad !== rawDoc && u.email.toLowerCase() !== rawEmail.toLowerCase());
@@ -1086,12 +1168,29 @@ export const supabaseService = {
           email: rawEmail || u.email,
           telefono: phone !== undefined ? phone : u.telefono,
           cargo: cargo !== undefined ? cargo : u.cargo,
+          direccion: updateData.direccion !== undefined ? updateData.direccion : (u.direccion || u.barrio || ''),
+          barrio: updateData.direccion !== undefined ? updateData.direccion : (u.barrio || u.direccion || ''),
           password: pass || u.password,
         };
         return updatedUser;
       }
       return u;
     });
+
+    if (!updatedUser) {
+      updatedUser = {
+        id: contractorId,
+        email: rawEmail || '',
+        nombreCompleto: fullName || '',
+        documentoIdentidad: rawDoc || '',
+        role: 'contratista',
+        telefono: phone,
+        cargo: cargo,
+        direccion: updateData.direccion || updateData.barrio || '',
+        barrio: updateData.barrio || updateData.direccion || '',
+        ...updateData,
+      };
+    }
 
     localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(newUsers));
 
@@ -1152,6 +1251,8 @@ export const supabaseService = {
             secretariaCodigo: row.sec_secretarias?.codigo || '',
             cargo: row.cargo || '',
             telefono: row.telefono || '',
+            barrio: row.direccion || row.barrio || '',
+            direccion: row.direccion || row.barrio || '',
             createdAt: row.created_at || new Date().toISOString(),
           };
         });
@@ -1181,6 +1282,67 @@ export const supabaseService = {
     });
 
     return Array.from(map.values());
+  },
+
+  // Helper: Obtener Perfil de Usuario Completo por ID, Documento o Email
+  async getUserProfile(identifier: string): Promise<AuthUser | null> {
+    if (!identifier) return null;
+    const cleanId = identifier.trim().replace(/\./g, '');
+    try {
+      let { data } = await supabase
+        .from('profiles')
+        .select('*, sec_secretarias(*), contratos(*)')
+        .or(`id.eq.${cleanId},documento_identidad.eq.${cleanId},email.ilike.${cleanId}`)
+        .limit(1);
+
+      if (data && data.length > 0) {
+        const row = data[0];
+        const cont = Array.isArray(row.contratos) ? row.contratos[0] : row.contratos;
+        let dirVal = row.direccion || row.barrio || '';
+
+        // Fallback: Si no tiene dirección en perfil, intentar buscar en sus informes
+        if (!dirVal && row.documento_identidad) {
+          try {
+            const { data: infData } = await supabase
+              .from('informes_mensuales')
+              .select('payload')
+              .limit(10);
+            if (infData) {
+              for (const item of infData) {
+                const p = item.payload;
+                if (p && (p.contratistaDocumento === row.documento_identidad || p.contratistaDocumento === cleanId)) {
+                  if (p.direccion || p.barrio || p.contratistaDireccion) {
+                    dirVal = p.direccion || p.barrio || p.contratistaDireccion;
+                    break;
+                  }
+                }
+              }
+            }
+          } catch (e) {}
+        }
+
+        return {
+          id: row.id,
+          email: row.email || '',
+          nombreCompleto: row.nombre_completo || '',
+          documentoIdentidad: row.documento_identidad || '',
+          role: row.role || 'contratista',
+          secretariaId: row.secretaria_id || '',
+          secretariaNombre: row.sec_secretarias?.nombre || '',
+          secretariaCodigo: row.sec_secretarias?.codigo || '',
+          cargo: row.cargo || '',
+          telefono: row.telefono || '',
+          barrio: dirVal,
+          direccion: dirVal,
+          contratoNro: cont?.contrato_nro || '',
+          supervisorNombre: cont?.supervisor_nombre || '',
+          supervisorDocumento: cont?.supervisor_documento || '',
+        };
+      }
+    } catch (err) {
+      console.warn('Error fetching user profile:', err);
+    }
+    return null;
   },
 
   // Helper: Asegurar existencia de Contrato en la BD vinculando el contratista y secretaría

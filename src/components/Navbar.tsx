@@ -22,6 +22,7 @@ import { supabaseService } from '../services/supabaseService';
 import { SUPABASE_CONFIG } from '../lib/supabase';
 import QuibdoLogo from './QuibdoLogo';
 import NotificationBell from './NotificationBell';
+import UserProfileModal from './UserProfileModal';
 
 interface Props {
   currentUser: AuthUser;
@@ -29,6 +30,7 @@ interface Props {
   onViewChange: (view: 'dashboard' | 'editor' | 'admin' | 'superadmin') => void;
   onLogout: () => void;
   onSwitchUser: (user: AuthUser) => void;
+  onUserUpdated?: (user: AuthUser) => void;
   onPrint?: () => void;
   onDownloadPDF?: () => void;
   onSaveToSupabase?: () => void;
@@ -44,6 +46,7 @@ export default function Navbar({
   onViewChange,
   onLogout,
   onSwitchUser,
+  onUserUpdated,
   onPrint,
   onDownloadPDF,
   onSaveToSupabase,
@@ -58,6 +61,7 @@ export default function Navbar({
   });
   const [showDbModal, setShowDbModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     supabaseService.checkConnection().then((res) => {
@@ -216,6 +220,20 @@ export default function Navbar({
                     )}
                   </div>
 
+                  {/* Opciones del Menú */}
+                  <div className="p-1.5 space-y-1 border-b border-gray-100">
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        setShowProfileModal(true);
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs font-bold text-emerald-900 hover:bg-emerald-50 rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                      <User size={15} className="text-emerald-700" />
+                      <span>Mi Perfil de Usuario</span>
+                    </button>
+                  </div>
+
                   {/* Botón Cerrar Sesión */}
                   <div className="p-1.5">
                     <button
@@ -238,6 +256,18 @@ export default function Navbar({
 
         </div>
       </div>
+
+      {/* Modal de Perfil de Usuario */}
+      {showProfileModal && (
+        <UserProfileModal
+          user={currentUser}
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          onUserUpdated={(updatedUser) => {
+            onUserUpdated?.(updatedUser);
+          }}
+        />
+      )}
 
       {/* Modal de Conexión a Supabase */}
       {showDbModal && (

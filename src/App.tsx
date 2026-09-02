@@ -114,6 +114,12 @@ export default function App() {
     });
   };
 
+  const handleUserUpdated = (updatedUser: AuthUser) => {
+    setCurrentUser(updatedUser);
+    localStorage.setItem('alcaldia_quibdo_user', JSON.stringify(updatedUser));
+    showToast('¡Perfil de usuario actualizado exitosamente!');
+  };
+
   const handleViewChange = (newView: 'dashboard' | 'editor' | 'admin' | 'superadmin') => {
     requestNavigation(() => {
       setCurrentView(newView);
@@ -450,6 +456,7 @@ export default function App() {
         onViewChange={handleViewChange}
         onLogout={handleLogout}
         onSwitchUser={handleSwitchUser}
+        onUserUpdated={handleUserUpdated}
         onPrint={handlePrint}
         onDownloadPDF={handleDownloadPDF}
         onSaveToSupabase={handleSaveToSupabase}
@@ -532,6 +539,7 @@ export default function App() {
               user={currentUser}
               onOpenReportEditor={handleOpenReportEditor}
               onDirectPrint={handleDirectPrint}
+              onUserUpdated={handleUserUpdated}
             />
           </div>
         )}

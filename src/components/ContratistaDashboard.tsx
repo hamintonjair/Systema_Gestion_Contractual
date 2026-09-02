@@ -11,6 +11,7 @@ import AutorizacionDesembolsoDoc from './AutorizacionDesembolsoDoc';
 import { OrdenDocumentosGuia } from './OrdenDocumentosGuia';
 import Footer from './Footer';
 import ValidationAlertModal from './ValidationAlertModal';
+import UserProfileModal from './UserProfileModal';
 import { validateReportForRadicacion, RadicacionValidationError } from '../utils/validationUtils';
 import { 
   FileText, 
@@ -52,11 +53,12 @@ interface Props {
   user: AuthUser;
   onOpenReportEditor: (report: ReportData) => void;
   onDirectPrint: (report: ReportData) => void;
+  onUserUpdated?: (user: AuthUser) => void;
 }
 
 export type ContratistaModuleTab = 'informe' | 'supervision' | 'fiduciaria' | 'juramento' | 'desembolso' | 'orden';
 
-export default function ContratistaDashboard({ user, onOpenReportEditor, onDirectPrint }: Props) {
+export default function ContratistaDashboard({ user, onOpenReportEditor, onDirectPrint, onUserUpdated }: Props) {
   const [activeModuleTab, setActiveModuleTab] = useState<ContratistaModuleTab>('informe');
   const moduleTabsRef = React.useRef<HTMLDivElement>(null);
   const scrollModuleTabs = (dir: 'left' | 'right') => {
@@ -249,6 +251,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
   const [lastActionTimestamp, setLastActionTimestamp] = useState<number>(0);
   const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const handleDismissAllApproved = () => {
     unseenApprovedReports.forEach(r => {
@@ -832,6 +835,16 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0 relative">
+            {/* Botón Mi Perfil */}
+            <button
+              onClick={() => setShowProfileModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-100 border border-emerald-700/80 text-xs font-bold transition-all shadow-xs"
+              title="Ver y actualizar mis datos de perfil de usuario"
+            >
+              <User size={16} className="text-emerald-300" />
+              <span className="hidden sm:inline">Mi Perfil</span>
+            </button>
+
             {/* Botón Campana de Notificaciones */}
             <div className="relative">
               <button
@@ -2647,6 +2660,18 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
       <div className="mt-12">
         <Footer />
       </div>
+
+      {/* Modal de Perfil de Usuario */}
+      {showProfileModal && (
+        <UserProfileModal
+          user={user}
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          onUserUpdated={(updatedUser) => {
+            onUserUpdated?.(updatedUser);
+          }}
+        />
+      )}
 
     </div>
   );

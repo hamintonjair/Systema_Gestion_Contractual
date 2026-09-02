@@ -132,8 +132,10 @@ export default function LoginView({ onLoginSuccess }: Props) {
             secretariaId: profile.secretaria_id,
             secretariaNombre: profile.sec_secretarias?.nombre || 'Secretaría de Inclusión y Cohesión Social',
             secretariaCodigo: profile.sec_secretarias?.codigo || '170',
-            telefono: profile.telefono,
-            cargo: profile.cargo,
+            telefono: profile.telefono || '',
+            cargo: profile.cargo || '',
+            barrio: profile.direccion || profile.barrio || '',
+            direccion: profile.direccion || profile.barrio || '',
           });
           return;
         }
