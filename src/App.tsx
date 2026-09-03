@@ -168,7 +168,7 @@ export default function App() {
     try {
       const oldTitle = document.title;
       if (currentView === 'editor') {
-        document.title = "Formato Informe De Cumplimiento";
+        document.title = "";
       }
       setTimeout(() => {
         window.print();
@@ -203,7 +203,7 @@ export default function App() {
       try {
         const oldTitle = document.title;
         if (currentView === 'editor') {
-          document.title = "Formato Informe De Cumplimiento";
+          document.title = "";
         }
         setTimeout(() => {
           window.print();
@@ -465,7 +465,7 @@ export default function App() {
     await handleSelectInformeToView(informe);
     setTimeout(() => {
       const oldTitle = document.title;
-      document.title = "Formato Informe De Cumplimiento";
+      document.title = "";
       setTimeout(() => {
         window.print();
         document.title = oldTitle;

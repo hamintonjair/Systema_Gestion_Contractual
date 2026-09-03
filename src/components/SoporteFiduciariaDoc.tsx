@@ -381,12 +381,15 @@ export default function SoporteFiduciariaDoc({
         <html lang="es">
           <head>
             <meta charset="utf-8">
-            <title>Documento Soporte Fiduciaria - Alcaldía de Quibdó</title>
+            <title></title>
             ${styles}
             <style>
               @page {
                 size: letter portrait;
-                margin: 8mm;
+                margin: 0 !important;
+              }
+              @page :left, @page :right, @page :first {
+                margin: 0 !important;
               }
               * {
                 -webkit-print-color-adjust: exact !important;
@@ -395,7 +398,7 @@ export default function SoporteFiduciariaDoc({
               }
               html, body {
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 6mm !important;
                 background: #ffffff !important;
                 color: #000000 !important;
                 font-family: "Courier New", Courier, monospace !important;
@@ -426,7 +429,7 @@ export default function SoporteFiduciariaDoc({
             <script>
               setTimeout(() => {
                 const oldTitle = window.parent.document.title;
-                window.parent.document.title = "Documento Soporte Fiduciaria";
+                window.parent.document.title = "";
                 window.print();
                 window.parent.document.title = oldTitle;
                 setTimeout(() => {

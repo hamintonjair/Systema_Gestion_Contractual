@@ -400,15 +400,15 @@ export default function AutorizacionDesembolsoDoc({
         <html lang="es">
           <head>
             <meta charset="utf-8">
-            <title>Autorizacion De Desembolso Y Equivalente A La Factura</title>
+            <title></title>
             ${styles}
             <style>
               @page {
                 size: letter;
-                margin-top: 5mm;
-                margin-bottom: 0mm;
-                margin-left: 5mm;
-                margin-right: 5mm;
+                margin: 0 !important;
+              }
+              @page :left, @page :right, @page :first {
+                margin: 0 !important;
               }
               * {
                 -webkit-print-color-adjust: exact !important;
@@ -417,7 +417,7 @@ export default function AutorizacionDesembolsoDoc({
               }
               html, body {
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 5mm !important;
                 font-family: "Times New Roman", Times, serif !important;
               }
               #desembolso-document,
@@ -443,7 +443,7 @@ export default function AutorizacionDesembolsoDoc({
               window.onload = () => {
                 setTimeout(() => {
                   const oldTitle = window.parent.document.title;
-                  window.parent.document.title = "Autorizacion De Desembolso Y Equivalente A La Factura";
+                  window.parent.document.title = "";
                   window.print();
                   window.parent.document.title = oldTitle;
                   setTimeout(() => {

@@ -451,15 +451,15 @@ export default function CertificadoSupervisionDoc({
         <html lang="es">
           <head>
             <meta charset="utf-8">
-            <title>Certificado de Supervisión - Alcaldía de Quibdó</title>
+            <title></title>
             ${styles}
             <style>
               @page {
                 size: letter;
-                margin-top: 5mm;
-                margin-bottom: 0mm;
-                margin-left: 5mm;
-                margin-right: 5mm;
+                margin: 0 !important;
+              }
+              @page :left, @page :right, @page :first {
+                margin: 0 !important;
               }
               * {
                 -webkit-print-color-adjust: exact !important;
@@ -501,13 +501,13 @@ export default function CertificadoSupervisionDoc({
       setTimeout(() => {
         try {
           const oldTitle = document.title;
-          document.title = "Certificado De Supervision O Equivalente A Factura";
+          document.title = "";
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
           document.title = oldTitle;
         } catch (e) {
           const oldTitle = document.title;
-          document.title = "Certificado De Supervision O Equivalente A Factura";
+          document.title = "";
           window.print();
           document.title = oldTitle;
         } finally {
@@ -960,10 +960,10 @@ export default function CertificadoSupervisionDoc({
           @media print {
             @page {
               size: letter;
-              margin-top: 5mm !important;
-              margin-bottom: 0mm !important;
-              margin-left: 5mm !important;
-              margin-right: 5mm !important;
+              margin: 0 !important;
+            }
+            @page :left, @page :right, @page :first {
+              margin: 0 !important;
             }
             body, html {
               margin: 0 !important;
