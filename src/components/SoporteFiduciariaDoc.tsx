@@ -89,7 +89,7 @@ export default function SoporteFiduciariaDoc({
         total: valorNumeroFormateado,
         totalGeneral: valorNumeroFormateado,
         descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
-        docSoporteNro: reportData.informeNro || baseData.docSoporteNro || '1',
+        docSoporteNro: '',
         fecha: formatFechaFiduciaria(reportData),
       };
     }
@@ -161,7 +161,7 @@ export default function SoporteFiduciariaDoc({
             total: valorNumeroFormateado,
             totalGeneral: valorNumeroFormateado,
             descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
-            docSoporteNro: reportData.informeNro || baseData.docSoporteNro || '1',
+            docSoporteNro: '',
             fecha: formatFechaFiduciaria(reportData),
           });
         } else if (baseData) {
