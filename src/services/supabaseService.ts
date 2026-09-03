@@ -1447,6 +1447,28 @@ export const supabaseService = {
         let dirVal = row.direccion || row.barrio || '';
 
         // Fallback: Si no tiene dirección en perfil, intentar buscar en sus informes
+        let valMensual = '';
+        if (cont?.id) {
+          try {
+            const { data: latestReport } = await supabase
+              .from('informes_mensuales')
+              .select('observaciones')
+              .eq('contrato_id', cont.id)
+              .order('informe_nro', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (latestReport?.observaciones) {
+              const { valorMensualText } = parseObservacionesAndComments(latestReport.observaciones);
+              if (valorMensualText) {
+                valMensual = valorMensualText;
+              }
+            }
+          } catch (e) {
+            console.warn('Error fetching latest report inside getUserProfile:', e);
+          }
+        }
+
         if (!dirVal && row.documento_identidad) {
           try {
             const { data: infData } = await supabase
@@ -1481,6 +1503,21 @@ export const supabaseService = {
           barrio: dirVal,
           direccion: dirVal,
           contratoNro: cont?.contrato_nro || '',
+          objetoContrato: cont?.objeto || '',
+          valorContrato: cont?.valor_contrato ? formatColombianCurrency(cont.valor_contrato) : '',
+          valorMensual: valMensual || '',
+          cdpNro: cont?.cdp_nro || '',
+          crpNro: cont?.crp_nro || '',
+          polizaNro: cont?.poliza_nro || '',
+          fechaPoliza: cont?.fecha_aprobacion_poliza ? formatDateSlash(cont.fecha_aprobacion_poliza) : '',
+          plazo: cont?.plazo_meses ? `${cont.plazo_meses} meses` : '',
+          fechaInicio: cont?.fecha_inicio ? formatDateSlash(cont.fecha_inicio) : '',
+          fechaTerminacion: cont?.fecha_terminacion ? formatDateSlash(cont.fecha_terminacion) : '',
+          numeroCuenta: cont?.numero_cuenta || '',
+          banco: cont?.banco || '',
+          tipoCuenta: cont?.tipo_cuenta || '',
+          ciudad: cont?.ciudad || '',
+          ciudadCuenta: cont?.ciudad || '',
           supervisorNombre: cont?.supervisor_nombre || '',
           supervisorDocumento: cont?.supervisor_documento || '',
         };
