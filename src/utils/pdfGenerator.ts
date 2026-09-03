@@ -15,7 +15,7 @@ export const exportInformeToPDF = async (options: PDFExportOptions): Promise<boo
   if (!element) {
     console.warn('Elemento #informe-printable-document no está visible o montado. Usando impresión nativa.');
     const oldTitle = document.title;
-    document.title = "";
+    document.title = "\uFEFF";
     window.print();
     document.title = oldTitle;
     return false;
@@ -26,7 +26,7 @@ export const exportInformeToPDF = async (options: PDFExportOptions): Promise<boo
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   if (isMobile) {
     const oldTitle = document.title;
-    document.title = "";
+    document.title = "\uFEFF";
     window.print();
     document.title = oldTitle;
     return true;
@@ -62,7 +62,7 @@ export const exportInformeToPDF = async (options: PDFExportOptions): Promise<boo
     // Fallback suave a impresión nativa del navegador
     try {
       const oldTitle = document.title;
-      document.title = "";
+      document.title = "\uFEFF";
       setTimeout(() => {
         window.print();
         document.title = oldTitle;
@@ -83,7 +83,7 @@ export const exportInformeToPDF = async (options: PDFExportOptions): Promise<boo
 export const printInformeNative = () => {
   try {
     const oldTitle = document.title;
-    document.title = "";
+    document.title = "\uFEFF";
     setTimeout(() => {
       window.print();
       document.title = oldTitle;

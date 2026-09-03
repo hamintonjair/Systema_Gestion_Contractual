@@ -381,14 +381,10 @@ export default function SoporteFiduciariaDoc({
         <html lang="es">
           <head>
             <meta charset="utf-8">
-            <title></title>
+            <title>&#xfeff;</title>
             ${styles}
             <style>
               @page {
-                size: letter portrait;
-                margin: 0 !important;
-              }
-              @page :left, @page :right, @page :first {
                 margin: 0 !important;
               }
               * {
@@ -429,7 +425,8 @@ export default function SoporteFiduciariaDoc({
             <script>
               setTimeout(() => {
                 const oldTitle = window.parent.document.title;
-                window.parent.document.title = "";
+                window.parent.document.title = "\uFEFF";
+                document.title = "\uFEFF";
                 window.print();
                 window.parent.document.title = oldTitle;
                 setTimeout(() => {

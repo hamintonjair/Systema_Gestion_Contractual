@@ -45,10 +45,6 @@
   
   @page {
     margin: 0 !important;
-    size: letter portrait;
-  }
-  @page :left, @page :right, @page :first {
-    margin: 0 !important;
   }
   
   html, body, #root, #root > div {

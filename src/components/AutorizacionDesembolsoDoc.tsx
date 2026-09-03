@@ -400,14 +400,10 @@ export default function AutorizacionDesembolsoDoc({
         <html lang="es">
           <head>
             <meta charset="utf-8">
-            <title></title>
+            <title>&#xfeff;</title>
             ${styles}
             <style>
               @page {
-                size: letter;
-                margin: 0 !important;
-              }
-              @page :left, @page :right, @page :first {
                 margin: 0 !important;
               }
               * {
@@ -443,7 +439,8 @@ export default function AutorizacionDesembolsoDoc({
               window.onload = () => {
                 setTimeout(() => {
                   const oldTitle = window.parent.document.title;
-                  window.parent.document.title = "";
+                  window.parent.document.title = "\uFEFF";
+                  document.title = "\uFEFF";
                   window.print();
                   window.parent.document.title = oldTitle;
                   setTimeout(() => {

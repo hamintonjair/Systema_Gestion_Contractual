@@ -451,14 +451,10 @@ export default function CertificadoSupervisionDoc({
         <html lang="es">
           <head>
             <meta charset="utf-8">
-            <title></title>
+            <title>&#xfeff;</title>
             ${styles}
             <style>
               @page {
-                size: letter;
-                margin: 0 !important;
-              }
-              @page :left, @page :right, @page :first {
                 margin: 0 !important;
               }
               * {
@@ -472,8 +468,7 @@ export default function CertificadoSupervisionDoc({
                 background: #ffffff !important;
                 color: #000000 !important;
                 font-family: "Times New Roman", Times, Georgia, serif !important;
-                width: 215.9mm !important;
-                height: 279.4mm !important;
+                width: 100% !important;
               }
               #certificado-supervision-document {
                 width: 205.9mm !important;
@@ -501,13 +496,16 @@ export default function CertificadoSupervisionDoc({
       setTimeout(() => {
         try {
           const oldTitle = document.title;
-          document.title = "";
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
+          document.title = "\uFEFF";
+          if (iframe.contentWindow) {
+            iframe.contentWindow.document.title = "\uFEFF";
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+          }
           document.title = oldTitle;
         } catch (e) {
           const oldTitle = document.title;
-          document.title = "";
+          document.title = "\uFEFF";
           window.print();
           document.title = oldTitle;
         } finally {
@@ -959,18 +957,12 @@ export default function CertificadoSupervisionDoc({
         <style>{`
           @media print {
             @page {
-              size: letter;
-              margin: 0 !important;
-            }
-            @page :left, @page :right, @page :first {
               margin: 0 !important;
             }
             body, html {
               margin: 0 !important;
               padding: 0 !important;
               background: #ffffff !important;
-              width: 215.9mm !important;
-              height: 279.4mm !important;
             }
             input, textarea {
               appearance: none !important;
