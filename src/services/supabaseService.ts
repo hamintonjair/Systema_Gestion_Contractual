@@ -84,13 +84,8 @@ const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[
   const assignedAnexosIds = new Set<string>();
 
   const obsWithFotos = obligaciones.map((obs, idx) => {
-    const stored = storedObs?.find(so => so.id === obs.id || so.descripcion === obs.descripcion);
-    if (stored?.fotos && stored.fotos.length > 0) {
-      stored.fotos.forEach(f => { if (f.id) assignedAnexosIds.add(f.id); });
-      return { ...obs, fotos: stored.fotos.slice(0, 5) };
-    }
-
-    const matched = allAnexos.filter(a => {
+    // 1. Priorizar la búsqueda de fotos coincidentes en la base de datos (Supabase)
+    const matchedDb = allAnexos.filter(a => {
       if (assignedAnexosIds.has(a.id)) return false;
       if (a.obligacionId && a.obligacionId === obs.id) return true;
       if (a.obligacionIndex !== undefined && a.obligacionIndex === (idx + 1)) return true;
@@ -111,9 +106,22 @@ const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[
       return false;
     });
 
-    matched.forEach(m => assignedAnexosIds.add(m.id));
+    // 2. Buscar borradores locales pendientes de subida en localStorage (como imágenes data:image)
+    const stored = storedObs?.find(so => so.id === obs.id || so.descripcion === obs.descripcion);
+    const localDrafts = (stored?.fotos || []).filter(f => {
+      const url = f.imagenUrl || '';
+      return f.file || url.startsWith('data:') || f.isPendingUpload;
+    });
 
-    const finalFotos = matched.slice(0, 5).map((f, fIdx) => ({
+    // Combinar priorizando la base de datos (con URLs públicas de producción) y luego borradores locales
+    const combined = [...matchedDb, ...localDrafts].slice(0, 5);
+
+    // Registrar IDs asignados para evitar duplicación
+    combined.forEach(f => {
+      if (f.id) assignedAnexosIds.add(f.id);
+    });
+
+    const finalFotos = combined.map((f, fIdx) => ({
       ...f,
       obligacionId: obs.id,
       obligacionIndex: idx + 1,
@@ -2105,7 +2113,7 @@ export const supabaseService = {
   },
 
   // 9. Guardar / Sincronizar Informe Completo a Supabase (Garantizando Contrato, Obligaciones y Fotos)
-  async saveFullInforme(report: ReportData, user?: AuthUser): Promise<{ success: boolean; id?: string; error?: string }> {
+  async saveFullInforme(report: ReportData, user?: AuthUser): Promise<{ success: boolean; id?: string; error?: string; obligaciones?: Obligacion[]; anexos?: Anexo[] }> {
     try {
       // 1. Asegurar Contrato ID válido y sincronizar fechas del contrato
       let contratoId = report.contratoId;
@@ -2318,6 +2326,15 @@ export const supabaseService = {
       // Si había anexos en report.anexos que no estaban en ninguna obligación
       if (report.anexos && report.anexos.length > 0) {
         for (const anexo of report.anexos) {
+          // Si el anexo está marcado como perteneciente a una obligación o tiene un título de obligación, omitir para evitar duplicados o fotos huérfanas
+          const isObligacionPhoto = anexo.obligacionId || 
+                                    (anexo.obligacionIndex !== undefined && anexo.obligacionIndex > 0) ||
+                                    (anexo.titulo || '').toLowerCase().startsWith('obligación #') ||
+                                    (anexo.titulo || '').toLowerCase().startsWith('obligacion #');
+          if (isObligacionPhoto) {
+            continue;
+          }
+
           if (!processedAnexos.some(a => a.id === anexo.id || a.imagenUrl === anexo.imagenUrl)) {
             let finalUrl = anexo.imagenUrl;
             if (anexo.file || (anexo.imagenUrl && anexo.imagenUrl.startsWith('data:image'))) {
@@ -2405,7 +2422,12 @@ export const supabaseService = {
         console.warn('Error syncing certificados/soportes in saveFullInforme:', certSyncErr);
       }
 
-      return { success: true, id: informeId || `local-${Date.now()}` };
+      return { 
+        success: true, 
+        id: informeId || `local-${Date.now()}`,
+        obligaciones: processedObligaciones,
+        anexos: processedAnexos
+      };
     } catch (err: any) {
       console.error('Error saving to Supabase:', err);
       return { success: false, error: err?.message || 'Error de conexión' };

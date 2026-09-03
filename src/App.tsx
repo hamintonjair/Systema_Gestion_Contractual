@@ -296,7 +296,8 @@ export default function App() {
         ...prev,
         id: result.id,
         estado: newStatus,
-        anexos: prev.anexos.map(a => ({ ...a, file: undefined, isPendingUpload: false })),
+        obligaciones: result.obligaciones || prev.obligaciones,
+        anexos: (result.anexos || prev.anexos).map(a => ({ ...a, file: undefined, isPendingUpload: false })),
         syncedToDb: true
       }));
       showToast(newStatus === 'Enviado' ? '¡Informe guardado y reenviado a la secretaría exitosamente!' : '¡Informe y fotografías guardados en Supabase exitosamente!');
@@ -338,7 +339,8 @@ export default function App() {
         ...prev,
         id: result.id,
         estado: 'Enviado',
-        anexos: prev.anexos.map(a => ({ ...a, file: undefined, isPendingUpload: false })),
+        obligaciones: result.obligaciones || prev.obligaciones,
+        anexos: (result.anexos || prev.anexos).map(a => ({ ...a, file: undefined, isPendingUpload: false })),
         syncedToDb: true
       }));
       showToast('🚀 ¡Informe Radicado y Reenviado a la Secretaría Exitosamente!');
