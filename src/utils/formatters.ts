@@ -285,3 +285,51 @@ export const quitarDecimales = (val?: string | number): string => {
   return str.replace(/,00$/, '').replace(/\.00$/, '');
 };
 
+/**
+ * Calcula la diferencia en días desde la fecha dada hasta la fecha actual.
+ */
+export const getDaysDifference = (dateVal?: string): number => {
+  if (!dateVal || dateVal === 'N/A' || dateVal === '-') return 0;
+  let d: Date | null = null;
+  const str = String(dateVal).trim().split('T')[0];
+
+  if (str.includes('/')) {
+    const parts = str.split('/');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      } else {
+        d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+      }
+    }
+  } else if (str.includes('-')) {
+    const parts = str.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      } else {
+        d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+      }
+    }
+  } else {
+    d = new Date(str);
+  }
+
+  if (!d || isNaN(d.getTime())) return 0;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const radicationDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const diffMs = today.getTime() - radicationDate.getTime();
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+};
+
+/**
+ * Verifica si una fecha de radicación/presentación supera un número de días límite (ej. 5 días).
+ */
+export const isOlderThanDays = (dateVal?: string, daysLimit: number = 5): boolean => {
+  return getDaysDifference(dateVal) > daysLimit;
+};
+
+
