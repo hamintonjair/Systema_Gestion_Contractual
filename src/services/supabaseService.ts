@@ -2498,9 +2498,15 @@ export const supabaseService = {
       if (isUuid(reportId)) {
         const { data: currentReport } = await supabase
           .from('informes_mensuales')
-          .select('observaciones')
+          .select('observaciones, estado')
           .eq('id', reportId)
           .maybeSingle();
+
+        if (currentReport?.estado === 'Aprobado' || currentReport?.estado === 'aprobado' || newStatus === 'Aprobado') {
+          statusToSave = 'Aprobado';
+        } else if (newStatus === 'Devuelto' && pendingMain.length === 0 && pendingComments.length > 0) {
+          statusToSave = 'Enviado';
+        }
 
         const { cleanObs, valorPagarText, plazoText, valorMensualText } = parseObservacionesAndComments(currentReport?.observaciones);
         const newObsWithComments = buildObservacionesWithComments(cleanObs, comments, valorPagarText, plazoText, valorMensualText);

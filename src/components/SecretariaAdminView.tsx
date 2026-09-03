@@ -636,8 +636,11 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
       }
     };
 
-    const hasRemainingMain = Object.values(updatedComments).some((c: any) => !c.corregido && isMainReportComment(c));
-    const newStatus: EstadoInforme = hasRemainingMain ? 'Devuelto' : 'Enviado';
+    let newStatus: EstadoInforme = inspectingInforme.estado;
+    if (inspectingInforme.estado !== 'Aprobado') {
+      const hasRemainingMain = Object.values(updatedComments).some((c: any) => !c.corregido && isMainReportComment(c));
+      newStatus = hasRemainingMain ? 'Devuelto' : 'Enviado';
+    }
 
     const updatedInforme: ReportData = {
       ...inspectingInforme,
@@ -719,8 +722,11 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
       }
     });
 
-    const hasRemainingComments = Object.keys(updatedComments).length > 0;
-    const newStatus: EstadoInforme = hasRemainingComments ? 'Devuelto' : 'Enviado';
+    let newStatus: EstadoInforme = inspectingInforme.estado;
+    if (inspectingInforme.estado !== 'Aprobado') {
+      const hasRemainingComments = Object.keys(updatedComments).length > 0;
+      newStatus = hasRemainingComments ? 'Devuelto' : 'Enviado';
+    }
 
     const updatedInforme: ReportData = {
       ...inspectingInforme,
