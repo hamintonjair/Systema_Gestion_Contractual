@@ -387,7 +387,8 @@ export default function AutorizacionDesembolsoDoc({
 
       const clone = element.cloneNode(true) as HTMLElement;
       processCloneInputsAndTextareas(clone);
-      clone.style.width = '21.59cm';
+      clone.style.width = '20.59cm';
+      clone.style.maxWidth = '100%';
       clone.style.minHeight = 'auto';
       clone.style.transform = 'none';
       clone.style.boxShadow = 'none';
@@ -413,8 +414,14 @@ export default function AutorizacionDesembolsoDoc({
               }
               html, body {
                 margin: 0 !important;
-                padding: 5mm !important;
+                padding: 4mm 5mm !important;
                 font-family: "Times New Roman", Times, serif !important;
+              }
+              #desembolso-document {
+                width: 100% !important;
+                max-width: 20.59cm !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
               }
               #desembolso-document,
               #desembolso-document *:not(.font-arial-narrow):not(.font-arial-narrow *) {
@@ -741,27 +748,27 @@ export default function AutorizacionDesembolsoDoc({
         <div className="w-full text-[11px] leading-snug border-2 border-black font-serif">
           
           {/* ENCABEZADO: Logo a la izquierda y Texto perfectamente centrado en todo el ancho */}
-          <div className="relative pt-4 pb-3 px-3">
+          <div className="relative pt-2.5 pb-2 px-3 print:pt-2 print:pb-1.5">
             {/* Logo de Quibdó a la izquierda, más grande */}
-            <div className="absolute left-4 top-3 flex items-center justify-center">
-              <QuibdoLogo variant="full" size="lg" className="scale-110" />
+            <div className="absolute left-4 top-2 flex items-center justify-center">
+              <QuibdoLogo variant="full" size="lg" className="scale-105" />
             </div>
 
             {/* Bloque de títulos centrado en toda la página */}
             <div className="w-full text-center font-bold font-serif flex flex-col justify-center items-center">
               <div className="text-[13px] uppercase tracking-wide">MUNICIPIO DE QUIBDÓ</div>
               <div className="text-[13px] uppercase mt-0.5">DOCUMENTO EQUIVALENTE A LA FACTURA</div>
-              <div className="text-[11px] uppercase mt-1">GESTIÓN FINANCIERA</div>
+              <div className="text-[11px] uppercase mt-0.5">GESTIÓN FINANCIERA</div>
               
-              <div className="text-[14px] font-bold mt-3">Aplica para personas naturales no comerciantes</div>
-              <div className="text-[15px] font-black uppercase mt-0.5 tracking-wider">
+              <div className="text-[13.5px] font-bold mt-2 print:mt-1">Aplica para personas naturales no comerciantes</div>
+              <div className="text-[14.5px] font-black uppercase mt-0.5 tracking-wider">
                 NO RESPONSABLES DEL IMPUESTO A LAS VENTAS
               </div>
             </div>
           </div>
 
           {/* SECCIÓN FECHA Y CONSECUTIVO (Sin línea superior divisoria, cajas con fondo gris y borde negro) */}
-          <div className="flex justify-between items-center px-2 py-3 font-bold font-serif text-[11px]">
+          <div className="flex justify-between items-center px-2 py-2 print:py-1 font-bold font-serif text-[11px]">
             <div className="flex items-center gap-2 pl-2">
               <span className="uppercase tracking-tight text-[11px]">FECHA DE EXPEDICIÓN</span>
               <div className="border-2 border-black bg-gray-200 px-4 py-0.5 min-w-[150px] text-center shadow-none">
@@ -796,7 +803,7 @@ export default function AutorizacionDesembolsoDoc({
           </div>
 
           {/* SECCIÓN ENTIDAD CONTRATANTE (Sin líneas divisorias arriba/abajo directas, centrado limpio) */}
-          <div className="text-center font-bold pb-3 pt-1 font-serif text-[12px]">
+          <div className="text-center font-bold pb-2 pt-0.5 print:pb-1 font-serif text-[12px]">
             <div>ENTIDAD CONTRATANTE: MUNICIPIO DE QUIBDÓ</div>
             <div className="text-[11px] mt-0.5">NIT. 891.680.011-0</div>
           </div>
@@ -946,9 +953,9 @@ export default function AutorizacionDesembolsoDoc({
           </div>
 
           {/* SECCIÓN CONCEPTO Y OBJETO */}
-          <div className="pt-3 pb-2 border-b-2 border-black font-serif">
+          <div className="pt-2 pb-1.5 print:pt-1 print:pb-1 border-b-2 border-black font-serif">
             {/* Concepto y Nro con márgenes laterales px-8 */}
-            <div className="flex justify-between items-center px-8 py-1.5 mb-1.5">
+            <div className="flex justify-between items-center px-6 print:px-4 py-1 mb-1">
               <div className="flex items-center gap-3">
                 <span className="font-bold text-[11px] uppercase tracking-wide">CONCEPTO</span>
                 <div className="border-2 border-black px-4 py-1 w-[380px] max-w-[400px] text-center bg-white font-bold uppercase text-[11px] shadow-none">
@@ -988,7 +995,7 @@ export default function AutorizacionDesembolsoDoc({
             </div>
 
             {/* Texto "Cuyo objeto es" con margen izquierdo ml-8 */}
-            <div className="flex items-center justify-between mb-1 mx-8">
+            <div className="flex items-center justify-between mb-1 mx-6 print:mx-4">
               <div className="text-[11px] font-bold">
                 Cuyo objeto es
               </div>
@@ -1017,14 +1024,14 @@ export default function AutorizacionDesembolsoDoc({
             </div>
 
             {/* Caja descriptiva del contrato con márgenes laterales mx-8 */}
-            <div className="mx-8 mb-3 border-2 border-black p-2.5 text-center text-[11px] font-normal uppercase bg-white leading-relaxed">
+            <div className="mx-6 print:mx-4 mb-2 print:mb-1 border-2 border-black p-2 print:p-1.5 text-center text-[11px] font-normal uppercase bg-white leading-relaxed">
               {isEditing ? (
                 <textarea 
                   value={formData.objeto} 
                   onChange={(e) => handleFieldChange('objeto', e.target.value)} 
                   rows={4}
                   placeholder="OBJETO DEL CONTRATO...\nCORRESPONDIENTE AL PERIODO DEL 01 DE JULIO AL 31 DE JULIO 2026"
-                  className="w-full min-h-[85px] text-center bg-amber-50 outline-none resize-y font-serif text-[11px] font-normal leading-relaxed uppercase border border-amber-300 rounded p-1" 
+                  className="w-full min-h-[65px] text-center bg-amber-50 outline-none resize-y font-serif text-[11px] font-normal leading-relaxed uppercase border border-amber-300 rounded p-1" 
                 />
               ) : (
                 <div className="whitespace-pre-wrap leading-relaxed tracking-tight font-serif text-[11px] font-normal">{formData.objeto}</div>
@@ -1224,8 +1231,8 @@ export default function AutorizacionDesembolsoDoc({
           </div>
 
           {/* SECCIÓN FINAL (FIRMA, DIRECCIÓN, TELÉFONO con márgenes ml-10 y anchos definidos) */}
-          <div className="pt-3 pb-2 px-4 print:pt-2 print:pb-1 font-serif">
-            <div className="ml-10 print:ml-8 mb-2 mt-3 print:mt-1 space-y-1.5">
+          <div className="pt-2 pb-1.5 px-3 print:pt-1 print:pb-0.5 font-serif">
+            <div className="ml-8 print:ml-6 mb-1 mt-1.5 print:mt-0.5 space-y-1 print:space-y-0.5">
               
               {/* Fila FIRMA */}
               <div className="flex flex-row items-end">
@@ -1235,7 +1242,7 @@ export default function AutorizacionDesembolsoDoc({
                     <img 
                       src={formData.firmaContratista} 
                       alt="Firma Contratista" 
-                      className="max-h-11 print:max-h-9 object-contain"
+                      className="max-h-10 print:max-h-8 object-contain"
                     />
                   ) : isEditing ? (
                     <input 
@@ -1285,7 +1292,7 @@ export default function AutorizacionDesembolsoDoc({
           </div>
 
           {/* FOOTER NOTICE (Centrado, sin línea divisoria al final) */}
-          <div className="w-full text-center text-[9px] print:text-[8px] font-bold pb-3 pt-3 print:py-1 font-serif print:break-inside-avoid">
+          <div className="w-full text-center text-[9px] print:text-[8px] font-bold pb-2 pt-2 print:py-0.5 font-serif print:break-inside-avoid">
             Adquisiciones efectuadas a Personas Naturales no comerciantes o no responsables del Impuesto a las Ventas<br/>
             Articulo 3 Decreto 522 de Marzo 7/2003
           </div>
