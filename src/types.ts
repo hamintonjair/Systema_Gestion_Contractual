@@ -268,6 +268,15 @@ export interface ReportData {
   contratistaDireccion?: string;
   fechaRegistroPresupuestal?: string;
   codigoRubro?: string;
+  saludValor?: string;
+  saludEps?: string;
+  saludPlanilla?: string;
+  pensionValor?: string;
+  pensionFondo?: string;
+  pensionPlanilla?: string;
+  arpValor?: string;
+  arpAseguradora?: string;
+  arpPlanilla?: string;
 }
 
 import { getDatosLiquidacionPeriodo, limpiarNumeroMoneda } from './utils/paymentPlanUtils';
@@ -504,15 +513,15 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
     codigoRubro5: '',
     valorRubro5: '',
 
-    saludValor: '218.900',
-    saludEps: 'COOSALUD',
-    saludPlanilla: '87049978',
-    pensionValor: '280.200',
-    pensionFondo: 'COLFONDO',
-    pensionPlanilla: '87049978',
-    arpValor: '9.200',
-    arpAseguradora: 'POSITIVA',
-    arpPlanilla: '87049978',
+    saludValor: rep?.saludValor || '218.900',
+    saludEps: rep?.saludEps || 'COOSALUD',
+    saludPlanilla: rep?.saludPlanilla || '87049978',
+    pensionValor: rep?.pensionValor || '280.200',
+    pensionFondo: rep?.pensionFondo || 'COLFONDO',
+    pensionPlanilla: rep?.pensionPlanilla || '87049978',
+    arpValor: rep?.arpValor || '9.200',
+    arpAseguradora: rep?.arpAseguradora || 'POSITIVA',
+    arpPlanilla: rep?.arpPlanilla || '87049978',
 
     pagoNro: pagoNroCalculado,
     periodoDesde: periodoDesdeCalculado,

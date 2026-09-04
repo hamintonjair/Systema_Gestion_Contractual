@@ -59,11 +59,17 @@ export default function CertificadoSupervisionDoc({
   };
   const getInitialData = (): CertificadoSupervisionData => {
     let baseData: CertificadoSupervisionData;
-    const key = storageKey || (reportData ? `cert_data_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}` : 'cert_data_global');
+    const docKey = reportData?.contratistaDocumento || '';
+    const cleanDoc = docKey.replace(/\D/g, '');
+    const pNro = String(reportData?.informeNro || '1');
+    const key = storageKey || (docKey ? `cert_data_${docKey}_${pNro}` : 'cert_data_global');
     
     let hasSaved = false;
     if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem(key);
+      const saved = localStorage.getItem(key) ||
+                    (cleanDoc ? localStorage.getItem(`cert_data_${cleanDoc}_${pNro}`) : null) ||
+                    (reportData?.id ? localStorage.getItem(`cert_data_${reportData.id}_${pNro}`) : null) ||
+                    localStorage.getItem(`cert_data_${pNro}`);
       if (saved) {
         try {
           baseData = JSON.parse(saved);
@@ -81,6 +87,7 @@ export default function CertificadoSupervisionDoc({
     if (reportData) {
       const liveDefaults = createDefaultCertificadoData(reportData);
       return {
+        ...liveDefaults,
         ...baseData,
         reportId: reportData.id || baseData.reportId,
         contratistaNombre: reportData.contratistaNombre || baseData.contratistaNombre,
@@ -89,17 +96,26 @@ export default function CertificadoSupervisionDoc({
         contratoAno: liveDefaults.contratoAno || baseData.contratoAno,
         supervisorNombre: reportData.supervisorNombre || baseData.supervisorNombre,
         objeto: reportData.objeto || baseData.objeto,
-        cdpNro: reportData.cdpNro || baseData.cdpNro,
-        crpNro: reportData.crpNro || baseData.crpNro,
+        cdpNro: baseData.cdpNro || reportData.cdpNro || liveDefaults.cdpNro,
+        crpNro: baseData.crpNro || reportData.crpNro || liveDefaults.crpNro,
         fechaInicio: reportData.fechaInicio || baseData.fechaInicio,
         fechaTerminacion: reportData.fechaTerminacion || baseData.fechaTerminacion,
         plazoMeses: liveDefaults.plazoMeses ?? baseData.plazoMeses,
         plazoDias: liveDefaults.plazoDias ?? baseData.plazoDias,
         valorInicial: reportData.valorContrato || baseData.valorInicial,
-        periodoDesde: liveDefaults.periodoDesde || reportData.periodoDesde || baseData.periodoDesde,
-        periodoHasta: liveDefaults.periodoHasta || reportData.periodoHasta || baseData.periodoHasta,
-        fechaRegistroPresupuestal: liveDefaults.fechaRegistroPresupuestal || baseData.fechaRegistroPresupuestal,
-        codigoRubro: liveDefaults.codigoRubro || baseData.codigoRubro,
+        periodoDesde: baseData.periodoDesde || liveDefaults.periodoDesde || reportData.periodoDesde,
+        periodoHasta: baseData.periodoHasta || liveDefaults.periodoHasta || reportData.periodoHasta,
+        fechaRegistroPresupuestal: baseData.fechaRegistroPresupuestal || liveDefaults.fechaRegistroPresupuestal,
+        codigoRubro: baseData.codigoRubro || liveDefaults.codigoRubro,
+        saludValor: baseData.saludValor || liveDefaults.saludValor,
+        saludEps: baseData.saludEps || liveDefaults.saludEps,
+        saludPlanilla: baseData.saludPlanilla || liveDefaults.saludPlanilla,
+        pensionValor: baseData.pensionValor || liveDefaults.pensionValor,
+        pensionFondo: baseData.pensionFondo || liveDefaults.pensionFondo,
+        pensionPlanilla: baseData.pensionPlanilla || liveDefaults.pensionPlanilla,
+        arpValor: baseData.arpValor || liveDefaults.arpValor,
+        arpAseguradora: baseData.arpAseguradora || liveDefaults.arpAseguradora,
+        arpPlanilla: baseData.arpPlanilla || liveDefaults.arpPlanilla,
       };
     }
     return baseData;
@@ -133,8 +149,14 @@ export default function CertificadoSupervisionDoc({
     if (data) {
       baseData = data;
     } else if (reportData) {
-      const key = storageKey || `cert_data_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}`;
-      const saved = localStorage.getItem(key);
+      const docKey = reportData.contratistaDocumento || '';
+      const cleanDoc = docKey.replace(/\D/g, '');
+      const pNro = String(reportData.informeNro || '1');
+      const key = storageKey || (docKey ? `cert_data_${docKey}_${pNro}` : `cert_data_${pNro}`);
+      const saved = localStorage.getItem(key) ||
+                    (cleanDoc ? localStorage.getItem(`cert_data_${cleanDoc}_${pNro}`) : null) ||
+                    (reportData.id ? localStorage.getItem(`cert_data_${reportData.id}_${pNro}`) : null) ||
+                    localStorage.getItem(`cert_data_${pNro}`);
       if (saved) {
         try {
           baseData = JSON.parse(saved);
@@ -151,6 +173,7 @@ export default function CertificadoSupervisionDoc({
     if (reportData) {
       const liveDefaults = createDefaultCertificadoData(reportData);
       setFormData({
+        ...liveDefaults,
         ...baseData,
         reportId: reportData.id || baseData.reportId,
         contratistaNombre: reportData.contratistaNombre || baseData.contratistaNombre,
@@ -159,16 +182,16 @@ export default function CertificadoSupervisionDoc({
         contratoAno: liveDefaults.contratoAno || baseData.contratoAno,
         supervisorNombre: reportData.supervisorNombre || baseData.supervisorNombre,
         objeto: reportData.objeto || baseData.objeto,
-        cdpNro: reportData.cdpNro || baseData.cdpNro,
-        crpNro: reportData.crpNro || baseData.crpNro,
+        cdpNro: baseData.cdpNro || reportData.cdpNro || liveDefaults.cdpNro,
+        crpNro: baseData.crpNro || reportData.crpNro || liveDefaults.crpNro,
         fechaInicio: reportData.fechaInicio || baseData.fechaInicio,
         fechaTerminacion: reportData.fechaTerminacion || baseData.fechaTerminacion,
         plazoMeses: liveDefaults.plazoMeses ?? baseData.plazoMeses,
         plazoDias: liveDefaults.plazoDias ?? baseData.plazoDias,
         valorInicial: reportData.valorContrato || baseData.valorInicial,
         valorTotal: reportData.valorContrato || baseData.valorTotal,
-        periodoDesde: liveDefaults.periodoDesde || reportData.periodoDesde || baseData.periodoDesde,
-        periodoHasta: liveDefaults.periodoHasta || reportData.periodoHasta || baseData.periodoHasta,
+        periodoDesde: baseData.periodoDesde || liveDefaults.periodoDesde || reportData.periodoDesde,
+        periodoHasta: baseData.periodoHasta || liveDefaults.periodoHasta || reportData.periodoHasta,
         pagoNro: baseData.pagoNro || liveDefaults.pagoNro,
         porcentajeEjecucion: baseData.porcentajeEjecucion || liveDefaults.porcentajeEjecucion,
         valorPagadoAcumulado: baseData.valorPagadoAcumulado || liveDefaults.valorPagadoAcumulado,
@@ -178,11 +201,20 @@ export default function CertificadoSupervisionDoc({
         saldoPorPagar: baseData.saldoPorPagar || liveDefaults.saldoPorPagar,
         valorRubro: baseData.valorRubro || liveDefaults.valorRubro,
         valorAvalado: baseData.valorAvalado || liveDefaults.valorAvalado,
-        fechaRegistroPresupuestal: liveDefaults.fechaRegistroPresupuestal || baseData.fechaRegistroPresupuestal,
-        codigoRubro: liveDefaults.codigoRubro || baseData.codigoRubro,
-        expedicionDia: liveDefaults.expedicionDia,
-        expedicionMes: liveDefaults.expedicionMes,
-        expedicionAno: liveDefaults.expedicionAno,
+        fechaRegistroPresupuestal: baseData.fechaRegistroPresupuestal || liveDefaults.fechaRegistroPresupuestal,
+        codigoRubro: baseData.codigoRubro || liveDefaults.codigoRubro,
+        saludValor: baseData.saludValor || liveDefaults.saludValor,
+        saludEps: baseData.saludEps || liveDefaults.saludEps,
+        saludPlanilla: baseData.saludPlanilla || liveDefaults.saludPlanilla,
+        pensionValor: baseData.pensionValor || liveDefaults.pensionValor,
+        pensionFondo: baseData.pensionFondo || liveDefaults.pensionFondo,
+        pensionPlanilla: baseData.pensionPlanilla || liveDefaults.pensionPlanilla,
+        arpValor: baseData.arpValor || liveDefaults.arpValor,
+        arpAseguradora: baseData.arpAseguradora || liveDefaults.arpAseguradora,
+        arpPlanilla: baseData.arpPlanilla || liveDefaults.arpPlanilla,
+        expedicionDia: baseData.expedicionDia || liveDefaults.expedicionDia,
+        expedicionMes: baseData.expedicionMes || liveDefaults.expedicionMes,
+        expedicionAno: baseData.expedicionAno || liveDefaults.expedicionAno,
       });
     } else {
       setFormData(baseData);
@@ -196,6 +228,17 @@ export default function CertificadoSupervisionDoc({
           setFormData(prev => ({
             ...prev,
             ...serverCert,
+            fechaRegistroPresupuestal: serverCert.fechaRegistroPresupuestal || prev.fechaRegistroPresupuestal,
+            codigoRubro: serverCert.codigoRubro || prev.codigoRubro,
+            saludValor: serverCert.saludValor || prev.saludValor,
+            saludEps: serverCert.saludEps || prev.saludEps,
+            saludPlanilla: serverCert.saludPlanilla || prev.saludPlanilla,
+            pensionValor: serverCert.pensionValor || prev.pensionValor,
+            pensionFondo: serverCert.pensionFondo || prev.pensionFondo,
+            pensionPlanilla: serverCert.pensionPlanilla || prev.pensionPlanilla,
+            arpValor: serverCert.arpValor || prev.arpValor,
+            arpAseguradora: serverCert.arpAseguradora || prev.arpAseguradora,
+            arpPlanilla: serverCert.arpPlanilla || prev.arpPlanilla,
             // Si el reporte actual tiene plazo explícito, asegurar meses y días calculados
             ...(liveDefaults && reportData?.plazo ? {
               plazoMeses: liveDefaults.plazoMeses,
@@ -220,8 +263,8 @@ export default function CertificadoSupervisionDoc({
       } else if (reportData) {
         const live = createDefaultCertificadoData(reportData);
         setFormData(prev => ({
+          ...live,
           ...prev,
-          ...live
         }));
       }
     };
@@ -394,12 +437,57 @@ export default function CertificadoSupervisionDoc({
   };
 
   const handleSave = async () => {
-    const key = storageKey || (reportData ? `cert_data_${reportData.contratistaDocumento || ''}_${reportData.informeNro || formData.pagoNro || '1'}` : `cert_data_${formData.contratistaDocumento || ''}_${formData.pagoNro || '1'}`);
+    const docKey = reportData?.contratistaDocumento || formData.contratistaDocumento || '';
+    const cleanDoc = docKey.replace(/\D/g, '');
+    const pNro = String(reportData?.informeNro || formData.pagoNro || '1');
+    const key = storageKey || (docKey ? `cert_data_${docKey}_${pNro}` : `cert_data_${pNro}`);
+
     localStorage.setItem(key, JSON.stringify(formData));
-    localStorage.setItem(`cert_data_${formData.pagoNro || '1'}`, JSON.stringify(formData));
+    if (cleanDoc) {
+      localStorage.setItem(`cert_data_${cleanDoc}_${pNro}`, JSON.stringify(formData));
+    }
+    localStorage.setItem(`cert_data_${pNro}`, JSON.stringify(formData));
+    if (reportData?.id) {
+      localStorage.setItem(`cert_data_${reportData.id}_${pNro}`, JSON.stringify(formData));
+    }
     
     // Guardar y sincronizar en Supabase
-    await supabaseService.saveCertificadoSupervision(formData, reportData?.id);
+    await supabaseService.saveCertificadoSupervision(formData, reportData?.id, undefined, reportData?.contratoId);
+
+    // Coordinar en informes locales para no desincronizar fechaRegistroPresupuestal ni aportes
+    if (docKey || cleanDoc) {
+      const repKeys = [
+        `informe_data_${docKey}_${pNro}`,
+        cleanDoc ? `informe_data_${cleanDoc}_${pNro}` : '',
+        `informe_data_${pNro}`,
+        `alcaldia_quibdo_report_${docKey}_${pNro}`,
+        cleanDoc ? `alcaldia_quibdo_report_${cleanDoc}_${pNro}` : '',
+        `alcaldia_quibdo_report_${pNro}`,
+      ].filter(Boolean);
+
+      repKeys.forEach(k => {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          try {
+            const p = JSON.parse(raw);
+            p.fechaRegistroPresupuestal = formData.fechaRegistroPresupuestal;
+            p.codigoRubro = formData.codigoRubro;
+            p.saludValor = formData.saludValor;
+            p.saludEps = formData.saludEps;
+            p.saludPlanilla = formData.saludPlanilla;
+            p.pensionValor = formData.pensionValor;
+            p.pensionFondo = formData.pensionFondo;
+            p.pensionPlanilla = formData.pensionPlanilla;
+            p.arpValor = formData.arpValor;
+            p.arpAseguradora = formData.arpAseguradora;
+            p.arpPlanilla = formData.arpPlanilla;
+            localStorage.setItem(k, JSON.stringify(p));
+          } catch (e) {}
+        }
+      });
+    }
+
+    window.dispatchEvent(new CustomEvent('certificado_updated_event', { detail: formData }));
 
     if (certComment && !certComment.corregido) {
       await handleMarkCommentAsFixed();
@@ -456,6 +544,7 @@ export default function CertificadoSupervisionDoc({
             <style>
               @page {
                 margin: 0 !important;
+                size: letter portrait;
               }
               * {
                 -webkit-print-color-adjust: exact !important;
@@ -469,15 +558,24 @@ export default function CertificadoSupervisionDoc({
                 color: #000000 !important;
                 font-family: "Times New Roman", Times, Georgia, serif !important;
                 width: 100% !important;
+                height: 100% !important;
+                overflow: hidden !important;
               }
               #certificado-supervision-document {
-                width: 205.9mm !important;
-                height: 269.4mm !important;
+                width: 200mm !important;
+                height: 265mm !important;
+                max-height: 268mm !important;
                 border: 2px solid #000000 !important;
-                padding: 10px 14px !important;
-                margin: 0 auto !important;
+                padding: 4mm 6mm !important;
+                margin: 1mm auto 0 auto !important;
                 box-shadow: none !important;
                 overflow: hidden !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+                transform: scale(0.94) !important;
+                transform-origin: top center !important;
               }
               th, .bg-\\[\\#d1d5db\\] {
                 background-color: #d1d5db !important;
@@ -951,18 +1049,36 @@ export default function CertificadoSupervisionDoc({
       <div className="w-full max-w-full overflow-x-auto pb-4 flex justify-start sm:justify-center">
         <div 
           id="certificado-supervision-document"
-          className="min-w-[760px] max-w-[850px] w-full bg-white border-2 border-black p-4 sm:p-6 text-black shrink-0 print:p-2.5 print:border-2 print:border-black print:w-[205.9mm] print:h-[269.4mm] print:overflow-hidden print:mx-auto text-[10px] sm:text-[10.5px] leading-tight select-text"
+          className="min-w-[760px] max-w-[850px] w-full bg-white border-2 border-black p-4 sm:p-6 text-black shrink-0 print:p-[4mm] print:border-2 print:border-black print:w-[200mm] print:max-h-[268mm] print:overflow-hidden print:mx-auto text-[10px] sm:text-[10.5px] leading-tight select-text"
           style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }}
         >
         <style>{`
           @media print {
             @page {
               margin: 0 !important;
+              size: letter portrait;
             }
             body, html {
               margin: 0 !important;
               padding: 0 !important;
               background: #ffffff !important;
+              overflow: hidden !important;
+            }
+            #certificado-supervision-document {
+              width: 200mm !important;
+              max-width: 200mm !important;
+              height: 265mm !important;
+              max-height: 268mm !important;
+              border: 2px solid #000000 !important;
+              padding: 4mm 6mm !important;
+              margin: 1mm auto 0 auto !important;
+              overflow: hidden !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              page-break-after: avoid !important;
+              break-after: avoid !important;
+              transform: scale(0.94) !important;
+              transform-origin: top center !important;
             }
             input, textarea {
               appearance: none !important;
@@ -983,19 +1099,19 @@ export default function CertificadoSupervisionDoc({
             }
             /* Asegurar altura exacta de campos rellenables en impresión */
             .min-h-\\[23px\\], .min-h-\\[19px\\] {
-              min-height: 18px !important;
-              height: 18px !important;
+              min-height: 16px !important;
+              height: 16px !important;
             }
           }
         `}</style>
         
         {/* CABECERA CON LOGO OFICIAL Y TÍTULO */}
-        <div className="relative flex items-center justify-center pb-2 mb-2 w-full min-h-[96px] print:min-h-[85px]">
+        <div className="relative flex items-center justify-center pb-2 mb-2 w-full min-h-[96px] print:min-h-[64px] print:pb-1 print:mb-1">
           <div className="absolute left-0 top-1/2 -translate-y-1/2 shrink-0 flex items-center">
-            <QuibdoLogo variant="full" size="lg" className="scale-100 print:scale-90 origin-left" />
+            <QuibdoLogo variant="full" size="lg" className="scale-100 print:scale-[0.80] origin-left" />
           </div>
           <div className="text-center px-4 w-full max-w-[580px] print:max-w-[580px]">
-            <h1 className="text-[14px] sm:text-[15.5px] print:text-[13.5px] font-bold tracking-tight uppercase text-black leading-tight whitespace-normal md:whitespace-nowrap print:whitespace-nowrap">
+            <h1 className="text-[14px] sm:text-[15.5px] print:text-[12.5px] font-bold tracking-tight uppercase text-black leading-tight whitespace-normal md:whitespace-nowrap print:whitespace-nowrap">
               CERTIFICADO DE SUPERVISIÓN Y AUTORIZACIÓN DE DESEMBOLSO
             </h1>
           </div>
@@ -2437,9 +2553,9 @@ export default function CertificadoSupervisionDoc({
         </div>
 
         {/* 8. LÍNEA DE FIRMA DEL SUPERVISOR (Exacto a la imagen) */}
-        <div className="w-full flex flex-col items-center justify-center pt-12 print:pt-12 pb-0">
-          <div className="w-56 border-t border-black text-center pt-0.5">
-            <p className="font-bold uppercase tracking-wider text-[10px]">SUPERVISOR</p>
+        <div className="w-full flex flex-col items-center justify-center pt-8 print:pt-4 pb-0">
+          <div className="w-56 print:w-44 border-t border-black text-center pt-0.5">
+            <p className="font-bold uppercase tracking-wider text-[10px] print:text-[8.5px]">SUPERVISOR</p>
           </div>
         </div>
 

@@ -244,26 +244,48 @@ export default function App() {
         id: resolvedId
       };
       
-      const liveCert = createDefaultCertificadoData(savedReportWithId);
       const liveFid = createDefaultFiduciariaData(savedReportWithId);
       const liveDesembolso = createDefaultAutorizacionDesembolsoData(savedReportWithId);
 
       const docKey = savedReportWithId.contratistaDocumento || '';
+      const cleanDoc = docKey.replace(/\D/g, '');
       const nroKey = savedReportWithId.informeNro || '1';
 
-      // Preservar datos de liquidación calculados previamente por la calculadora si existen en localStorage
-      const existingCertRaw = localStorage.getItem(`cert_data_${docKey}_${nroKey}`) || (resolvedId ? localStorage.getItem(`cert_data_${resolvedId}_${nroKey}`) : null);
+      // Preservar datos de liquidación y datos presupuestales/seguridad social del certificado si existen en localStorage
+      const existingCertRaw = localStorage.getItem(`cert_data_${docKey}_${nroKey}`) || 
+                              (cleanDoc ? localStorage.getItem(`cert_data_${cleanDoc}_${nroKey}`) : null) ||
+                              (resolvedId ? localStorage.getItem(`cert_data_${resolvedId}_${nroKey}`) : null) ||
+                              localStorage.getItem(`cert_data_${nroKey}`);
+      let liveCert = createDefaultCertificadoData(savedReportWithId);
       if (existingCertRaw) {
         try {
           const exObj = JSON.parse(existingCertRaw);
-          if (exObj?.saldoPorPagar) liveCert.saldoPorPagar = exObj.saldoPorPagar;
-          if (exObj?.porcentajeEjecucion) liveCert.porcentajeEjecucion = exObj.porcentajeEjecucion;
-          if (exObj?.valorRubro) liveCert.valorRubro = exObj.valorRubro;
-          if (exObj?.valorPagadoAcumulado) liveCert.valorPagadoAcumulado = exObj.valorPagadoAcumulado;
+          liveCert = {
+            ...liveCert,
+            ...exObj,
+            contratistaNombre: savedReportWithId.contratistaNombre || exObj.contratistaNombre,
+            contratistaDocumento: savedReportWithId.contratistaDocumento || exObj.contratistaDocumento,
+            supervisorNombre: savedReportWithId.supervisorNombre || exObj.supervisorNombre,
+            objeto: savedReportWithId.objeto || exObj.objeto,
+            fechaRegistroPresupuestal: exObj.fechaRegistroPresupuestal || liveCert.fechaRegistroPresupuestal,
+            codigoRubro: exObj.codigoRubro || liveCert.codigoRubro,
+            saludValor: exObj.saludValor || liveCert.saludValor,
+            saludEps: exObj.saludEps || liveCert.saludEps,
+            saludPlanilla: exObj.saludPlanilla || liveCert.saludPlanilla,
+            pensionValor: exObj.pensionValor || liveCert.pensionValor,
+            pensionFondo: exObj.pensionFondo || liveCert.pensionFondo,
+            pensionPlanilla: exObj.pensionPlanilla || liveCert.pensionPlanilla,
+            arpValor: exObj.arpValor || liveCert.arpValor,
+            arpAseguradora: exObj.arpAseguradora || liveCert.arpAseguradora,
+            arpPlanilla: exObj.arpPlanilla || liveCert.arpPlanilla,
+          };
         } catch (e) {}
       }
 
       localStorage.setItem(`cert_data_${docKey}_${nroKey}`, JSON.stringify(liveCert));
+      if (cleanDoc) {
+        localStorage.setItem(`cert_data_${cleanDoc}_${nroKey}`, JSON.stringify(liveCert));
+      }
       localStorage.setItem(`cert_data_${nroKey}`, JSON.stringify(liveCert));
 
       localStorage.setItem(`fid_data_${docKey}_${nroKey}`, JSON.stringify(liveFid));

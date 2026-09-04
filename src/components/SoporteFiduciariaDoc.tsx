@@ -572,7 +572,7 @@ export default function SoporteFiduciariaDoc({
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#006b33]"></span>
           <span className="text-xs font-bold text-slate-800 uppercase tracking-wide font-sans">
-            Soporte Fiduciaria y Adquisiciones
+            Soporte Fiduciaria (Fondo 101) y Adquisiciones
           </span>
           <span className="text-[11px] font-mono bg-emerald-100 text-[#006b33] font-bold px-2 py-0.5 rounded border border-emerald-300">
             {formData.docSoporteNro ? `Documento #${formData.docSoporteNro}` : 'N° Doc Soporte: En Blanco'}

@@ -3210,22 +3210,71 @@ export const supabaseService = {
     const docKey = certData.contratistaDocumento || '';
     const cleanDoc = docKey.replace(/[^0-9]/g, '');
     const pagoNroStr = String(certData.pagoNro || '1');
+    let mergedCertData = { ...certData };
 
     // 1. Guardar copia en LocalStorage inmediatamente con todas las variantes de clave
     if (typeof localStorage !== 'undefined') {
       const storageKey = `cert_data_${docKey}_${pagoNroStr}`;
       
-      // Si excludeLiquidacion es true, verificar si ya había datos de liquidación reales en localStorage
-      let mergedCertData = { ...certData };
+      // Si excludeLiquidacion es true, verificar si ya había datos de liquidación y datos personalizados en localStorage
       if (options?.excludeLiquidacion) {
-        const prevRaw = localStorage.getItem(storageKey) || (informeId ? localStorage.getItem(`cert_data_${informeId}_${pagoNroStr}`) : null);
+        const prevRaw = localStorage.getItem(storageKey) || 
+                        (cleanDoc ? localStorage.getItem(`cert_data_${cleanDoc}_${pagoNroStr}`) : null) ||
+                        (informeId ? localStorage.getItem(`cert_data_${informeId}_${pagoNroStr}`) : null) ||
+                        localStorage.getItem(`cert_data_${pagoNroStr}`);
         if (prevRaw) {
           try {
             const prevObj = JSON.parse(prevRaw);
-            if (prevObj?.saldoPorPagar) mergedCertData.saldoPorPagar = prevObj.saldoPorPagar;
-            if (prevObj?.porcentajeEjecucion) mergedCertData.porcentajeEjecucion = prevObj.porcentajeEjecucion;
-            if (prevObj?.valorRubro) mergedCertData.valorRubro = prevObj.valorRubro;
-            if (prevObj?.valorPagadoAcumulado) mergedCertData.valorPagadoAcumulado = prevObj.valorPagadoAcumulado;
+            mergedCertData = {
+              ...certData,
+              ...prevObj,
+              contratistaNombre: certData.contratistaNombre || prevObj.contratistaNombre,
+              contratistaDocumento: certData.contratistaDocumento || prevObj.contratistaDocumento,
+              supervisorNombre: certData.supervisorNombre || prevObj.supervisorNombre,
+              objeto: certData.objeto || prevObj.objeto,
+              pagoNro: pagoNroStr,
+              fechaRegistroPresupuestal: prevObj.fechaRegistroPresupuestal || certData.fechaRegistroPresupuestal,
+              codigoRubro: prevObj.codigoRubro || certData.codigoRubro,
+              fechaRegistroPresupuestal2: prevObj.fechaRegistroPresupuestal2 ?? certData.fechaRegistroPresupuestal2,
+              codigoRubro2: prevObj.codigoRubro2 ?? certData.codigoRubro2,
+              fechaRegistroPresupuestal3: prevObj.fechaRegistroPresupuestal3 ?? certData.fechaRegistroPresupuestal3,
+              codigoRubro3: prevObj.codigoRubro3 ?? certData.codigoRubro3,
+              fechaRegistroPresupuestal4: prevObj.fechaRegistroPresupuestal4 ?? certData.fechaRegistroPresupuestal4,
+              codigoRubro4: prevObj.codigoRubro4 ?? certData.codigoRubro4,
+              fechaRegistroPresupuestal5: prevObj.fechaRegistroPresupuestal5 ?? certData.fechaRegistroPresupuestal5,
+              codigoRubro5: prevObj.codigoRubro5 ?? certData.codigoRubro5,
+              cdpNro: prevObj.cdpNro || certData.cdpNro,
+              cdpNro2: prevObj.cdpNro2 ?? certData.cdpNro2,
+              cdpNro3: prevObj.cdpNro3 ?? certData.cdpNro3,
+              cdpNro4: prevObj.cdpNro4 ?? certData.cdpNro4,
+              cdpNro5: prevObj.cdpNro5 ?? certData.cdpNro5,
+              crpNro: prevObj.crpNro || certData.crpNro,
+              crpNro2: prevObj.crpNro2 ?? certData.crpNro2,
+              crpNro3: prevObj.crpNro3 ?? certData.crpNro3,
+              crpNro4: prevObj.crpNro4 ?? certData.crpNro4,
+              crpNro5: prevObj.crpNro5 ?? certData.crpNro5,
+              valorRubro: prevObj.valorRubro || certData.valorRubro,
+              valorRubro2: prevObj.valorRubro2 ?? certData.valorRubro2,
+              valorRubro3: prevObj.valorRubro3 ?? certData.valorRubro3,
+              valorRubro4: prevObj.valorRubro4 ?? certData.valorRubro4,
+              valorRubro5: prevObj.valorRubro5 ?? certData.valorRubro5,
+              saludValor: prevObj.saludValor || certData.saludValor,
+              saludEps: prevObj.saludEps || certData.saludEps,
+              saludPlanilla: prevObj.saludPlanilla || certData.saludPlanilla,
+              pensionValor: prevObj.pensionValor || certData.pensionValor,
+              pensionFondo: prevObj.pensionFondo || certData.pensionFondo,
+              pensionPlanilla: prevObj.pensionPlanilla || certData.pensionPlanilla,
+              arpValor: prevObj.arpValor || certData.arpValor,
+              arpAseguradora: prevObj.arpAseguradora || certData.arpAseguradora,
+              arpPlanilla: prevObj.arpPlanilla || certData.arpPlanilla,
+              expedicionDia: prevObj.expedicionDia || certData.expedicionDia,
+              expedicionMes: prevObj.expedicionMes || certData.expedicionMes,
+              expedicionAno: prevObj.expedicionAno || certData.expedicionAno,
+              valorAvalado: prevObj.valorAvalado || certData.valorAvalado,
+              saldoPorPagar: prevObj.saldoPorPagar || certData.saldoPorPagar,
+              porcentajeEjecucion: prevObj.porcentajeEjecucion || certData.porcentajeEjecucion,
+              valorPagadoAcumulado: prevObj.valorPagadoAcumulado || certData.valorPagadoAcumulado,
+            };
           } catch (e) {}
         }
       }
@@ -3275,22 +3324,108 @@ export const supabaseService = {
         }
       }
 
-      const numTotalAPagar = limpiarNumeroMoneda(certData.valorTotalAPagar || certData.valorAPagarSinIva || certData.valorAvalado);
-      const numTotalContrato = limpiarNumeroMoneda(certData.valorTotal || certData.valorInicial);
-      const numSaldoPorPagar = limpiarNumeroMoneda(certData.saldoPorPagar);
+      // Comprobar si ya existe registro por informe_id o por documento y pago_nro
+      let existingId: string | null = null;
+      let existingDbForm: any = null;
+      if (resolvedInformeId) {
+        const { data: existingCert } = await supabase
+          .from('certificaciones_supervision')
+          .select('id, datos_formulario')
+          .eq('informe_id', resolvedInformeId)
+          .limit(1)
+          .maybeSingle();
+        if (existingCert?.id) {
+          existingId = existingCert.id;
+          existingDbForm = existingCert.datos_formulario;
+        }
+      }
+
+      if (!existingId && (docKey || cleanDoc)) {
+        const { data: existingByDoc } = await supabase
+          .from('certificaciones_supervision')
+          .select('id, datos_formulario')
+          .or(`contratista_documento.eq.${docKey},contratista_documento.eq.${cleanDoc}`)
+          .eq('pago_nro', pagoNroStr)
+          .limit(1)
+          .maybeSingle();
+        if (existingByDoc?.id) {
+          existingId = existingByDoc.id;
+          existingDbForm = existingByDoc.datos_formulario;
+        }
+      }
+
+      // Si se excluye liquidación y ya existían datos en la base de datos, preservar los valores personalizados
+      if (options?.excludeLiquidacion && existingDbForm) {
+        mergedCertData = {
+          ...mergedCertData,
+          fechaRegistroPresupuestal: existingDbForm.fechaRegistroPresupuestal || mergedCertData.fechaRegistroPresupuestal,
+          codigoRubro: existingDbForm.codigoRubro || mergedCertData.codigoRubro,
+          fechaRegistroPresupuestal2: existingDbForm.fechaRegistroPresupuestal2 ?? mergedCertData.fechaRegistroPresupuestal2,
+          codigoRubro2: existingDbForm.codigoRubro2 ?? mergedCertData.codigoRubro2,
+          fechaRegistroPresupuestal3: existingDbForm.fechaRegistroPresupuestal3 ?? mergedCertData.fechaRegistroPresupuestal3,
+          codigoRubro3: existingDbForm.codigoRubro3 ?? mergedCertData.codigoRubro3,
+          fechaRegistroPresupuestal4: existingDbForm.fechaRegistroPresupuestal4 ?? mergedCertData.fechaRegistroPresupuestal4,
+          codigoRubro4: existingDbForm.codigoRubro4 ?? mergedCertData.codigoRubro4,
+          fechaRegistroPresupuestal5: existingDbForm.fechaRegistroPresupuestal5 ?? mergedCertData.fechaRegistroPresupuestal5,
+          codigoRubro5: existingDbForm.codigoRubro5 ?? mergedCertData.codigoRubro5,
+          cdpNro: existingDbForm.cdpNro || mergedCertData.cdpNro,
+          cdpNro2: existingDbForm.cdpNro2 ?? mergedCertData.cdpNro2,
+          cdpNro3: existingDbForm.cdpNro3 ?? mergedCertData.cdpNro3,
+          cdpNro4: existingDbForm.cdpNro4 ?? mergedCertData.cdpNro4,
+          cdpNro5: existingDbForm.cdpNro5 ?? mergedCertData.cdpNro5,
+          crpNro: existingDbForm.crpNro || mergedCertData.crpNro,
+          crpNro2: existingDbForm.crpNro2 ?? mergedCertData.crpNro2,
+          crpNro3: existingDbForm.crpNro3 ?? mergedCertData.crpNro3,
+          crpNro4: existingDbForm.crpNro4 ?? mergedCertData.crpNro4,
+          crpNro5: existingDbForm.crpNro5 ?? mergedCertData.crpNro5,
+          valorRubro: existingDbForm.valorRubro || mergedCertData.valorRubro,
+          valorRubro2: existingDbForm.valorRubro2 ?? mergedCertData.valorRubro2,
+          valorRubro3: existingDbForm.valorRubro3 ?? mergedCertData.valorRubro3,
+          valorRubro4: existingDbForm.valorRubro4 ?? mergedCertData.valorRubro4,
+          valorRubro5: existingDbForm.valorRubro5 ?? mergedCertData.valorRubro5,
+          saludValor: existingDbForm.saludValor || mergedCertData.saludValor,
+          saludEps: existingDbForm.saludEps || mergedCertData.saludEps,
+          saludPlanilla: existingDbForm.saludPlanilla || mergedCertData.saludPlanilla,
+          pensionValor: existingDbForm.pensionValor || mergedCertData.pensionValor,
+          pensionFondo: existingDbForm.pensionFondo || mergedCertData.pensionFondo,
+          pensionPlanilla: existingDbForm.pensionPlanilla || mergedCertData.pensionPlanilla,
+          arpValor: existingDbForm.arpValor || mergedCertData.arpValor,
+          arpAseguradora: existingDbForm.arpAseguradora || mergedCertData.arpAseguradora,
+          arpPlanilla: existingDbForm.arpPlanilla || mergedCertData.arpPlanilla,
+          expedicionDia: existingDbForm.expedicionDia || mergedCertData.expedicionDia,
+          expedicionMes: existingDbForm.expedicionMes || mergedCertData.expedicionMes,
+          expedicionAno: existingDbForm.expedicionAno || mergedCertData.expedicionAno,
+          valorAvalado: existingDbForm.valorAvalado || mergedCertData.valorAvalado,
+          saldoPorPagar: existingDbForm.saldoPorPagar || mergedCertData.saldoPorPagar,
+          porcentajeEjecucion: existingDbForm.porcentajeEjecucion || mergedCertData.porcentajeEjecucion,
+          valorPagadoAcumulado: existingDbForm.valorPagadoAcumulado || mergedCertData.valorPagadoAcumulado,
+        };
+
+        if (typeof localStorage !== 'undefined') {
+          const storageKey = `cert_data_${docKey}_${pagoNroStr}`;
+          localStorage.setItem(storageKey, JSON.stringify(mergedCertData));
+          if (cleanDoc) localStorage.setItem(`cert_data_${cleanDoc}_${pagoNroStr}`, JSON.stringify(mergedCertData));
+          localStorage.setItem(`cert_data_${pagoNroStr}`, JSON.stringify(mergedCertData));
+          if (informeId) localStorage.setItem(`cert_data_${informeId}_${pagoNroStr}`, JSON.stringify(mergedCertData));
+        }
+      }
+
+      const numTotalAPagar = limpiarNumeroMoneda(mergedCertData.valorTotalAPagar || mergedCertData.valorAPagarSinIva || mergedCertData.valorAvalado);
+      const numTotalContrato = limpiarNumeroMoneda(mergedCertData.valorTotal || mergedCertData.valorInicial);
+      const numSaldoPorPagar = limpiarNumeroMoneda(mergedCertData.saldoPorPagar);
 
       const payload: any = {
         contratista_documento: cleanDoc || docKey,
         pago_nro: pagoNroStr,
-        periodo_certificado: `${certData.periodoDesde || ''} - ${certData.periodoHasta || ''}`,
+        periodo_certificado: `${mergedCertData.periodoDesde || ''} - ${mergedCertData.periodoHasta || ''}`,
         valor_autorizado_pago: numTotalAPagar,
         valor_total_contrato: numTotalContrato,
-        observaciones_supervision: certData.objeto || '',
-        observaciones_liquidacion: certData.observacionesLiquidacion || '',
-        expedicion_dia: certData.expedicionDia || '',
-        expedicion_mes: certData.expedicionMes || '',
-        expedicion_ano: certData.expedicionAno || '',
-        datos_formulario: certData, // Guardar todos los campos del formulario íntegramente
+        observaciones_supervision: mergedCertData.objeto || '',
+        observaciones_liquidacion: mergedCertData.observacionesLiquidacion || '',
+        expedicion_dia: mergedCertData.expedicionDia || '',
+        expedicion_mes: mergedCertData.expedicionMes || '',
+        expedicion_ano: mergedCertData.expedicionAno || '',
+        datos_formulario: mergedCertData, // Guardar todos los campos íntegramente
         certifica_cumplimiento: true,
         updated_at: new Date().toISOString(),
       };
@@ -3298,7 +3433,7 @@ export const supabaseService = {
       // Si no se solicita excluir liquidación (o si es guardado directo desde el certificado/calculadora), enviar saldo_por_pagar y porcentaje_ejecucion
       if (!options?.excludeLiquidacion) {
         payload.saldo_por_pagar = numSaldoPorPagar;
-        payload.porcentaje_ejecucion = certData.porcentajeEjecucion || '';
+        payload.porcentaje_ejecucion = mergedCertData.porcentajeEjecucion || '';
       }
 
       if (resolvedInformeId && isUuid(resolvedInformeId)) {
@@ -3309,29 +3444,6 @@ export const supabaseService = {
       }
       if (supervisorId && isUuid(supervisorId)) {
         payload.supervisor_id = supervisorId;
-      }
-
-      // Comprobar si ya existe registro por informe_id o por documento y pago_nro
-      let existingId: string | null = null;
-      if (resolvedInformeId) {
-        const { data: existingCert } = await supabase
-          .from('certificaciones_supervision')
-          .select('id')
-          .eq('informe_id', resolvedInformeId)
-          .limit(1)
-          .maybeSingle();
-        if (existingCert?.id) existingId = existingCert.id;
-      }
-
-      if (!existingId && (docKey || cleanDoc)) {
-        const { data: existingByDoc } = await supabase
-          .from('certificaciones_supervision')
-          .select('id')
-          .or(`contratista_documento.eq.${docKey},contratista_documento.eq.${cleanDoc}`)
-          .eq('pago_nro', pagoNroStr)
-          .limit(1)
-          .maybeSingle();
-        if (existingByDoc?.id) existingId = existingByDoc.id;
       }
 
       if (existingId) {
@@ -3404,6 +3516,7 @@ export const supabaseService = {
       const key = `cert_data_${docIdentidad || ''}_${pagoNro || '1'}`;
       const saved = localStorage.getItem(key) || 
         (cleanDoc ? localStorage.getItem(`cert_data_${cleanDoc}_${pagoNro || '1'}`) : null) ||
+        (informeId && pagoNro ? localStorage.getItem(`cert_data_${informeId}_${pagoNro}`) : null) ||
         (pagoNro ? localStorage.getItem(`cert_data_${pagoNro}`) : null);
       if (saved) {
         try {

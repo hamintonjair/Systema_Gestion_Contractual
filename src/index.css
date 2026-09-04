@@ -88,17 +88,23 @@
   #certificado-supervision-document {
     display: block !important;
     visibility: visible !important;
-    width: 216mm !important;
-    min-height: 279.4mm !important;
-    max-width: 216mm !important;
-    margin: 0 auto !important;
-    padding: 10mm 12mm !important;
+    width: 200mm !important;
+    max-width: 200mm !important;
+    height: 265mm !important;
+    max-height: 268mm !important;
+    margin: 2mm auto 0 auto !important;
+    padding: 5mm 7mm !important;
     box-shadow: none !important;
     border: 2px solid #000000 !important;
     color: #000000 !important;
     background-color: #ffffff !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    overflow: hidden !important;
+    transform: scale(0.95) !important;
+    transform-origin: top center !important;
   }
 
   #certificado-supervision-document * {

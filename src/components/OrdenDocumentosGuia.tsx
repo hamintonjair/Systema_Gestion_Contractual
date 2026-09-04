@@ -86,7 +86,7 @@ export const LISTA_ORDEN_DOCUMENTOS: DocumentoRequisito[] = [
     documento: "5. RUT (Registro Único Tributario)",
     alcaldia: "No aplica",
     fiducia: "Aplica",
-    observaciones: "Exclusivo para trámites de pago ante la Fiducia.",
+    observaciones: "Exclusivo para trámites de pago ante Fiducia (Fondo 101).",
     enlaces: [
       {
         nombre: "Portal DIAN MUISCA (Obtención y actualización de RUT)",
@@ -101,28 +101,28 @@ export const LISTA_ORDEN_DOCUMENTOS: DocumentoRequisito[] = [
     documento: "6. Certificación bajo juramento (Declaración)",
     alcaldia: "2 copias",
     fiducia: "2 copias",
-    observaciones: "Alcaldía: Ambas copias dirigidas a la Alcaldía municipal. Fiducia: 1 copia a Alcaldía y 1 copia a Fiducia."
+    observaciones: "Alcaldía: Ambas copias dirigidas a la Alcaldía municipal. Fiducia (Fondo 101): 1 copia a Alcaldía y 1 copia a Fiducia (Fondo 101)."
   },
   {
     id: 7,
-    documento: "7. Soporte de Fiducia / Transferencias",
+    documento: "7. Soporte de Fiducia (Fondo 101) / Transferencias",
     alcaldia: "No aplica",
     fiducia: "Aplica (2 copias)",
-    observaciones: "Exclusivo si la orden de pago aplica para trámite ante Fiducia."
+    observaciones: "Exclusivo si la orden de pago aplica para trámite ante Fiducia (Fondo 101)."
   },
   {
     id: 8,
     documento: "8. Cédula de Ciudadanía",
     alcaldia: "Opcional / No aplica",
     fiducia: "Aplica",
-    observaciones: "Solo requerida para el primer cobro (opcional anexar copia legible en el primer cobro)."
+    observaciones: "Solo requerida para el primer cobro ante Fiducia (Fondo 101) (opcional anexar copia legible en el primer cobro)."
   },
   {
     id: 9,
     documento: "9. Certificación bancaria",
     alcaldia: "Opcional / No aplica",
     fiducia: "Aplica",
-    observaciones: "Solo requerida para el primer cobro (opcional anexar certificación bancaria reciente en el primero)."
+    observaciones: "Solo requerida para el primer cobro ante Fiducia (Fondo 101) (opcional anexar certificación bancaria reciente en el primero)."
   }
 ];
 
@@ -419,7 +419,7 @@ export const OrdenDocumentosGuia: React.FC = () => {
                     : 'bg-white text-slate-600 hover:bg-slate-200 border border-slate-200'
                 }`}
               >
-                Fiducia
+                Fiducia (Fondo 101)
               </button>
             </div>
           </div>
@@ -442,10 +442,10 @@ export const OrdenDocumentosGuia: React.FC = () => {
                     <span>Alcaldía</span>
                   </div>
                 </th>
-                <th className="py-3.5 px-4 min-w-[140px]">
+                <th className="py-3.5 px-4 min-w-[150px]">
                   <div className="flex items-center gap-1.5">
                     <Landmark size={14} className="text-blue-700" />
-                    <span>Fiducia</span>
+                    <span>Fiducia (Fondo 101)</span>
                   </div>
                 </th>
                 <th className="py-3.5 px-4 min-w-[280px]">Observaciones y Requisitos</th>
@@ -563,7 +563,7 @@ export const OrdenDocumentosGuia: React.FC = () => {
             Importante para la radicación ante la Alcaldía de Quibdó:
           </p>
           <p className="text-amber-800 leading-relaxed">
-            Asegúrese de foliarse y organizarse cada paquete respetando el orden numerado (1 al 9). En caso de trámite mixto (Alcaldía + Fiducia), conserve 2 juegos físicos completos conforme a las especificaciones indicadas en la columna de observaciones.
+            Asegúrese de foliarse y organizarse cada paquete respetando el orden numerado (1 al 9). En caso de trámite mixto (Alcaldía + Fiducia / Fondo 101), conserve 2 juegos físicos completos conforme a las especificaciones indicadas en la columna de observaciones.
           </p>
         </div>
       </div>

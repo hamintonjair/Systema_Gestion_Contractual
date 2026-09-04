@@ -215,21 +215,38 @@ export default function ReportEditor({
         ...data,
         valorPagar: formattedStr,
       };
-      const liveCert = createDefaultCertificadoData(nextData);
-      liveCert.valorRubro = res.valorAPagarTabla;
-      liveCert.valorAPagarSinIva = res.valorAPagarTabla;
-      liveCert.valorTotalAPagar = res.valorAPagarTabla;
-      liveCert.porcentajeEjecucion = res.porcentajeEjecucionFormateado || `${res.porcentajeEjecucion.toFixed(2).replace('.', ',')} %`;
-      liveCert.valorPagadoAcumulado = res.pagosAcumuladosFormateado ? res.pagosAcumuladosFormateado.replace('$', '').trim() : '0';
-      liveCert.saldoPorPagar = res.saldoPorPagarTabla;
-      liveCert.valorAvalado = `$ ${res.valorAPagarTabla}`;
-      liveCert.pagoNro = String(data.informeNro || '1');
-      liveCert.periodoDesde = data.periodoDesde || res.fechaInicioPago || '13/08/2026';
-      liveCert.periodoHasta = data.periodoHasta || res.fechaFinPago || '31/08/2026';
-
       const docKey = data.contratistaDocumento || '';
+      const cleanDoc = docKey.replace(/\D/g, '');
       const nroKey = data.informeNro || '1';
+
+      const existingCertRaw = localStorage.getItem(`cert_data_${docKey}_${nroKey}`) || 
+                              (cleanDoc ? localStorage.getItem(`cert_data_${cleanDoc}_${nroKey}`) : null) ||
+                              (data.id ? localStorage.getItem(`cert_data_${data.id}_${nroKey}`) : null) ||
+                              localStorage.getItem(`cert_data_${nroKey}`);
+      let existingCert: any = null;
+      if (existingCertRaw) {
+        try { existingCert = JSON.parse(existingCertRaw); } catch (e) {}
+      }
+
+      const liveCert = {
+        ...createDefaultCertificadoData(nextData),
+        ...(existingCert || {}),
+        valorRubro: res.valorAPagarTabla,
+        valorAPagarSinIva: res.valorAPagarTabla,
+        valorTotalAPagar: res.valorAPagarTabla,
+        porcentajeEjecucion: res.porcentajeEjecucionFormateado || `${res.porcentajeEjecucion.toFixed(2).replace('.', ',')} %`,
+        valorPagadoAcumulado: res.pagosAcumuladosFormateado ? res.pagosAcumuladosFormateado.replace('$', '').trim() : '0',
+        saldoPorPagar: res.saldoPorPagarTabla,
+        valorAvalado: `$ ${res.valorAPagarTabla}`,
+        pagoNro: String(data.informeNro || '1'),
+        periodoDesde: existingCert?.periodoDesde || data.periodoDesde || res.fechaInicioPago || '13/08/2026',
+        periodoHasta: existingCert?.periodoHasta || data.periodoHasta || res.fechaFinPago || '31/08/2026',
+      };
+
       localStorage.setItem(`cert_data_${docKey}_${nroKey}`, JSON.stringify(liveCert));
+      if (cleanDoc) {
+        localStorage.setItem(`cert_data_${cleanDoc}_${nroKey}`, JSON.stringify(liveCert));
+      }
       localStorage.setItem(`cert_data_${nroKey}`, JSON.stringify(liveCert));
       if (data.id) {
         localStorage.setItem(`cert_data_${data.id}_${nroKey}`, JSON.stringify(liveCert));
