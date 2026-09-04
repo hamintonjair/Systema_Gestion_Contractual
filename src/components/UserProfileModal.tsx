@@ -132,7 +132,7 @@ export default function UserProfileModal({ user, isOpen, onClose, onUserUpdated 
                   Mi Perfil de usuario
                 </h3>
                 <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-900 text-emerald-300 border border-emerald-700">
-                  {user.role === 'contratista' ? 'Contratista' : user.role === 'secretaria_admin' ? 'Supervisor' : 'Administrador'}
+                  {user.role === 'contratista' ? 'Contratista' : user.role === 'secretaria_admin' ? 'Secretaría Titular' : user.role === 'secretaria_supervisor' ? 'Supervisor' : 'Administrador'}
                 </span>
               </div>
               <p className="text-xs text-emerald-300/80 mt-0.5">

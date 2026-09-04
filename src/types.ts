@@ -8,7 +8,7 @@ export const extractContratoNroOnly = (str?: string): string => {
   return firstPart.replace(/\D/g, '');
 };
 
-export type UserRole = 'super_admin' | 'secretaria_admin' | 'contratista';
+export type UserRole = 'super_admin' | 'secretaria_admin' | 'secretaria_supervisor' | 'contratista';
 
 export type EstadoInforme = 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Devuelto';
 

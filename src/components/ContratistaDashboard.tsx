@@ -795,7 +795,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       
       {/* Banner de Acceso Rápido al Rol de Supervisor (Si el usuario tiene rol secretaria_admin o super_admin) */}
-      {(user.role === 'secretaria_admin' || user.role === 'super_admin') && onGoToAdminView && (
+      {(user.role === 'secretaria_admin' || user.role === 'secretaria_supervisor' || user.role === 'super_admin') && onGoToAdminView && (
         <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-white p-4 sm:p-5 rounded-2xl border border-blue-500/40 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 shrink-0">

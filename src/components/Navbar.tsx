@@ -92,7 +92,7 @@ export default function Navbar({
                   Alcaldía de Quibdó
                 </h1>
                 <span className="hidden sm:inline-block text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700/60">
-                  {currentUser.role === 'contratista' ? 'Portal Contratista' : currentUser.role === 'secretaria_admin' ? 'Supervisión Secretaría' : 'Super Admin'}
+                  {currentUser.role === 'contratista' ? 'Portal Contratista' : currentUser.role === 'secretaria_admin' ? 'Secretaría de Despacho' : currentUser.role === 'secretaria_supervisor' ? 'Supervisión Secretaría' : 'Super Admin'}
                 </span>
               </div>
               <p className="text-[11px] text-emerald-300/80 mt-0.5 flex items-center gap-1.5 truncate max-w-xs sm:max-w-md">
@@ -111,7 +111,7 @@ export default function Navbar({
           <div className="flex items-center gap-2 sm:gap-3">
             
             {/* Selector de Modo Rápido para Supervisores/Secretaría Admin (Contratista <-> Supervisión) */}
-            {currentUser.role === 'secretaria_admin' && (
+            {(currentUser.role === 'secretaria_admin' || currentUser.role === 'secretaria_supervisor') && (
               <div className="hidden md:flex items-center bg-emerald-950/80 p-1 rounded-xl border border-emerald-700/60 shadow-inner">
                 <button
                   type="button"
@@ -207,7 +207,7 @@ export default function Navbar({
                     {currentUser.nombreCompleto}
                   </p>
                   <p className="text-[10px] text-emerald-300 uppercase tracking-wider font-semibold">
-                    {currentUser.role === 'contratista' ? 'Contratista' : currentUser.role === 'secretaria_admin' ? 'Admin Secretaría' : 'Super Admin'}
+                    {currentUser.role === 'contratista' ? 'Contratista' : currentUser.role === 'secretaria_admin' ? 'Admin Secretaría' : currentUser.role === 'secretaria_supervisor' ? 'Supervisor' : 'Super Admin'}
                   </p>
                 </div>
                 <ChevronDown size={14} className="text-emerald-400" />
@@ -233,7 +233,7 @@ export default function Navbar({
                         {currentUser.secretariaNombre || 'Alcaldía de Quibdó'}
                       </span>
                       <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                        {currentUser.role === 'contratista' ? 'Contratista' : currentUser.role === 'secretaria_admin' ? 'Supervisor' : 'Super Admin'}
+                        {currentUser.role === 'contratista' ? 'Contratista' : currentUser.role === 'secretaria_admin' ? 'Secretaría Titular' : currentUser.role === 'secretaria_supervisor' ? 'Supervisor' : 'Super Admin'}
                       </span>
                     </div>
                   </div>
@@ -254,7 +254,7 @@ export default function Navbar({
 
                   {/* Opciones del Menú */}
                   <div className="p-1.5 space-y-1 border-b border-gray-100">
-                    {currentUser.role === 'secretaria_admin' && (
+                    {(currentUser.role === 'secretaria_admin' || currentUser.role === 'secretaria_supervisor') && (
                       <>
                         <button
                           onClick={() => {

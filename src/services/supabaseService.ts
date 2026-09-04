@@ -15,6 +15,109 @@ const isUuid = (val?: string): boolean => {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 };
 
+// Helper genérico para insertar en cualquier tabla garantizando UUID y tolerando columnas inexistentes (PGRST204)
+const executeSafeInsert = async (tableName: string, payload: any) => {
+  const payloadToTry: any = { ...payload };
+  // Siempre asegurar un UUID válido para la clave primaria 'id' si no viene definida
+  if (!payloadToTry.id || !isUuid(payloadToTry.id)) {
+    payloadToTry.id = crypto.randomUUID();
+  }
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const res = await supabase.from(tableName).insert([payloadToTry]).select('*').maybeSingle();
+    if (!res.error) {
+      return res;
+    }
+
+    // 1. Manejo de columnas inexistentes reportadas por PostgREST (PGRST204)
+    if (res.error.code === 'PGRST204' || res.error.message?.includes('Could not find the')) {
+      const match = res.error.message?.match(/Could not find the '([^']+)' column/i);
+      if (match && match[1] && payloadToTry.hasOwnProperty(match[1])) {
+        delete payloadToTry[match[1]];
+        continue;
+      }
+    }
+
+    // 2. Manejo de columnas comunes que pueden no existir en la BD
+    if (payloadToTry.updated_at && res.error.message?.toLowerCase().includes('updated_at')) {
+      delete payloadToTry.updated_at;
+      continue;
+    }
+    if (payloadToTry.password && res.error.message?.toLowerCase().includes('password')) {
+      delete payloadToTry.password;
+      continue;
+    }
+    if (payloadToTry.created_at && res.error.message?.toLowerCase().includes('created_at')) {
+      delete payloadToTry.created_at;
+      continue;
+    }
+    if (payloadToTry.activo !== undefined && res.error.message?.toLowerCase().includes('activo')) {
+      delete payloadToTry.activo;
+      continue;
+    }
+
+    // Si el error fue por falta de 'id' (error 23502), generar y reintentar
+    if (res.error.code === '23502' && res.error.message?.includes('"id"')) {
+      payloadToTry.id = crypto.randomUUID();
+      continue;
+    }
+
+    return res;
+  }
+
+  return await supabase.from(tableName).insert([payloadToTry]).select('*').maybeSingle();
+};
+
+// Helper genérico para actualizar tolerando columnas inexistentes (PGRST204)
+const executeSafeUpdate = async (tableName: string, payload: any, id: string) => {
+  const payloadToTry: any = { ...payload };
+  // Nunca intentar actualizar la columna 'id'
+  delete payloadToTry.id;
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const res = await supabase.from(tableName).update(payloadToTry).eq('id', id).select('*').maybeSingle();
+    if (!res.error) {
+      return res;
+    }
+
+    // 1. Manejo de columnas inexistentes reportadas por PostgREST (PGRST204)
+    if (res.error.code === 'PGRST204' || res.error.message?.includes('Could not find the')) {
+      const match = res.error.message?.match(/Could not find the '([^']+)' column/i);
+      if (match && match[1] && payloadToTry.hasOwnProperty(match[1])) {
+        delete payloadToTry[match[1]];
+        continue;
+      }
+    }
+
+    // 2. Manejo de columnas comunes
+    if (payloadToTry.updated_at && res.error.message?.toLowerCase().includes('updated_at')) {
+      delete payloadToTry.updated_at;
+      continue;
+    }
+    if (payloadToTry.password && res.error.message?.toLowerCase().includes('password')) {
+      delete payloadToTry.password;
+      continue;
+    }
+    if (payloadToTry.created_at && res.error.message?.toLowerCase().includes('created_at')) {
+      delete payloadToTry.created_at;
+      continue;
+    }
+
+    return res;
+  }
+
+  return await supabase.from(tableName).update(payloadToTry).eq('id', id).select('*').maybeSingle();
+};
+
+// Helpers específicos para 'profiles'
+const executeProfileInsert = async (profilePayload: any) => {
+  return executeSafeInsert('profiles', profilePayload);
+};
+
+const executeProfileUpdate = async (profilePayload: any, id: string) => {
+  return executeSafeUpdate('profiles', profilePayload, id);
+};
+
 // Helper para obtener comentarios por campo almacenados
 const getStoredComments = (docKey?: string, informeNro?: string): Record<string, FieldComment> => {
   if (typeof localStorage === 'undefined') return {};
@@ -271,32 +374,8 @@ const mapStatusFromDb = (dbStatus?: string, hasComments: boolean = false): Estad
   return (dbStatus as EstadoInforme) || 'Enviado';
 };
 
-// Cuentas de respaldo del sistema institucional
-const SYSTEM_CORE_USERS: AuthUser[] = [
-  {
-    id: 'usr-superadmin-core',
-    email: 'alcaldia@quibdo-choco.gov.co',
-    password: 'Quibdo2026*',
-    nombreCompleto: 'SUPER ADMINISTRADOR MUNICIPAL',
-    documentoIdentidad: '891680011',
-    role: 'super_admin',
-    cargo: 'Alcaldía Mayor / Administrador General del Sistema',
-    telefono: '3100000000',
-  },
-  {
-    id: 'usr-admin-inclusion-core',
-    email: 'inclusion@quibdo-choco.gov.co',
-    password: 'Inclusion2026*',
-    nombreCompleto: 'DIANA ANDREA MOSQUERA GARCIA',
-    documentoIdentidad: '35602521',
-    role: 'secretaria_admin',
-    secretariaId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-    secretariaNombre: 'Secretaría de Inclusión y Cohesión Social',
-    secretariaCodigo: '170',
-    cargo: 'Secretaria de Despacho / Supervisora',
-    telefono: '3100000000',
-  }
-];
+// Cuentas de respaldo dinámicas de la base de datos (se leen directamente de la tabla 'profiles')
+const SYSTEM_CORE_USERS: AuthUser[] = [];
 
 export const supabaseService = {
   // Helper: Obtener comentarios guardados por documento y número de informe
@@ -544,31 +623,62 @@ export const supabaseService = {
   async createSecretariaWithAdmin(
     secData: { nombre: string; codigo: string; nit: string },
     adminData: { nombreCompleto: string; documentoIdentidad: string; email: string; password?: string; cargo?: string; telefono?: string }
-  ): Promise<{ success: boolean; secretaria: Secretaria; admin: AuthUser }> {
+  ): Promise<{ success: boolean; message?: string; secretaria?: Secretaria; admin?: AuthUser }> {
     let createdSecId: string = `sec-${secData.codigo.toLowerCase()}-${Date.now()}`;
     let realSecRow: Secretaria | null = null;
 
-    // 1. Guardar Secretaría en Supabase
+    // 1. Guardar o Buscar Secretaría en Supabase
     try {
-      const { data: secInserted, error: secError } = await supabase
+      // Búsqueda por código para evitar duplicados
+      const { data: existingSec } = await supabase
         .from('sec_secretarias')
-        .insert([{
+        .select('*')
+        .eq('codigo', secData.codigo.trim())
+        .maybeSingle();
+
+      if (existingSec) {
+        // Actualizar datos si ya existía en la BD
+        const { data: updatedSec } = await executeSafeUpdate('sec_secretarias', {
+          nombre: secData.nombre.trim(),
+          nit: secData.nit.trim(),
+          activo: true,
+          updated_at: new Date().toISOString()
+        }, existingSec.id);
+
+        if (updatedSec) {
+          createdSecId = updatedSec.id;
+          realSecRow = updatedSec as Secretaria;
+        } else {
+          createdSecId = existingSec.id;
+          realSecRow = existingSec as Secretaria;
+        }
+      } else {
+        // Insertar nueva secretaría en Supabase
+        const { data: secInserted, error: secError } = await executeSafeInsert('sec_secretarias', {
+          id: crypto.randomUUID(),
           nombre: secData.nombre.trim(),
           codigo: secData.codigo.trim(),
           nit: secData.nit.trim(),
           activo: true,
-        }])
-        .select('*')
-        .single();
+        });
 
-      if (secInserted) {
-        createdSecId = secInserted.id;
-        realSecRow = secInserted as Secretaria;
-      } else if (secError) {
-        console.warn('Supabase sec_secretarias insert error:', secError);
+        if (secInserted) {
+          createdSecId = secInserted.id;
+          realSecRow = secInserted as Secretaria;
+        } else if (secError) {
+          console.error('Supabase sec_secretarias insert error:', secError);
+          return {
+            success: false,
+            message: `Error en la BD al guardar la Secretaría: ${secError.message || 'Error de inserción'}`
+          };
+        }
       }
-    } catch (e) {
-      console.warn('Supabase sec_secretarias catch:', e);
+    } catch (e: any) {
+      console.error('Supabase sec_secretarias catch:', e);
+      return {
+        success: false,
+        message: `Error de conexión al guardar Secretaría: ${e.message || 'Excepción imprevista'}`
+      };
     }
 
     const newSec: Secretaria = realSecRow || {
@@ -582,15 +692,17 @@ export const supabaseService = {
     const adminPassword = adminData.password?.trim() || 'Admin2026*';
     const adminEmail = adminData.email.trim();
     const adminDoc = adminData.documentoIdentidad.trim().replace(/\./g, '');
-    let createdAdminId = `usr-admin-${Date.now()}`;
+    let createdAdminId = crypto.randomUUID();
 
-    // 2. Guardar Administrador en la tabla 'profiles' de Supabase
+    // 2. Guardar o Actualizar Administrador en la tabla 'profiles' de Supabase
     try {
       const adminProfilePayload: any = {
+        id: createdAdminId,
         role: 'secretaria_admin',
         nombre_completo: adminData.nombreCompleto.trim().toUpperCase(),
         documento_identidad: adminDoc,
         email: adminEmail,
+        password: adminPassword,
         telefono: adminData.telefono?.trim() || '3100000000',
         cargo: adminData.cargo?.trim() || 'Secretaria de Despacho / Supervisora',
         activo: true,
@@ -600,19 +712,46 @@ export const supabaseService = {
         adminProfilePayload.secretaria_id = createdSecId;
       }
 
-      const { data: adminInserted, error: adminErr } = await supabase
+      // Buscar si ya existe un perfil en Supabase con este documento o correo
+      const { data: existingAdmin } = await supabase
         .from('profiles')
-        .insert([adminProfilePayload])
         .select('*')
-        .single();
+        .or(`documento_identidad.eq.${adminDoc},email.ilike.${adminEmail}`)
+        .maybeSingle();
 
-      if (adminInserted) {
-        createdAdminId = adminInserted.id;
-      } else if (adminErr) {
-        console.warn('Supabase profile admin insert error:', adminErr);
+      if (existingAdmin) {
+        createdAdminId = existingAdmin.id;
+        const { data: adminUpdated, error: updAdminErr } = await executeProfileUpdate(adminProfilePayload, existingAdmin.id);
+
+        if (adminUpdated) {
+          createdAdminId = adminUpdated.id;
+        } else if (updAdminErr) {
+          console.error('Error actualizando perfil de admin:', updAdminErr);
+          return {
+            success: false,
+            message: `Error al vincular el administrador en la BD: ${updAdminErr.message}`
+          };
+        }
+      } else {
+        // Insertar nuevo usuario
+        const { data: adminInserted, error: adminErr } = await executeProfileInsert(adminProfilePayload);
+
+        if (adminInserted) {
+          createdAdminId = adminInserted.id;
+        } else if (adminErr) {
+          console.error('Supabase profile admin insert error:', adminErr);
+          return {
+            success: false,
+            message: `Error al crear el perfil administrativo en la BD: ${adminErr.message}`
+          };
+        }
       }
-    } catch (e) {
-      console.warn('Supabase admin catch:', e);
+    } catch (e: any) {
+      console.error('Supabase admin catch:', e);
+      return {
+        success: false,
+        message: `Excepción al guardar Administrador en la BD: ${e.message}`
+      };
     }
 
     // Guardar contraseña asignada
@@ -637,8 +776,16 @@ export const supabaseService = {
     // Actualizar almacenamiento local
     const storedUsers = localStorage.getItem(STORAGE_USERS_KEY);
     const customUsers: AuthUser[] = storedUsers ? JSON.parse(storedUsers) : [];
-    customUsers.push(newAdmin);
-    localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(customUsers));
+    const filteredUsers = customUsers.filter(u => u.id !== createdAdminId && u.documentoIdentidad !== adminDoc && u.email !== adminEmail);
+    filteredUsers.push(newAdmin);
+    localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(filteredUsers));
+
+    // Actualizar almacenamiento local de secretarías
+    const storedSecs = localStorage.getItem(STORAGE_SECRETARIAS_KEY);
+    const customSecs: Secretaria[] = storedSecs ? JSON.parse(storedSecs) : [];
+    const filteredSecs = customSecs.filter(s => s.id !== createdSecId && s.codigo !== secData.codigo.trim());
+    filteredSecs.push(newSec);
+    localStorage.setItem(STORAGE_SECRETARIAS_KEY, JSON.stringify(filteredSecs));
 
     return { success: true, secretaria: newSec, admin: newAdmin };
   },
@@ -653,45 +800,131 @@ export const supabaseService = {
       const trimmedNombre = secData.nombre.trim();
       const trimmedCodigo = secData.codigo.trim();
       const trimmedNit = secData.nit.trim();
+      let realSecId = secId;
 
-      // 1. Actualizar tabla sec_secretarias en Supabase si es UUID
+      // 1. Actualizar o Insertar tabla sec_secretarias en Supabase
       if (isUuid(secId)) {
-        await supabase
+        const { error: secUpdErr } = await executeSafeUpdate('sec_secretarias', {
+          nombre: trimmedNombre,
+          codigo: trimmedCodigo,
+          nit: trimmedNit,
+          updated_at: new Date().toISOString()
+        }, secId);
+
+        if (secUpdErr) {
+          console.error('Error actualizando sec_secretarias por ID:', secUpdErr);
+        }
+      } else {
+        // Buscar por código o insertar en Supabase si no existía como UUID
+        const { data: existingSec } = await supabase
           .from('sec_secretarias')
-          .update({
+          .select('*')
+          .eq('codigo', trimmedCodigo)
+          .maybeSingle();
+
+        if (existingSec) {
+          realSecId = existingSec.id;
+          await executeSafeUpdate('sec_secretarias', {
+            nombre: trimmedNombre,
+            nit: trimmedNit,
+            updated_at: new Date().toISOString()
+          }, existingSec.id);
+        } else {
+          const { data: newSecInserted, error: insSecErr } = await executeSafeInsert('sec_secretarias', {
+            id: crypto.randomUUID(),
             nombre: trimmedNombre,
             codigo: trimmedCodigo,
             nit: trimmedNit,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', secId);
+            activo: true,
+          });
+
+          if (newSecInserted) {
+            realSecId = newSecInserted.id;
+          } else if (insSecErr) {
+            console.error('Error insertando secretaria en Supabase:', insSecErr);
+          }
+        }
       }
 
       // 2. Actualizar almacenamiento local de secretarías
       const storedSecs = localStorage.getItem(STORAGE_SECRETARIAS_KEY);
       if (storedSecs) {
         let secs: Secretaria[] = JSON.parse(storedSecs);
-        secs = secs.map(s => s.id === secId || s.codigo === trimmedCodigo ? { ...s, nombre: trimmedNombre, codigo: trimmedCodigo, nit: trimmedNit } : s);
+        secs = secs.map(s => s.id === secId || s.codigo === trimmedCodigo ? { ...s, id: realSecId, nombre: trimmedNombre, codigo: trimmedCodigo, nit: trimmedNit } : s);
         localStorage.setItem(STORAGE_SECRETARIAS_KEY, JSON.stringify(secs));
       }
 
-      // 3. Actualizar administrador en Supabase
+      // 3. Actualizar o Crear Administrador en la tabla 'profiles' de Supabase
       const adminDoc = adminData.documentoIdentidad.trim().replace(/\./g, '');
       const adminEmail = adminData.email.trim();
       const adminPass = adminData.password?.trim();
 
-      if (adminData.id && isUuid(adminData.id)) {
-        await supabase
-          .from('profiles')
-          .update({
-            nombre_completo: adminData.nombreCompleto.trim().toUpperCase(),
-            documento_identidad: adminDoc,
-            email: adminEmail,
-            cargo: adminData.cargo?.trim() || 'Secretaria de Despacho / Supervisora',
-            telefono: adminData.telefono?.trim() || '3100000000',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', adminData.id);
+      const profilePayload: any = {
+        role: 'secretaria_admin',
+        nombre_completo: adminData.nombreCompleto.trim().toUpperCase(),
+        documento_identidad: adminDoc,
+        email: adminEmail,
+        cargo: adminData.cargo?.trim() || 'Secretaria de Despacho / Supervisora',
+        telefono: adminData.telefono?.trim() || '3100000000',
+        updated_at: new Date().toISOString()
+      };
+
+      if (adminPass) {
+        profilePayload.password = adminPass;
+      }
+
+      if (isUuid(realSecId)) {
+        profilePayload.secretaria_id = realSecId;
+      }
+
+      // Localizar ID del perfil del admin en Supabase
+      let targetProfileId: string | null = (adminData.id && isUuid(adminData.id)) ? adminData.id : null;
+
+      if (!targetProfileId) {
+        // Intentar buscar por documento, email o por la secretaría
+        let query = supabase.from('profiles').select('id').or(`documento_identidad.eq.${adminDoc},email.ilike.${adminEmail}`);
+        
+        const { data: foundProfile } = await query.maybeSingle();
+
+        if (foundProfile) {
+          targetProfileId = foundProfile.id;
+        } else if (isUuid(realSecId)) {
+          const { data: secProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('secretaria_id', realSecId)
+            .eq('role', 'secretaria_admin')
+            .maybeSingle();
+
+          if (secProfile) {
+            targetProfileId = secProfile.id;
+          }
+        }
+      }
+
+      if (targetProfileId) {
+        // Actualizar perfil en Supabase
+        const { error: updProfErr } = await executeProfileUpdate(profilePayload, targetProfileId);
+
+        if (updProfErr) {
+          console.error('Error actualizando profiles admin:', updProfErr);
+          return { success: false, message: `Error en BD al actualizar el perfil administrativo: ${updProfErr.message}` };
+        }
+      } else {
+        // Crear nuevo perfil en Supabase si no existía aún
+        profilePayload.activo = true;
+        profilePayload.password = adminPass || 'Admin2026*';
+
+        const { data: createdProf, error: insProfErr } = await executeProfileInsert(profilePayload);
+
+        if (createdProf?.id) {
+          targetProfileId = createdProf.id;
+        }
+
+        if (insProfErr) {
+          console.error('Error creando perfil administrativo en Supabase:', insProfErr);
+          return { success: false, message: `Error en BD al crear el perfil administrativo: ${insProfErr.message}` };
+        }
       }
 
       if (adminPass) {
@@ -706,16 +939,19 @@ export const supabaseService = {
         customUsers = customUsers.map(u => {
           if (
             (adminData.id && u.id === adminData.id) || 
-            (u.role === 'secretaria_admin' && (u.secretariaId === secId || u.secretariaCodigo === trimmedCodigo))
+            (targetProfileId && u.id === targetProfileId) ||
+            (u.role === 'secretaria_admin' && (u.secretariaId === secId || u.secretariaId === realSecId || u.secretariaCodigo === trimmedCodigo))
           ) {
             return {
               ...u,
+              id: targetProfileId || u.id,
               nombreCompleto: adminData.nombreCompleto.trim().toUpperCase(),
               documentoIdentidad: adminDoc,
               email: adminEmail,
               cargo: adminData.cargo?.trim() || u.cargo,
               telefono: adminData.telefono?.trim() || u.telefono,
               password: adminPass || u.password,
+              secretariaId: realSecId,
               secretariaNombre: trimmedNombre,
               secretariaCodigo: trimmedCodigo
             };
@@ -788,14 +1024,14 @@ export const supabaseService = {
       let { data, error } = await supabase
         .from('profiles')
         .select('*, sec_secretarias(*), contratos(*)')
-        .in('role', ['contratista', 'secretaria_admin'])
+        .in('role', ['contratista', 'secretaria_admin', 'secretaria_supervisor'])
         .order('created_at', { ascending: false });
 
       if (error || !data || data.length === 0) {
         const fallback = await supabase
           .from('profiles')
           .select('*, contratos(*)')
-          .in('role', ['contratista', 'secretaria_admin']);
+          .in('role', ['contratista', 'secretaria_admin', 'secretaria_supervisor']);
         if (!fallback.error && fallback.data) {
           data = fallback.data;
           error = null;
@@ -807,8 +1043,14 @@ export const supabaseService = {
           const doc = row.documento_identidad || '';
           const mail = row.email || '';
           const userRole = (row.role as any) || 'contratista';
-          // Obtener la contraseña asignada si fue guardada previamente; si no, dejar vacío para indicar que está protegida en Auth
-          const pass = this.getUserPassword(mail) || this.getUserPassword(doc) || '';
+          const defaultRolePass = (userRole === 'secretaria_admin' || userRole === 'secretaria_supervisor') ? 'Supervisor2026*' : 'Contratista2026*';
+          // Obtener la contraseña asignada desde la columna en DB si existe, o desde las credenciales guardadas, o valor por defecto
+          const pass = row.password || this.getUserPassword(mail) || this.getUserPassword(doc) || this.getUserPassword(row.id) || defaultRolePass;
+          if (row.password) {
+            this.saveUserPassword(mail, row.password);
+            this.saveUserPassword(doc, row.password);
+            if (row.id) this.saveUserPassword(row.id, row.password);
+          }
           const cont = Array.isArray(row.contratos) ? row.contratos[0] : row.contratos;
 
           return {
@@ -821,7 +1063,7 @@ export const supabaseService = {
             secretariaId: row.secretaria_id || '',
             secretariaNombre: row.sec_secretarias?.nombre || '',
             secretariaCodigo: row.sec_secretarias?.codigo || '',
-            cargo: row.cargo || (userRole === 'secretaria_admin' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios'),
+            cargo: row.cargo || (userRole === 'secretaria_admin' || userRole === 'secretaria_supervisor' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios'),
             telefono: row.telefono || '',
             barrio: row.direccion || '',
             direccion: row.direccion || '',
@@ -860,15 +1102,16 @@ export const supabaseService = {
 
     const stored = localStorage.getItem(STORAGE_USERS_KEY);
     const customUsers: AuthUser[] = stored ? JSON.parse(stored) : [];
-    const localContractors = customUsers.filter(u => u.role === 'contratista' || u.role === 'secretaria_admin');
+    const localContractors = customUsers.filter(u => u.role === 'contratista' || u.role === 'secretaria_admin' || u.role === 'secretaria_supervisor');
     localContractors.forEach(c => {
       const key = (c.documentoIdentidad || c.email || c.id).replace(/\./g, '').trim().toLowerCase();
       if (key) {
         const existing = map.get(key);
+        const resolvedPass = c.password || existing?.password || this.getUserPassword(c.email) || this.getUserPassword(c.documentoIdentidad) || (c.role === 'secretaria_admin' || c.role === 'secretaria_supervisor' ? 'Supervisor2026*' : 'Contratista2026*');
         if (existing) {
-          map.set(key, { ...existing, ...c, isSyncedToDb: existing.isSyncedToDb ?? isUuid(existing.id) });
+          map.set(key, { ...existing, ...c, password: resolvedPass, isSyncedToDb: existing.isSyncedToDb ?? isUuid(existing.id) });
         } else {
-          map.set(key, { ...c, isSyncedToDb: isUuid(c.id) });
+          map.set(key, { ...c, password: resolvedPass, isSyncedToDb: isUuid(c.id) });
         }
       }
     });
@@ -895,10 +1138,10 @@ export const supabaseService = {
     const rawEmail = contractorData.email.trim();
     const rawDoc = contractorData.documentoIdentidad.trim().replace(/\./g, '');
     const userRole: UserRole = (contractorData as any).role || 'contratista';
-    const pass = contractorData.password?.trim() || (userRole === 'secretaria_admin' ? 'Supervisor2026*' : 'Contratista2026*');
+    const pass = contractorData.password?.trim() || (userRole === 'secretaria_admin' || userRole === 'secretaria_supervisor' ? 'Supervisor2026*' : 'Contratista2026*');
     const fullName = contractorData.nombreCompleto.trim().toUpperCase();
     const phone = contractorData.telefono?.trim() || '';
-    const cargo = contractorData.cargo?.trim() || (userRole === 'secretaria_admin' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios');
+    const cargo = contractorData.cargo?.trim() || (userRole === 'secretaria_admin' || userRole === 'secretaria_supervisor' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios');
 
     // Resolver UUID real de la secretaría
     const secUuid = await this.resolveSecretariaUuid(contractorData.secretariaId || contractorData.secretariaCodigo || contractorData.secretariaNombre);
@@ -928,6 +1171,7 @@ export const supabaseService = {
         const updatePayload: any = {
           role: userRole,
           nombre_completo: fullName,
+          password: pass,
           telefono: phone,
           direccion: contractorData.direccion || contractorData.barrio || '',
           cargo: cargo,
@@ -936,10 +1180,7 @@ export const supabaseService = {
         if (secUuid && isUuid(secUuid)) {
           updatePayload.secretaria_id = secUuid;
         }
-        await supabase
-          .from('profiles')
-          .update(updatePayload)
-          .eq('id', existingProfile.id);
+        await executeProfileUpdate(updatePayload, existingProfile.id);
       } catch (e: any) {
         console.warn('Notice updating existing contractor profile:', e);
       }
@@ -955,6 +1196,7 @@ export const supabaseService = {
         nombre_completo: fullName,
         documento_identidad: rawDoc,
         email: rawEmail,
+        password: pass,
         telefono: phone,
         direccion: contractorData.direccion || contractorData.barrio || '',
         cargo: cargo,
@@ -966,13 +1208,10 @@ export const supabaseService = {
       }
 
       try {
-        const { data: inserted, error: insertErr } = await supabase
-          .from('profiles')
-          .insert([profilePayload])
-          .select('*');
+        const { data: inserted, error: insertErr } = await executeProfileInsert(profilePayload);
 
-        if (inserted && inserted.length > 0) {
-          createdId = inserted[0].id;
+        if (inserted?.id) {
+          createdId = inserted.id;
         } else if (insertErr) {
           console.warn('Profiles insert notice (might be missing FK in auth.users):', insertErr.message);
         }
@@ -1233,17 +1472,36 @@ export const supabaseService = {
         profileUpdatePayload.direccion = updateData.direccion || updateData.barrio || '';
       }
       if (cargo !== undefined) profileUpdatePayload.cargo = cargo;
+      if (pass) profileUpdatePayload.password = pass;
 
-      if (isUuid(contractorId)) {
-        await supabase
-          .from('profiles')
-          .update(profileUpdatePayload)
-          .eq('id', contractorId);
+      let targetProfileId: string | null = isUuid(contractorId) ? contractorId : null;
+      if (!targetProfileId) {
+        try {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('id')
+            .or(`documento_identidad.eq.${rawDoc || contractorId},email.ilike.${rawEmail || contractorId}`)
+            .limit(1)
+            .maybeSingle();
+          if (prof?.id) targetProfileId = prof.id;
+        } catch (e) {}
+      }
+
+      if (targetProfileId) {
+        await executeProfileUpdate(profileUpdatePayload, targetProfileId);
       } else if (rawDoc) {
-        await supabase
-          .from('profiles')
-          .update(profileUpdatePayload)
-          .eq('documento_identidad', rawDoc);
+        try {
+          const { error: errUpd } = await supabase
+            .from('profiles')
+            .update(profileUpdatePayload)
+            .eq('documento_identidad', rawDoc);
+          if (errUpd && errUpd.code === 'PGRST204') {
+            const stripped = { ...profileUpdatePayload };
+            delete stripped.password;
+            delete stripped.updated_at;
+            await supabase.from('profiles').update(stripped).eq('documento_identidad', rawDoc);
+          }
+        } catch (e) {}
       }
 
       // Sincronizar tabla contratos si se editaron campos contractuales
@@ -1278,8 +1536,8 @@ export const supabaseService = {
       if (updateData.ciudad) contractUpdatePayload.ciudad = updateData.ciudad;
 
       if (Object.keys(contractUpdatePayload).length > 0) {
-        if (isUuid(contractorId)) {
-          await supabase.from('contratos').update(contractUpdatePayload).eq('contratista_id', contractorId);
+        if (targetProfileId) {
+          await supabase.from('contratos').update(contractUpdatePayload).eq('contratista_id', targetProfileId);
         } else if (rawDoc) {
           const { data: prof } = await supabase.from('profiles').select('id').eq('documento_identidad', rawDoc).limit(1).maybeSingle();
           if (prof?.id) {
@@ -1291,9 +1549,29 @@ export const supabaseService = {
       console.warn('Error updating contractor in Supabase:', e);
     }
 
+    // Determinar email y documento del usuario para guardar contraseña de forma robusta
+    let finalEmail = rawEmail;
+    let finalDoc = rawDoc;
+    if (!finalEmail || !finalDoc) {
+      try {
+        const stored = localStorage.getItem(STORAGE_USERS_KEY);
+        if (stored) {
+          const list: AuthUser[] = JSON.parse(stored);
+          const match = list.find(u => u.id === contractorId || (rawDoc && u.documentoIdentidad === rawDoc));
+          if (match) {
+            finalEmail = finalEmail || match.email;
+            finalDoc = finalDoc || match.documentoIdentidad;
+          }
+        }
+      } catch (e) {}
+    }
+
     if (pass) {
-      if (rawEmail) this.saveUserPassword(rawEmail, pass);
-      if (rawDoc) this.saveUserPassword(rawDoc, pass);
+      if (finalEmail) this.saveUserPassword(finalEmail, pass);
+      if (finalDoc) this.saveUserPassword(finalDoc, pass);
+      if (rawEmail && rawEmail !== finalEmail) this.saveUserPassword(rawEmail, pass);
+      if (rawDoc && rawDoc !== finalDoc) this.saveUserPassword(rawDoc, pass);
+      if (contractorId) this.saveUserPassword(contractorId, pass);
     }
 
     // Actualizar localStorage
@@ -1302,7 +1580,8 @@ export const supabaseService = {
     let updatedUser: AuthUser | undefined;
 
     const newUsers = customUsers.map(u => {
-      if (u.id === contractorId || (rawDoc && u.documentoIdentidad === rawDoc)) {
+      if (u.id === contractorId || (rawDoc && u.documentoIdentidad === rawDoc) || (finalDoc && u.documentoIdentidad === finalDoc) || (finalEmail && u.email?.toLowerCase() === finalEmail.toLowerCase())) {
+        const resolvedPass = pass || u.password || (finalEmail ? this.getUserPassword(finalEmail) : undefined) || (finalDoc ? this.getUserPassword(finalDoc) : undefined) || 'Contratista2026*';
         updatedUser = {
           ...u,
           ...updateData,
@@ -1313,7 +1592,7 @@ export const supabaseService = {
           cargo: cargo !== undefined ? cargo : u.cargo,
           direccion: updateData.direccion !== undefined ? updateData.direccion : (u.direccion || u.barrio || ''),
           barrio: updateData.direccion !== undefined ? updateData.direccion : (u.barrio || u.direccion || ''),
-          password: pass || u.password,
+          password: resolvedPass,
         };
         return updatedUser;
       }
@@ -1321,18 +1600,21 @@ export const supabaseService = {
     });
 
     if (!updatedUser) {
+      const resolvedPass = pass || (finalEmail ? this.getUserPassword(finalEmail) : undefined) || (finalDoc ? this.getUserPassword(finalDoc) : undefined) || 'Contratista2026*';
       updatedUser = {
         id: contractorId,
-        email: rawEmail || '',
+        email: rawEmail || finalEmail || '',
         nombreCompleto: fullName || '',
-        documentoIdentidad: rawDoc || '',
-        role: 'contratista',
+        documentoIdentidad: rawDoc || finalDoc || '',
+        role: updateData.role || 'contratista',
         telefono: phone,
         cargo: cargo,
         direccion: updateData.direccion || updateData.barrio || '',
         barrio: updateData.barrio || updateData.direccion || '',
+        password: resolvedPass,
         ...updateData,
       };
+      newUsers.push(updatedUser);
     }
 
     localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(newUsers));
@@ -1381,7 +1663,13 @@ export const supabaseService = {
           const doc = row.documento_identidad || '';
           const mail = row.email || '';
           const role = (row.role as any) || 'contratista';
-          const pass = this.getUserPassword(mail) || this.getUserPassword(doc) || (role === 'secretaria_admin' ? 'Admin2026*' : 'Contratista2026*');
+          const defaultRolePass = role === 'super_admin' ? 'Quibdo2026*' : (role === 'secretaria_admin' || role === 'secretaria_supervisor') ? 'Supervisor2026*' : 'Contratista2026*';
+          const pass = row.password || this.getUserPassword(mail) || this.getUserPassword(doc) || this.getUserPassword(row.id) || defaultRolePass;
+          if (row.password) {
+            this.saveUserPassword(mail, row.password);
+            this.saveUserPassword(doc, row.password);
+            if (row.id) this.saveUserPassword(row.id, row.password);
+          }
 
           return {
             id: row.id,
@@ -1489,12 +1777,19 @@ export const supabaseService = {
           } catch (e) {}
         }
 
+        const doc = row.documento_identidad || '';
+        const mail = row.email || '';
+        const userRole = row.role || 'contratista';
+        const defaultRolePass = (userRole === 'secretaria_admin' || userRole === 'secretaria_supervisor') ? 'Supervisor2026*' : 'Contratista2026*';
+        const pass = row.password || this.getUserPassword(mail) || this.getUserPassword(doc) || this.getUserPassword(row.id) || defaultRolePass;
+
         return {
           id: row.id,
-          email: row.email || '',
+          email: mail,
+          password: pass,
           nombreCompleto: row.nombre_completo || '',
-          documentoIdentidad: row.documento_identidad || '',
-          role: row.role || 'contratista',
+          documentoIdentidad: doc,
+          role: userRole,
           secretariaId: row.secretaria_id || '',
           secretariaNombre: row.sec_secretarias?.nombre || '',
           secretariaCodigo: row.sec_secretarias?.codigo || '',
@@ -1551,19 +1846,16 @@ export const supabaseService = {
       // Si no existe perfil en profiles, crearlo
       if (!contratistaId || !isUuid(contratistaId)) {
         const secId = await this.resolveSecretariaId(report.secretariaId || user?.secretariaId, report.secretariaNombre);
-        const { data: newProf, error: errProf } = await supabase
-          .from('profiles')
-          .insert([{
-            email: report.contratistaCorreo || user?.email || `contratista_${doc ? doc.replace(/\D/g, '') : Date.now()}@quibdo-choco.gov.co`,
-            role: 'contratista',
-            nombre_completo: (report.contratistaNombre || user?.nombreCompleto || 'CONTRATISTA REGISTRADO').toUpperCase(),
-            documento_identidad: doc || `CC-${Date.now()}`,
-            telefono: report.contratistaTelefono || user?.telefono || '3100000000',
-            secretaria_id: secId,
-            cargo: user?.cargo || 'Contratista de Prestación de Servicios',
-          }])
-          .select('id')
-          .single();
+        const { data: newProf, error: errProf } = await executeProfileInsert({
+          id: crypto.randomUUID(),
+          email: report.contratistaCorreo || user?.email || `contratista_${doc ? doc.replace(/\D/g, '') : Date.now()}@quibdo-choco.gov.co`,
+          role: 'contratista',
+          nombre_completo: (report.contratistaNombre || user?.nombreCompleto || 'CONTRATISTA REGISTRADO').toUpperCase(),
+          documento_identidad: doc || `CC-${Date.now()}`,
+          telefono: report.contratistaTelefono || user?.telefono || '3100000000',
+          secretaria_id: secId,
+          cargo: user?.cargo || 'Contratista de Prestación de Servicios',
+        });
 
         if (!errProf && newProf?.id) {
           contratistaId = newProf.id;

@@ -449,7 +449,8 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     if (!nuevoNombre || !nuevaCedula || !nuevoCorreo) return;
 
     setLoading(true);
-    const assignedPassword = nuevaPassword.trim() || undefined;
+    const defaultPassword = (nuevoRol === 'secretaria_admin' || nuevoRol === 'secretaria_supervisor') ? 'Supervisor2026*' : 'Contratista2026*';
+    const assignedPassword = nuevaPassword.trim() || defaultPassword;
     const result = await supabaseService.createContractor({
       role: nuevoRol,
       nombreCompleto: nuevoNombre,
@@ -459,7 +460,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       telefono: nuevoTelefono,
       barrio: nuevoBarrio,
       direccion: nuevoBarrio,
-      cargo: nuevoCargo || (nuevoRol === 'secretaria_admin' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios'),
+      cargo: nuevoCargo || (nuevoRol === 'secretaria_admin' || nuevoRol === 'secretaria_supervisor' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios'),
       numeroCuenta: nuevoNumeroCuenta || undefined,
       banco: nuevoBanco || undefined,
       tipoCuenta: nuevoTipoCuenta,
@@ -501,10 +502,11 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     setEditNombre(c.nombreCompleto || '');
     setEditCedula(c.documentoIdentidad || '');
     setEditCorreo(c.email || '');
-    setEditPassword(c.password || '');
+    const currentPass = c.password || supabaseService.getUserPassword(c.email) || supabaseService.getUserPassword(c.documentoIdentidad) || (c.role === 'secretaria_admin' || c.role === 'secretaria_supervisor' ? 'Supervisor2026*' : 'Contratista2026*');
+    setEditPassword(currentPass);
     setEditTelefono(c.telefono || '');
     setEditBarrio(c.barrio || c.direccion || '');
-    setEditCargo(c.cargo || (c.role === 'secretaria_admin' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios'));
+    setEditCargo(c.cargo || (c.role === 'secretaria_admin' || c.role === 'secretaria_supervisor' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios'));
     setEditNumeroCuenta(c.numeroCuenta || '');
     setEditBanco(c.banco || '');
     setEditTipoCuenta(c.tipoCuenta || 'AHORRO');
@@ -938,9 +940,12 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
       (c.cargo && c.cargo.toLowerCase().includes(term))
     );
 
+    const userRole = c.role || 'contratista';
     const matchesRole = 
       contractorRoleFilter === 'todos' || 
-      (c.role || 'contratista') === contractorRoleFilter;
+      (contractorRoleFilter === 'contratista' && userRole === 'contratista') ||
+      (contractorRoleFilter === 'secretaria_admin' && userRole === 'secretaria_admin') ||
+      (contractorRoleFilter === 'secretaria_supervisor' && (userRole === 'secretaria_supervisor' || userRole === 'secretaria_admin'));
 
     return matchesSearch && matchesRole;
   });
@@ -1790,7 +1795,7 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
                 >
                   <option value="todos">Todos los roles ({contractors.length})</option>
                   <option value="contratista">Solo Contratistas ({contractors.filter(c => (c.role || 'contratista') === 'contratista').length})</option>
-                  <option value="secretaria_admin">Solo Supervisores ({contractors.filter(c => c.role === 'secretaria_admin').length})</option>
+                  <option value="secretaria_supervisor">Solo Supervisores ({contractors.filter(c => c.role === 'secretaria_supervisor' || c.role === 'secretaria_admin').length})</option>
                 </select>
               </div>
 
@@ -1833,14 +1838,16 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`w-2.5 h-2.5 rounded-full ${c.role === 'secretaria_admin' ? 'bg-blue-600' : 'bg-emerald-500'}`}></span>
+                        <span className={`w-2.5 h-2.5 rounded-full ${c.role === 'secretaria_admin' ? 'bg-purple-600' : c.role === 'secretaria_supervisor' ? 'bg-blue-600' : 'bg-emerald-500'}`}></span>
                         <h4 className="font-bold text-gray-900 text-sm">{c.nombreCompleto}</h4>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                           c.role === 'secretaria_admin'
+                            ? 'bg-purple-100 text-purple-900 border-purple-300'
+                            : c.role === 'secretaria_supervisor'
                             ? 'bg-blue-100 text-blue-900 border-blue-300'
                             : 'bg-emerald-100 text-emerald-900 border-emerald-300'
                         }`}>
-                          {c.role === 'secretaria_admin' ? '🔍 Supervisor / Apoyo' : '📝 Contratista'}
+                          {c.role === 'secretaria_admin' ? '🏛️ Secretaría Titular' : c.role === 'secretaria_supervisor' ? '🔍 Supervisor / Apoyo' : '📝 Contratista'}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 font-mono mt-0.5">
@@ -2107,17 +2114,17 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
                       </label>
 
                       <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                        nuevoRol === 'secretaria_admin'
+                        nuevoRol === 'secretaria_supervisor' || nuevoRol === 'secretaria_admin'
                           ? 'border-blue-600 bg-blue-50/90 text-blue-950 font-bold shadow-xs'
                           : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700'
                       }`}>
                         <input
                           type="radio"
                           name="nuevoRol"
-                          value="secretaria_admin"
-                          checked={nuevoRol === 'secretaria_admin'}
+                          value="secretaria_supervisor"
+                          checked={nuevoRol === 'secretaria_supervisor' || nuevoRol === 'secretaria_admin'}
                           onChange={() => {
-                            setNuevoRol('secretaria_admin');
+                            setNuevoRol('secretaria_supervisor');
                             if (nuevoCargo === 'Contratista de Prestación de Servicios' || !nuevoCargo) {
                               setNuevoCargo('Supervisor / Apoyo a la Supervisión');
                             }
@@ -2189,11 +2196,14 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
                     <label className="block font-semibold text-gray-700 mb-1">Contraseña Inicial de Acceso</label>
                     <input
                       type="text"
-                      placeholder="ej. Escribe la contraseña de acceso"
+                      placeholder={nuevoRol === 'secretaria_admin' || nuevoRol === 'secretaria_supervisor' ? 'ej. Supervisor2026*' : 'ej. Contratista2026*'}
                       value={nuevaPassword}
                       onChange={(e) => setNuevaPassword(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg p-2.5 font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
                     />
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Si se deja en blanco, se asignará automáticamente <span className="font-mono font-semibold text-emerald-700">{nuevoRol === 'secretaria_admin' || nuevoRol === 'secretaria_supervisor' ? 'Supervisor2026*' : 'Contratista2026*'}</span>.
+                    </p>
                   </div>
 
                   <div className="sm:col-span-2">
@@ -2662,17 +2672,17 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
                   </label>
 
                   <label className={`flex items-start gap-2.5 p-2.5 rounded-xl border-2 cursor-pointer transition-all ${
-                    editRol === 'secretaria_admin'
+                    editRol === 'secretaria_supervisor' || editRol === 'secretaria_admin'
                       ? 'border-blue-600 bg-blue-50 text-blue-950 font-bold shadow-xs'
                       : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700'
                   }`}>
                     <input
                       type="radio"
                       name="editRol"
-                      value="secretaria_admin"
-                      checked={editRol === 'secretaria_admin'}
+                      value="secretaria_supervisor"
+                      checked={editRol === 'secretaria_supervisor' || editRol === 'secretaria_admin'}
                       onChange={() => {
-                        setEditRol('secretaria_admin');
+                        setEditRol('secretaria_supervisor');
                         if (editCargo === 'Contratista de Prestación de Servicios' || !editCargo) {
                           setEditCargo('Supervisor / Apoyo a la Supervisión');
                         }

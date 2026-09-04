@@ -34,6 +34,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_sec_secretarias_codigo ON sec_secretarias 
 -- ==============================================================================
 -- TABLA 2: profiles (Perfiles y Usuarios: Contratistas / Admins / Super Admin)
 -- ==============================================================================
+
+-- Si en Supabase la columna 'role' usa un tipo ENUM 'user_role', agregar el nuevo valor
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'secretaria_supervisor';
+    END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   role TEXT NOT NULL DEFAULT 'contratista',
@@ -41,6 +50,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   nombre_completo TEXT,
   documento_identidad TEXT,
   email TEXT,
+  password TEXT,
   telefono TEXT,
   direccion TEXT,
   cargo TEXT,
@@ -55,6 +65,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS secretaria_id UUID REFERENCES sec_
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS nombre_completo TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS documento_identidad TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS password TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS telefono TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS direccion TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS cargo TEXT;
@@ -282,7 +293,7 @@ CREATE POLICY "Lectura anexos" ON informe_anexos FOR ALL USING (true);
 CREATE POLICY "Lectura certificaciones" ON certificaciones_supervision FOR ALL USING (true);
 
 -- ==============================================================================
--- INSERCIÓN DE DATOS INICIALES (SEEDS DE SECRETARÍAS)
+-- INSERCIÓN DE DATOS INICIALES (SEEDS DE SECRETARÍAS Y SUPER ADMIN)
 -- ==============================================================================
 INSERT INTO sec_secretarias (id, nombre, nit, codigo) VALUES
   ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Secretaría de Inclusión y Cohesión Social', '891680011-0', '170'),
@@ -295,6 +306,26 @@ ON CONFLICT (id) DO UPDATE SET
   nombre = EXCLUDED.nombre,
   codigo = EXCLUDED.codigo,
   nit = EXCLUDED.nit;
+
+-- Inserción de Usuario Super Admin Inicial en la tabla 'profiles'
+INSERT INTO profiles (id, role, nombre_completo, documento_identidad, email, password, cargo, telefono, activo)
+VALUES (
+  'a1eebc99-9c0b-4ef8-bb6d-6bb9bd380a00',
+  'super_admin',
+  'SUPER ADMINISTRADOR MUNICIPAL',
+  '891680011',
+  'alcaldia@quibdo-choco.gov.co',
+  'Quibdo2026*',
+  'Alcaldía Mayor / Administrador General del Sistema',
+  '3100000000',
+  true
+)
+ON CONFLICT (id) DO UPDATE SET
+  role = EXCLUDED.role,
+  nombre_completo = EXCLUDED.nombre_completo,
+  email = EXCLUDED.email,
+  password = EXCLUDED.password,
+  cargo = EXCLUDED.cargo;
 
 -- ==============================================================================
 -- STORAGE BUCKETS Y POLÍTICAS DE ACCESO PARA ARCHIVOS

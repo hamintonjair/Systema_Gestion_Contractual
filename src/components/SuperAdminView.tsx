@@ -42,7 +42,7 @@ export default function SuperAdminView({ user }: Props) {
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'todos' | 'secretaria_admin' | 'contratista'>('todos');
+  const [roleFilter, setRoleFilter] = useState<'todos' | 'secretaria_admin' | 'secretaria_supervisor' | 'contratista'>('todos');
   const [secFilter, setSecFilter] = useState<'todas' | string>('todas');
 
   // Modals & Alerts
@@ -144,7 +144,7 @@ export default function SuperAdminView({ user }: Props) {
       setAdminCargo('Secretaria de Despacho / Supervisora');
       setAdminTelefono('3100000000');
     } else {
-      showNotification('error', 'Error al crear la secretaría. Intente nuevamente.');
+      showNotification('error', result.message || 'Error al crear la secretaría. Intente nuevamente.');
     }
   };
 
@@ -254,8 +254,40 @@ export default function SuperAdminView({ user }: Props) {
 
   // Helpers de Búsqueda
   const getAdminForSecretaria = (sec: Secretaria) => {
-    return allUsers.find(
+    const secAdmins = allUsers.filter(
       u => u.role === 'secretaria_admin' && (u.secretariaId === sec.id || u.secretariaCodigo === sec.codigo || u.secretariaNombre?.toLowerCase() === sec.nombre.toLowerCase())
+    );
+
+    if (secAdmins.length === 0) return null;
+    if (secAdmins.length === 1) return secAdmins[0];
+
+    // 1. Priorizar el/la Secretario(a) de Despacho (titular principal de la dependencia)
+    const titular = secAdmins.find(u => 
+      u.cargo?.toLowerCase().includes('secretar') || 
+      u.cargo?.toLowerCase().includes('despacho') || 
+      u.cargo?.toLowerCase().includes('titular')
+    );
+
+    if (titular) return titular;
+
+    // 2. Buscar usuario cuyo cargo NO contenga 'apoyo' ni 'supervisor'
+    const noApoyo = secAdmins.find(u => 
+      !u.cargo?.toLowerCase().includes('apoyo') && 
+      !u.cargo?.toLowerCase().includes('supervisor')
+    );
+
+    if (noApoyo) return noApoyo;
+
+    // 3. Fallback: tomar el usuario más antiguo (creado originalmente con la dependencia)
+    return secAdmins.slice().sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))[0];
+  };
+
+  const getSupervisorsForSecretaria = (sec: Secretaria) => {
+    const mainAdmin = getAdminForSecretaria(sec);
+    return allUsers.filter(
+      u => (u.role === 'secretaria_supervisor' || u.role === 'secretaria_admin') && 
+           (u.secretariaId === sec.id || u.secretariaCodigo === sec.codigo || u.secretariaNombre?.toLowerCase() === sec.nombre.toLowerCase()) &&
+           u.id !== mainAdmin?.id
     );
   };
 
@@ -707,6 +739,7 @@ export default function SuperAdminView({ user }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredSecretarias.map((sec) => {
               const admin = getAdminForSecretaria(sec);
+              const supervisors = getSupervisorsForSecretaria(sec);
               const contractorsCount = getContractorsCount(sec);
               const reportsCount = getReportsCount(sec);
               const hasLinkedRecords = contractorsCount > 0 || reportsCount > 0;
@@ -736,7 +769,7 @@ export default function SuperAdminView({ user }: Props) {
                     <div className="mt-4 p-3 bg-emerald-50/60 rounded-xl border border-emerald-200/80 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1">
-                          <UserCheck size={12} className="text-emerald-700" /> Administrador(a) Oficial
+                          <UserCheck size={12} className="text-emerald-700" /> Administrador(a) / Secretario(a)
                         </span>
                         <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                       </div>
@@ -744,7 +777,7 @@ export default function SuperAdminView({ user }: Props) {
                       {admin ? (
                         <div className="space-y-1 text-xs">
                           <p className="font-bold text-gray-900">{admin.nombreCompleto}</p>
-                          <p className="text-[11px] text-gray-600 font-mono">C.C. {admin.documentoIdentidad} • {admin.cargo || 'Supervisor(a)'}</p>
+                          <p className="text-[11px] text-gray-600 font-mono">C.C. {admin.documentoIdentidad} • {admin.cargo || 'Secretaria de Despacho'}</p>
                           <p className="text-[11px] text-emerald-800 font-mono pt-1 border-t border-emerald-200/60">
                             📧 {admin.email}
                           </p>
@@ -753,6 +786,23 @@ export default function SuperAdminView({ user }: Props) {
                         <p className="text-xs text-amber-700 italic">
                           Sin administrador asignado
                         </p>
+                      )}
+
+                      {/* Supervisores Adicionales */}
+                      {supervisors.length > 0 && (
+                        <div className="pt-2 border-t border-emerald-200/60 mt-2">
+                          <p className="text-[10px] font-bold text-blue-900 uppercase tracking-wider mb-1">
+                            🔍 Supervisores de Apoyo ({supervisors.length}):
+                          </p>
+                          <div className="space-y-1">
+                            {supervisors.map(s => (
+                              <p key={s.id} className="text-[11px] font-semibold text-gray-800 flex items-center justify-between">
+                                <span>• {s.nombreCompleto}</span>
+                                <span className="text-[10px] text-gray-500 font-mono">C.C. {s.documentoIdentidad}</span>
+                              </p>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
 
@@ -833,7 +883,8 @@ export default function SuperAdminView({ user }: Props) {
                   className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
                 >
                   <option value="todos">Todos los Roles</option>
-                  <option value="secretaria_admin">Administradores de Secretaría</option>
+                  <option value="secretaria_admin">Secretarías Titulares</option>
+                  <option value="secretaria_supervisor">Supervisores de Apoyo</option>
                   <option value="contratista">Contratistas</option>
                 </select>
               </div>
@@ -898,9 +949,10 @@ export default function SuperAdminView({ user }: Props) {
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             u.role === 'super_admin' ? 'bg-purple-100 text-purple-900 border border-purple-200' :
                             u.role === 'secretaria_admin' ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' :
+                            u.role === 'secretaria_supervisor' ? 'bg-blue-100 text-blue-900 border border-blue-200' :
                             'bg-amber-100 text-amber-900 border border-amber-200'
                           }`}>
-                            {u.role === 'super_admin' ? 'Super Admin' : u.role === 'secretaria_admin' ? 'Admin Secretaría' : 'Contratista'}
+                            {u.role === 'super_admin' ? 'Super Admin' : u.role === 'secretaria_admin' ? 'Secretaría Titular' : u.role === 'secretaria_supervisor' ? 'Supervisor Apoyo' : 'Contratista'}
                           </span>
                         </td>
                         <td className="px-4 py-3 font-medium text-gray-800">

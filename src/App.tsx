@@ -64,7 +64,7 @@ export default function App() {
     if (currentUser) {
       if (currentUser.role === 'contratista') {
         setCurrentView('dashboard');
-      } else if (currentUser.role === 'secretaria_admin') {
+      } else if (currentUser.role === 'secretaria_admin' || currentUser.role === 'secretaria_supervisor') {
         setCurrentView('admin');
       } else if (currentUser.role === 'super_admin') {
         setCurrentView('superadmin');
@@ -572,7 +572,7 @@ export default function App() {
               onOpenReportEditor={handleOpenReportEditor}
               onDirectPrint={handleDirectPrint}
               onUserUpdated={handleUserUpdated}
-              onGoToAdminView={currentUser.role === 'secretaria_admin' || currentUser.role === 'super_admin' ? () => handleViewChange('admin') : undefined}
+              onGoToAdminView={currentUser.role === 'secretaria_admin' || currentUser.role === 'secretaria_supervisor' || currentUser.role === 'super_admin' ? () => handleViewChange('admin') : undefined}
             />
           </div>
         )}
