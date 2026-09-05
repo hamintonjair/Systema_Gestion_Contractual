@@ -801,34 +801,42 @@ export default function ReportPreview({
           {data.anexos && data.anexos.length > 0 && (
             <tr>
               <td className="px-8 pt-2 pb-4">
-                <div className="text-center mb-3">
-                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-900">ANEXOS FOTOGRÁFICOS</h3>
-                  <div className="w-14 h-0.5 bg-[#2a7a38] mx-auto mt-0.5"></div>
-                </div>
-                
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {/* Agrupamiento inteligente por Obligación */}
                   {data.obligaciones.some(o => o.fotos && o.fotos.length > 0) ? (
-                    data.obligaciones.map((obs, oIdx) => {
-                      const obsFotos = obs.fotos || [];
-                      if (obsFotos.length === 0) return null;
+                    (() => {
+                      const firstObsWithFotosIndex = data.obligaciones.findIndex(o => o.fotos && o.fotos.length > 0);
 
-                      return (
-                        <div key={obs.id} className="space-y-3 break-inside-avoid">
-                          {/* ÚNICO ENCABEZADO PARA LA OBLIGACIÓN Y TODAS SUS FOTOS */}
-                          <div className="bg-[#f0f7f2] border border-[#b8dec2] px-3 py-1.5 rounded text-center print:bg-[#f0f7f2]">
-                            <span className="font-bold text-[11.5px] uppercase text-[#005226] tracking-wide block">
-                              OBLIGACIÓN Nº {oIdx + 1}
-                            </span>
-                            {obs.descripcion && (
-                              <p className="text-[10pt] font-century-gothic text-gray-700 italic mt-0.5 leading-snug">
-                                {obs.descripcion}
-                              </p>
+                      return data.obligaciones.map((obs, oIdx) => {
+                        const obsFotos = obs.fotos || [];
+                        if (obsFotos.length === 0) return null;
+                        const isFirstSection = oIdx === firstObsWithFotosIndex;
+
+                        return (
+                          <div key={obs.id} className="space-y-2.5">
+                            {/* ENCABEZADO: Si es la primera obligación con fotos, ANEXOS FOTOGRÁFICOS queda directamente unido a OBLIGACIÓN Nº 1 en el mismo bloque para que nunca quede solo */}
+                            {isFirstSection ? (
+                              <div className="break-inside-avoid print:break-inside-avoid break-after-avoid print:break-after-avoid mb-2.5">
+                                <div className="text-center mb-2.5">
+                                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-900">ANEXOS FOTOGRÁFICOS</h3>
+                                  <div className="w-14 h-0.5 bg-[#2a7a38] mx-auto mt-0.5"></div>
+                                </div>
+                                <div className="bg-[#f0f7f2] border border-[#b8dec2] px-3 py-1 rounded text-center print:bg-[#f0f7f2]">
+                                  <span className="font-bold text-[11.5px] uppercase text-[#005226] tracking-wide block">
+                                    OBLIGACIÓN Nº {oIdx + 1}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="bg-[#f0f7f2] border border-[#b8dec2] px-3 py-1 rounded text-center print:bg-[#f0f7f2] break-inside-avoid print:break-inside-avoid break-after-avoid print:break-after-avoid mb-2.5">
+                                <span className="font-bold text-[11.5px] uppercase text-[#005226] tracking-wide block">
+                                  OBLIGACIÓN Nº {oIdx + 1}
+                                </span>
+                              </div>
                             )}
-                          </div>
 
-                          {/* TODAS LAS FOTOS DE ESTA OBLIGACIÓN DEBAJO DEL ENCABEZADO */}
-                          <div className="space-y-3">
+                            {/* TODAS LAS FOTOS DE ESTA OBLIGACIÓN DEBAJO DEL ENCABEZADO */}
+                            <div className="space-y-2.5">
                             {obsFotos.map((anexo, aIdx) => {
                               const anexoKey = `anexo_${anexo.id || aIdx}`;
                               const hasAnexoComment = Boolean(data.comentariosCampos?.[anexoKey]);
@@ -881,9 +889,15 @@ export default function ReportPreview({
                           </div>
                         </div>
                       );
-                    })
-                  ) : (
-                    data.anexos.map((anexo, aIdx) => {
+                    });
+                  })()
+                ) : (
+                  <>
+                    <div className="text-center mb-3 break-inside-avoid print:break-inside-avoid break-after-avoid print:break-after-avoid">
+                      <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-900">ANEXOS FOTOGRÁFICOS</h3>
+                      <div className="w-14 h-0.5 bg-[#2a7a38] mx-auto mt-0.5"></div>
+                    </div>
+                    {data.anexos.map((anexo, aIdx) => {
                       const anexoKey = `anexo_${anexo.id || aIdx}`;
                       const hasAnexoComment = Boolean(data.comentariosCampos?.[anexoKey]);
 
@@ -931,7 +945,9 @@ export default function ReportPreview({
                         </div>
                       );
                     })
-                  )}
+                  }
+                  </>
+                )}
                 </div>
               </td>
             </tr>

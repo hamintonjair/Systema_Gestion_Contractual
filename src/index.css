@@ -310,5 +310,15 @@
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
+
+  .break-after-avoid {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .break-before-avoid {
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+  }
 }
 
