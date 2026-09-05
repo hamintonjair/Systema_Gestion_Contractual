@@ -610,14 +610,14 @@ export default function ReportPreview({
               <table className="w-full border-collapse border border-black mb-3">
                 <thead>
                   <tr>
-                    <th colSpan={3} className="border border-black bg-gray-200 text-center font-bold py-1 text-xs uppercase">
+                    <th colSpan={3} className="border border-black bg-gray-200 text-center font-bold py-1 text-xs uppercase font-century-gothic">
                       EJECUCIÓN DE ACTIVIDADES FRENTE A LAS OBLIGACIONES DURANTE EL PERÍODO REPORTADO
                     </th>
                   </tr>
-                  <tr className="bg-gray-100 text-[11px]">
-                    <th className="border border-black px-2 py-1 text-center w-[38%] font-bold">Obligaciones Contractuales</th>
-                    <th className="border border-black px-2 py-1 text-center w-[47%] font-bold">Actividades realizadas y/o productos entregados</th>
-                    <th className="border border-black px-2 py-1 text-center w-[15%] font-bold">Soportes</th>
+                  <tr className="bg-gray-100 text-[11px] font-century-gothic">
+                    <th className="border border-black px-2 py-1 text-center w-[38%] font-bold font-century-gothic">Obligaciones Contractuales</th>
+                    <th className="border border-black px-2 py-1 text-center w-[47%] font-bold font-century-gothic">Actividades realizadas y/o productos entregados</th>
+                    <th className="border border-black px-2 py-1 text-center w-[15%] font-bold font-century-gothic">Soportes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -627,28 +627,28 @@ export default function ReportPreview({
                         `obligacion_${obs.id}_descripcion`,
                         `Obligación #${idx + 1} (Descripción)`,
                         obs.descripcion,
-                        <div className="text-justify whitespace-pre-wrap text-[12px] leading-snug">
+                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12">
                           {obs.descripcion}
                         </div>,
-                        'align-top'
+                        'align-top font-century-gothic-12'
                       )}
                       {renderReviewedTd(
                         `obligacion_${obs.id}_actividades`,
                         `Obligación #${idx + 1} (Actividades Desarrolladas)`,
                         obs.actividades,
-                        <div className="text-justify whitespace-pre-wrap text-[12px] leading-snug">
+                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12">
                           {obs.actividades}
                         </div>,
-                        'align-top'
+                        'align-top font-century-gothic-12'
                       )}
                       {renderReviewedTd(
                         `obligacion_${obs.id}_soportes`,
                         `Obligación #${idx + 1} (Soportes)`,
                         obs.soportes,
-                        <div className="text-center text-[12px] font-medium">
+                        <div className="text-center text-[12pt] font-medium font-century-gothic-12">
                           {obs.soportes}
                         </div>,
-                        'align-top text-center'
+                        'align-top text-center font-century-gothic-12'
                       )}
                     </tr>
                   ))}
@@ -795,7 +795,7 @@ export default function ReportPreview({
                               OBLIGACIÓN Nº {oIdx + 1}
                             </span>
                             {obs.descripcion && (
-                              <p className="text-[9.5px] text-gray-700 italic mt-0.5 leading-snug">
+                              <p className="text-[10pt] font-century-gothic text-gray-700 italic mt-0.5 leading-snug">
                                 {obs.descripcion}
                               </p>
                             )}

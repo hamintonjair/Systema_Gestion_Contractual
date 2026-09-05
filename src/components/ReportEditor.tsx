@@ -1655,8 +1655,11 @@ export default function ReportEditor({
 
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[11px] font-semibold text-gray-700">
-                          Descripción de la Obligación Contractual:
+                        <label className="block text-[11px] font-semibold text-gray-700 flex items-center gap-1.5">
+                          <span>Descripción de la Obligación Contractual:</span>
+                          <span className="text-[9.5px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                            Century Gothic 12
+                          </span>
                         </label>
                         {renderNewReportBadge(`obligacion_${obs.id}_descripcion`)}
                       </div>
@@ -1665,15 +1668,18 @@ export default function ReportEditor({
                         value={obs.descripcion}
                         onChange={(e) => handleObligacionChange(obs.id, 'descripcion', e.target.value)}
                         placeholder="Redacte la obligación..."
-                        className={`w-full border border-gray-300 rounded p-2 text-xs leading-relaxed focus:ring-1 focus:ring-emerald-500 min-h-[60px] ${getFieldHighlightClass(`obligacion_${obs.id}_descripcion`, descComment || undefined) || 'bg-slate-50/70 border-emerald-200/80 font-medium'}`}
+                        className={`w-full border border-gray-300 rounded p-2 text-[12pt] leading-relaxed focus:ring-1 focus:ring-emerald-500 min-h-[60px] font-century-gothic-12 ${getFieldHighlightClass(`obligacion_${obs.id}_descripcion`, descComment || undefined) || 'bg-slate-50/70 border-emerald-200/80 font-medium'}`}
                       />
                       {renderCommentAlert(`obligacion_${obs.id}_descripcion`, descComment || undefined)}
                     </div>
 
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[11px] font-semibold text-gray-700">
-                          Actividades realizadas y/o productos entregados:
+                        <label className="block text-[11px] font-semibold text-gray-700 flex items-center gap-1.5">
+                          <span>Actividades realizadas y/o productos entregados:</span>
+                          <span className="text-[9.5px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                            Century Gothic 12
+                          </span>
                         </label>
                         {renderNewReportBadge(`obligacion_${obs.id}_actividades`)}
                       </div>
@@ -1682,7 +1688,7 @@ export default function ReportEditor({
                         value={obs.actividades}
                         onChange={(e) => handleObligacionChange(obs.id, 'actividades', e.target.value)}
                         placeholder="Detalle los logros, entregables y actividades del mes..."
-                        className={`w-full border border-gray-300 rounded p-2.5 text-xs leading-relaxed focus:ring-1 focus:ring-emerald-500 min-h-[220px] ${getFieldHighlightClass(`obligacion_${obs.id}_actividades`, actComment || undefined)}`}
+                        className={`w-full border border-gray-300 rounded p-2.5 text-[12pt] leading-relaxed focus:ring-1 focus:ring-emerald-500 min-h-[220px] font-century-gothic-12 ${getFieldHighlightClass(`obligacion_${obs.id}_actividades`, actComment || undefined)}`}
                       />
                       {renderCommentAlert(`obligacion_${obs.id}_actividades`, actComment || undefined)}
                     </div>
@@ -1694,7 +1700,7 @@ export default function ReportEditor({
                           type="text"
                           value={obs.soportes}
                           onChange={(e) => handleObligacionChange(obs.id, 'soportes', e.target.value)}
-                          className={`text-[11px] border border-gray-200 rounded px-2 py-0.5 text-right w-56 focus:ring-1 focus:ring-emerald-500 ${getFieldHighlightClass(`obligacion_${obs.id}_soportes`, sopComment || undefined)}`}
+                          className={`text-[12pt] font-century-gothic-12 border border-gray-200 rounded px-2 py-0.5 text-right w-56 focus:ring-1 focus:ring-emerald-500 ${getFieldHighlightClass(`obligacion_${obs.id}_soportes`, sopComment || undefined)}`}
                         />
                       </div>
                       {renderCommentAlert(`obligacion_${obs.id}_soportes`, sopComment || undefined)}

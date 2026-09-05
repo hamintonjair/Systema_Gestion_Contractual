@@ -1,14 +1,41 @@
 @import "tailwindcss";
 
-/* Tipografía Oficial: Todo el informe debe usar Calibri */
+/* Tipografía Oficial: Todo el informe debe usar Calibri excepto obligaciones y descripción que usan Century Gothic 12pt */
 #informe-printable-document,
-#informe-printable-document * {
+#informe-printable-document *:not(.font-century-gothic):not(.font-century-gothic *):not(.font-century-gothic-12):not(.font-century-gothic-12 *) {
   font-family: 'Calibri', 'Segoe UI', Candara, Arial, sans-serif !important;
 }
 
-/* Tipografía Oficial: Documento Equivalente a la Factura / Desembolso debe usar Times New Roman */
+/* Tipografía Oficial: Obligaciones y descripciones en Century Gothic tamaño 12 (12pt) */
+.font-century-gothic,
+.font-century-gothic *,
+#informe-printable-document .font-century-gothic,
+#informe-printable-document .font-century-gothic * {
+  font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', 'Didact Gothic', Questrial, sans-serif !important;
+}
+
+.font-century-gothic-12,
+.font-century-gothic-12 *,
+#informe-printable-document .font-century-gothic-12,
+#informe-printable-document .font-century-gothic-12 * {
+  font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', 'Didact Gothic', Questrial, sans-serif !important;
+  font-size: 12pt !important;
+  line-height: 1.35 !important;
+}
+
+/* Tipografía Oficial: Documento Equivalente a la Factura / Desembolso debe usar Times New Roman tamaño 12 */
 #desembolso-document,
 #desembolso-document *:not(.font-arial-narrow):not(.font-arial-narrow *) {
+  font-family: "Times New Roman", Times, serif !important;
+}
+
+#desembolso-document {
+  font-size: 12pt;
+}
+
+#desembolso-document input,
+#desembolso-document textarea,
+#desembolso-document select {
   font-family: "Times New Roman", Times, serif !important;
 }
 
@@ -17,14 +44,21 @@
   font-family: 'Arial Narrow', 'Nimbus Sans Narrow', Arial, sans-serif !important;
 }
 
-/* Reglas de visualización y texto de alto contraste para el Certificado de Supervisión */
+/* Reglas de visualización y tipografía oficial para el Certificado de Supervisión (Times New Roman tamaño 12) */
+#certificado-supervision-document,
+#certificado-supervision-document * {
+  font-family: "Times New Roman", Times, Georgia, serif !important;
+}
+
 #certificado-supervision-document {
   color: #000000 !important;
+  font-size: 12pt;
 }
 
 #certificado-supervision-document input,
 #certificado-supervision-document textarea,
 #certificado-supervision-document select {
+  font-family: "Times New Roman", Times, Georgia, serif !important;
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
   caret-color: #000000 !important;
@@ -70,9 +104,10 @@
     display: none !important;
   }
 
-  /* Si se está imprimiendo el Certificado dentro de un modal */
+  /* Si se está imprimiendo el Certificado o Desembolso dentro de un modal */
   .fixed:has(#certificado-supervision-document),
-  .fixed:has(#informe-printable-document) {
+  .fixed:has(#informe-printable-document),
+  .fixed:has(#desembolso-document) {
     position: static !important;
     background: transparent !important;
     backdrop-filter: none !important;
@@ -84,27 +119,26 @@
     display: block !important;
   }
 
-  /* Reglas para el contenedor del Certificado de Supervisión - 1 SOLA HOJA EXACTA */
+  /* Reglas para el contenedor del Certificado de Supervisión */
   #certificado-supervision-document {
     display: block !important;
     visibility: visible !important;
     width: 200mm !important;
     max-width: 200mm !important;
-    height: 265mm !important;
-    max-height: 268mm !important;
+    height: auto !important;
+    min-height: 265mm !important;
     margin: 2mm auto 0 auto !important;
     padding: 5mm 7mm !important;
     box-shadow: none !important;
     border: 2px solid #000000 !important;
     color: #000000 !important;
     background-color: #ffffff !important;
+    font-family: "Times New Roman", Times, Georgia, serif !important;
+    font-size: 12pt !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
-    overflow: hidden !important;
-    transform: scale(0.95) !important;
-    transform-origin: top center !important;
   }
 
   #certificado-supervision-document * {
@@ -130,6 +164,18 @@
     box-shadow: none !important;
     border: none !important;
     font-family: 'Calibri', 'Segoe UI', Candara, Arial, sans-serif !important;
+  }
+
+  #informe-printable-document .font-century-gothic,
+  #informe-printable-document .font-century-gothic * {
+    font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', 'Didact Gothic', Questrial, sans-serif !important;
+  }
+
+  #informe-printable-document .font-century-gothic-12,
+  #informe-printable-document .font-century-gothic-12 * {
+    font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', 'Didact Gothic', Questrial, sans-serif !important;
+    font-size: 12pt !important;
+    line-height: 1.35 !important;
   }
 
   /* Control estricto de saltos de página */

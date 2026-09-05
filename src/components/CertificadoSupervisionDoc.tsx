@@ -557,25 +557,24 @@ export default function CertificadoSupervisionDoc({
                 background: #ffffff !important;
                 color: #000000 !important;
                 font-family: "Times New Roman", Times, Georgia, serif !important;
+                font-size: 12pt !important;
                 width: 100% !important;
-                height: 100% !important;
-                overflow: hidden !important;
+                height: auto !important;
               }
               #certificado-supervision-document {
                 width: 200mm !important;
-                height: 265mm !important;
-                max-height: 268mm !important;
+                height: auto !important;
+                min-height: 265mm !important;
                 border: 2px solid #000000 !important;
                 padding: 4mm 6mm !important;
                 margin: 1mm auto 0 auto !important;
                 box-shadow: none !important;
-                overflow: hidden !important;
+                font-family: "Times New Roman", Times, Georgia, serif !important;
+                font-size: 12pt !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 page-break-after: avoid !important;
                 break-after: avoid !important;
-                transform: scale(0.94) !important;
-                transform-origin: top center !important;
               }
               th, .bg-\\[\\#d1d5db\\] {
                 background-color: #d1d5db !important;
@@ -650,9 +649,9 @@ export default function CertificadoSupervisionDoc({
       #certificado-supervision-document {
         background-color: #ffffff !important;
         color: #000000 !important;
+        font-family: "Times New Roman", Times, Georgia, serif !important;
+        font-size: 12pt !important;
         width: 816px !important;
-        height: 1020px !important;
-        overflow: hidden !important;
         box-shadow: none !important;
       }
     `;
@@ -741,9 +740,9 @@ export default function CertificadoSupervisionDoc({
       #certificado-supervision-document {
         background-color: #ffffff !important;
         color: #000000 !important;
+        font-family: "Times New Roman", Times, Georgia, serif !important;
+        font-size: 12pt !important;
         width: 816px !important;
-        height: 1020px !important;
-        overflow: hidden !important;
         box-shadow: none !important;
       }
     `;
@@ -1049,8 +1048,8 @@ export default function CertificadoSupervisionDoc({
       <div className="w-full max-w-full overflow-x-auto pb-4 flex justify-start sm:justify-center">
         <div 
           id="certificado-supervision-document"
-          className="min-w-[760px] max-w-[850px] w-full bg-white border-2 border-black p-4 sm:p-6 text-black shrink-0 print:p-[4mm] print:border-2 print:border-black print:w-[200mm] print:max-h-[268mm] print:overflow-hidden print:mx-auto text-[10px] sm:text-[10.5px] leading-tight select-text"
-          style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }}
+          className="min-w-[760px] max-w-[850px] w-full bg-white border-2 border-black p-4 sm:p-6 text-black shrink-0 print:p-[4mm] print:border-2 print:border-black print:w-[200mm] print:overflow-hidden print:mx-auto text-[12pt] leading-normal select-text font-serif"
+          style={{ fontFamily: '"Times New Roman", Times, Georgia, serif', fontSize: '12pt' }}
         >
         <style>{`
           @media print {
@@ -1062,23 +1061,24 @@ export default function CertificadoSupervisionDoc({
               margin: 0 !important;
               padding: 0 !important;
               background: #ffffff !important;
-              overflow: hidden !important;
+              color: #000000 !important;
+              font-family: "Times New Roman", Times, Georgia, serif !important;
+              font-size: 12pt !important;
             }
             #certificado-supervision-document {
               width: 200mm !important;
               max-width: 200mm !important;
-              height: 265mm !important;
-              max-height: 268mm !important;
+              height: auto !important;
+              min-height: 265mm !important;
               border: 2px solid #000000 !important;
               padding: 4mm 6mm !important;
               margin: 1mm auto 0 auto !important;
-              overflow: hidden !important;
+              font-family: "Times New Roman", Times, Georgia, serif !important;
+              font-size: 12pt !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
               page-break-after: avoid !important;
               break-after: avoid !important;
-              transform: scale(0.94) !important;
-              transform-origin: top center !important;
             }
             input, textarea {
               appearance: none !important;
@@ -1090,17 +1090,16 @@ export default function CertificadoSupervisionDoc({
               outline: none !important;
               box-shadow: none !important;
               text-align: inherit !important;
-              font-size: inherit !important;
-              font-family: inherit !important;
+              font-size: 12pt !important;
+              font-family: "Times New Roman", Times, Georgia, serif !important;
               font-weight: inherit !important;
               color: #000000 !important;
               min-height: 0 !important;
               line-height: inherit !important;
             }
-            /* Asegurar altura exacta de campos rellenables en impresión */
             .min-h-\\[23px\\], .min-h-\\[19px\\] {
-              min-height: 16px !important;
-              height: 16px !important;
+              min-height: 18px !important;
+              height: 18px !important;
             }
           }
         `}</style>
@@ -1111,7 +1110,7 @@ export default function CertificadoSupervisionDoc({
             <QuibdoLogo variant="full" size="lg" className="scale-100 print:scale-[0.80] origin-left" />
           </div>
           <div className="text-center px-4 w-full max-w-[580px] print:max-w-[580px]">
-            <h1 className="text-[14px] sm:text-[15.5px] print:text-[12.5px] font-bold tracking-tight uppercase text-black leading-tight whitespace-normal md:whitespace-nowrap print:whitespace-nowrap">
+            <h1 className="text-[14pt] sm:text-[15pt] print:text-[13pt] font-bold tracking-tight uppercase text-black leading-tight whitespace-normal md:whitespace-nowrap print:whitespace-nowrap">
               CERTIFICADO DE SUPERVISIÓN Y AUTORIZACIÓN DE DESEMBOLSO
             </h1>
           </div>
@@ -1120,76 +1119,76 @@ export default function CertificadoSupervisionDoc({
         {/* 1. INFORMACIÓN CONTRACTUAL */}
         <div className="w-full mb-1">
           {/* Franja gris institucional */}
-          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[10px] uppercase tracking-wide text-black mb-1 border-y border-black">
+          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[12pt] uppercase tracking-wide text-black mb-1 border-y border-black">
             INFORMACIÓN CONTRACTUAL
           </div>
 
-          <div className="flex gap-2 text-[10px] items-stretch">
+          <div className="flex gap-2 text-[12pt] items-stretch">
             
             {/* Columna Izquierda: Datos del Contratista y Supervisor (58% del ancho) */}
-            <div className="w-[58%] flex flex-col justify-between space-y-0.5">
+            <div className="w-[58%] flex flex-col justify-between space-y-1">
               
               {/* Fila Nombre Contratista */}
               <div className="flex items-center">
-                <span className="w-[145px] font-normal text-[10px] shrink-0">Nombre del (la) Contratista</span>
-                <div className="flex-1 border border-black px-1.5 py-0 font-bold uppercase min-h-[19px] flex items-center">
+                <span className="w-[160px] font-normal text-[12pt] shrink-0">Nombre del (la) Contratista</span>
+                <div className="flex-1 border border-black px-1.5 py-0 font-bold uppercase min-h-[22px] flex items-center">
                   {isEditing ? (
                     <input 
                       type="text"
                       value={formData.contratistaNombre}
                       onChange={(e) => handleFieldChange('contratistaNombre', e.target.value)}
-                      className="w-full bg-amber-50 text-black font-bold uppercase text-[10px] focus:outline-none"
+                      className="w-full bg-amber-50 text-black font-bold uppercase text-[12pt] focus:outline-none"
                     />
                   ) : (
-                    formData.contratistaNombre
+                    <span className="text-[12pt]">{formData.contratistaNombre}</span>
                   )}
                 </div>
               </div>
 
               {/* Fila Tipo de Contrato */}
               <div className="flex items-center">
-                <span className="w-[145px] font-normal text-[10px] shrink-0">Tipo de Contrato</span>
-                <div className="flex-1 border border-black px-1.5 py-0 font-bold uppercase min-h-[19px] flex items-center">
+                <span className="w-[160px] font-normal text-[12pt] shrink-0">Tipo de Contrato</span>
+                <div className="flex-1 border border-black px-1.5 py-0 font-bold uppercase min-h-[22px] flex items-center">
                   {isEditing ? (
                     <input 
                       type="text"
                       value={formData.tipoContrato}
                       onChange={(e) => handleFieldChange('tipoContrato', e.target.value)}
-                      className="w-full bg-amber-50 text-black font-bold uppercase text-[10px] focus:outline-none"
+                      className="w-full bg-amber-50 text-black font-bold uppercase text-[12pt] focus:outline-none"
                     />
                   ) : (
-                    formData.tipoContrato
+                    <span className="text-[12pt]">{formData.tipoContrato}</span>
                   )}
                 </div>
               </div>
 
               {/* Fila Contrato Nº y Año (Alineados a la derecha con los demás cuadros, 'DE' centrado) */}
               <div className="flex items-center justify-between">
-                <span className="w-[145px] font-normal text-[10px] shrink-0">Contrato Nº</span>
+                <span className="w-[160px] font-normal text-[12pt] shrink-0">Contrato Nº</span>
                 <div className="flex-1 flex items-center justify-end">
-                  <div className="w-[72px] border border-black px-1 py-0 text-center font-bold min-h-[19px] flex items-center justify-center">
+                  <div className="w-[85px] border border-black px-1 py-0 text-center font-bold min-h-[22px] flex items-center justify-center">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={formData.contratoNro}
                         onChange={(e) => handleFieldChange('contratoNro', e.target.value)}
-                        className="w-full bg-amber-50 text-center font-bold text-[10px] focus:outline-none"
+                        className="w-full bg-amber-50 text-center font-bold text-[12pt] focus:outline-none"
                       />
                     ) : (
-                      formData.contratoNro
+                      <span className="text-[12pt] font-bold">{formData.contratoNro}</span>
                     )}
                   </div>
-                  <span className="font-bold text-[10px] flex-1 text-center">DE</span>
-                  <div className="w-[85px] border border-black px-1 py-0 text-center font-bold min-h-[19px] flex items-center justify-center">
+                  <span className="font-bold text-[12pt] flex-1 text-center">DE</span>
+                  <div className="w-[95px] border border-black px-1 py-0 text-center font-bold min-h-[22px] flex items-center justify-center">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={formData.contratoAno}
                         onChange={(e) => handleFieldChange('contratoAno', e.target.value)}
-                        className="w-full bg-amber-50 text-center font-bold text-[10px] focus:outline-none"
+                        className="w-full bg-amber-50 text-center font-bold text-[12pt] focus:outline-none"
                       />
                     ) : (
-                      formData.contratoAno
+                      <span className="text-[12pt] font-bold">{formData.contratoAno}</span>
                     )}
                   </div>
                 </div>
@@ -1197,31 +1196,31 @@ export default function CertificadoSupervisionDoc({
 
               {/* Fila Documento de Identidad (Cédula y número alineados a la derecha con los demás cuadros) */}
               <div className="flex items-center justify-between">
-                <span className="w-[145px] font-normal text-[10px] shrink-0 text-black">Documento de Identidad</span>
+                <span className="w-[160px] font-normal text-[12pt] shrink-0 text-black">Documento de Identidad</span>
                 <div className="flex-1 flex items-center justify-end">
-                  <div className="w-[50px] border border-black px-1 py-0 text-center font-bold text-black min-h-[19px] flex items-center justify-center">
+                  <div className="w-[60px] border border-black px-1 py-0 text-center font-bold text-black min-h-[22px] flex items-center justify-center">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={formData.tipoDocumento}
                         onChange={(e) => handleFieldChange('tipoDocumento', e.target.value)}
-                        className="w-full bg-amber-50 text-center font-bold text-black text-[10px] focus:outline-none"
+                        className="w-full bg-amber-50 text-center font-bold text-black text-[12pt] focus:outline-none"
                       />
                     ) : (
-                      formData.tipoDocumento
+                      <span className="text-[12pt] font-bold">{formData.tipoDocumento}</span>
                     )}
                   </div>
-                  <span className="font-bold text-[10px] px-2 text-center text-black">Nº</span>
-                  <div className="flex-1 border border-black px-2 py-0 text-right font-bold text-black min-h-[19px] flex items-center justify-end">
+                  <span className="font-bold text-[12pt] px-2 text-center text-black">Nº</span>
+                  <div className="flex-1 border border-black px-2 py-0 text-right font-bold text-black min-h-[22px] flex items-center justify-end">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={formData.contratistaDocumento}
                         onChange={(e) => handleFieldChange('contratistaDocumento', e.target.value)}
-                        className="w-full bg-amber-50 text-right font-bold text-black text-[10px] focus:outline-none"
+                        className="w-full bg-amber-50 text-right font-bold text-black text-[12pt] focus:outline-none"
                       />
                     ) : (
-                      formData.contratistaDocumento
+                      <span className="text-[12pt] font-bold">{formData.contratistaDocumento}</span>
                     )}
                   </div>
                 </div>
@@ -1229,38 +1228,38 @@ export default function CertificadoSupervisionDoc({
 
               {/* Fila Nombre de Supervisor */}
               <div className="flex items-center">
-                <span className="w-[145px] font-normal text-[9.5px] sm:text-[10px] shrink-0 leading-tight pr-1">
+                <span className="w-[160px] font-normal text-[12pt] shrink-0 leading-tight pr-1">
                   Nombre de Supervisor(a) o Interventor(a)
                 </span>
-                <div className="flex-1 border border-black px-1.5 py-0 text-center font-bold uppercase min-h-[19px] flex items-center justify-center">
+                <div className="flex-1 border border-black px-1.5 py-0 text-center font-bold uppercase min-h-[22px] flex items-center justify-center">
                   {isEditing ? (
                     <input 
                       type="text"
                       value={formData.supervisorNombre}
                       onChange={(e) => handleFieldChange('supervisorNombre', e.target.value)}
-                      className="w-full bg-amber-50 text-center font-bold uppercase text-[10px] focus:outline-none"
+                      className="w-full bg-amber-50 text-center font-bold uppercase text-[12pt] focus:outline-none"
                     />
                   ) : (
-                    formData.supervisorNombre
+                    <span className="text-[12pt] font-bold">{formData.supervisorNombre}</span>
                   )}
                 </div>
               </div>
 
               {/* Fila Cargo Supervisor */}
               <div className="flex items-center">
-                <span className="w-[145px] font-normal text-[9.5px] sm:text-[10px] shrink-0 leading-tight pr-1">
+                <span className="w-[160px] font-normal text-[12pt] shrink-0 leading-tight pr-1">
                   Cargo Supervisor(a) o Interventor(a)
                 </span>
-                <div className="flex-1 border border-black px-1.5 py-0 text-center font-normal text-[9.5px] sm:text-[10px] min-h-[19px] flex items-center justify-center">
+                <div className="flex-1 border border-black px-1.5 py-0 text-center font-normal text-[12pt] min-h-[22px] flex items-center justify-center">
                   {isEditing ? (
                     <input 
                       type="text"
                       value={formData.supervisorCargo}
                       onChange={(e) => handleFieldChange('supervisorCargo', e.target.value)}
-                      className="w-full bg-amber-50 text-center text-[9.5px] sm:text-[10px] focus:outline-none"
+                      className="w-full bg-amber-50 text-center text-[12pt] focus:outline-none"
                     />
                   ) : (
-                    formData.supervisorCargo
+                    <span className="text-[12pt]">{formData.supervisorCargo}</span>
                   )}
                 </div>
               </div>
@@ -1269,17 +1268,17 @@ export default function CertificadoSupervisionDoc({
 
             {/* Columna Derecha: OBJETO (42% del ancho, más amplio para textos largos) */}
             <div className="w-[42%] flex items-stretch gap-1">
-              <span className="font-normal text-[10px] pt-0.5 shrink-0">OBJETO</span>
-              <div className="flex-1 border border-black p-1 text-justify text-[9px] sm:text-[9.5px] leading-snug uppercase flex flex-col justify-start">
+              <span className="font-normal text-[12pt] pt-0.5 shrink-0">OBJETO</span>
+              <div className="flex-1 border border-black p-1 text-justify text-[12pt] leading-normal uppercase flex flex-col justify-start">
                 {isEditing ? (
                   <textarea 
                     rows={6}
                     value={formData.objeto}
                     onChange={(e) => handleFieldChange('objeto', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-black uppercase text-[9px] sm:text-[9.5px] focus:outline-none resize-none leading-snug"
+                    className="w-full h-full bg-amber-50 text-black uppercase text-[12pt] focus:outline-none resize-none leading-normal font-serif"
                   />
                 ) : (
-                  <p className="m-0 leading-snug">{formData.objeto}</p>
+                  <p className="m-0 leading-normal text-[12pt] font-serif">{formData.objeto}</p>
                 )}
               </div>
             </div>
@@ -1289,11 +1288,11 @@ export default function CertificadoSupervisionDoc({
 
         {/* 2. MANIFESTACIÓN DE INTENCIÓN */}
         <div className="w-full mb-1">
-          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[10px] uppercase tracking-wide text-black mb-1 border-y border-black/30">
+          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[12pt] uppercase tracking-wide text-black mb-1 border-y border-black/30">
             MANIFESTACIÓN DE INTENCIÓN
           </div>
           
-          <div className="text-justify text-[10px] leading-relaxed pt-0.5">
+          <div className="text-justify text-[12pt] leading-relaxed pt-0.5 font-serif">
             Una vez revisada la documentación enviada por el señor{' '}
             <span className="inline-block border-b border-black font-bold uppercase px-3 text-center min-w-[280px] print:border-b-[1px]">
               {isEditing ? (
@@ -1301,10 +1300,10 @@ export default function CertificadoSupervisionDoc({
                   type="text"
                   value={formData.contratistaNombre}
                   onChange={(e) => handleFieldChange('contratistaNombre', e.target.value)}
-                  className="bg-amber-50 font-bold uppercase text-center text-[10px] focus:outline-none w-full print:appearance-none print:p-0 print:m-0 print:border-none print:bg-transparent print:outline-none"
+                  className="bg-amber-50 font-bold uppercase text-center text-[12pt] focus:outline-none w-full print:appearance-none print:p-0 print:m-0 print:border-none print:bg-transparent print:outline-none font-serif"
                 />
               ) : (
-                formData.contratistaNombre
+                <span className="text-[12pt] font-serif">{formData.contratistaNombre}</span>
               )}
             </span>
             {' '}en su calidad de contratista/convenido del Municipio de Quibdó de acuerdo con el contrato (convenio) No{' '}
@@ -1314,10 +1313,10 @@ export default function CertificadoSupervisionDoc({
                   type="text"
                   value={formData.contratoNro}
                   onChange={(e) => handleFieldChange('contratoNro', e.target.value)}
-                  className="bg-amber-50 font-bold text-center text-[10px] focus:outline-none w-full print:appearance-none print:p-0 print:m-0 print:border-none print:bg-transparent print:outline-none"
+                  className="bg-amber-50 font-bold text-center text-[12pt] focus:outline-none w-full print:appearance-none print:p-0 print:m-0 print:border-none print:bg-transparent print:outline-none font-serif"
                 />
               ) : (
-                formData.contratoNro
+                <span className="text-[12pt] font-serif">{formData.contratoNro}</span>
               )}
             </span>
             {' '}en cumplimiento de la cláusula{' '}
@@ -1327,10 +1326,10 @@ export default function CertificadoSupervisionDoc({
                   type="text"
                   value={formData.clausulaNro}
                   onChange={(e) => handleFieldChange('clausulaNro', e.target.value)}
-                  className="bg-amber-50 font-bold text-center text-[10px] focus:outline-none w-full print:appearance-none print:p-0 print:m-0 print:border-none print:bg-transparent print:outline-none"
+                  className="bg-amber-50 font-bold text-center text-[12pt] focus:outline-none w-full print:appearance-none print:p-0 print:m-0 print:border-none print:bg-transparent print:outline-none font-serif"
                 />
               ) : (
-                formData.clausulaNro
+                <span className="text-[12pt] font-serif">{formData.clausulaNro}</span>
               )}
             </span>
             {' '}del convenio/contrato en mención, solicito respetuosamente realizar el trámite de pago (o desembolso), con base en la siguiente información y anexos de cumplimiento.
@@ -1339,100 +1338,100 @@ export default function CertificadoSupervisionDoc({
 
         {/* 3. INFORMACIÓN FINANCIERA */}
         <div className="w-full mb-1">
-          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[10px] uppercase tracking-wide text-black mb-1 border-y border-black/30">
+          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[12pt] uppercase tracking-wide text-black mb-1 border-y border-black/30">
             INFORMACIÓN FINANCIERA
           </div>
           
-          <div className="space-y-0.5 text-[10px]">
+          <div className="space-y-1 text-[12pt]">
             {/* Fila 1: Cuenta Bancaria, Banco y Tipo cuenta */}
             <div className="flex items-center">
-              <span className="w-[150px] shrink-0 font-normal">Número cuenta del (a) Contratista</span>
-              <div className="w-[170px] border border-black px-1.5 py-0 text-right font-bold min-h-[19px] flex items-center justify-end">
+              <span className="w-[160px] shrink-0 font-normal">Número cuenta del (a) Contratista</span>
+              <div className="w-[170px] border border-black px-1.5 py-0 text-right font-bold min-h-[22px] flex items-center justify-end">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.numeroCuenta ?? ''}
                     onChange={(e) => handleFieldChange('numeroCuenta', e.target.value)}
-                    className="w-full bg-amber-50 text-right text-black font-bold text-[10px] focus:outline-none"
+                    className="w-full bg-amber-50 text-right text-black font-bold text-[12pt] focus:outline-none"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.numeroCuenta
+                  <span className="text-[12pt] font-bold">{formData.numeroCuenta}</span>
                 )}
               </div>
               <span className="font-normal px-2">Banco</span>
-              <div className="w-[130px] border border-black px-1.5 py-0 text-right font-normal min-h-[19px] flex items-center justify-end">
+              <div className="w-[130px] border border-black px-1.5 py-0 text-right font-normal min-h-[22px] flex items-center justify-end">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.banco ?? ''}
                     onChange={(e) => handleFieldChange('banco', e.target.value)}
-                    className="w-full bg-amber-50 text-right text-black font-normal text-[10px] focus:outline-none"
+                    className="w-full bg-amber-50 text-right text-black font-normal text-[12pt] focus:outline-none"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.banco
+                  <span className="text-[12pt]">{formData.banco}</span>
                 )}
               </div>
               <span className="font-normal px-2">Tipo cuenta</span>
-              <div className="flex-1 border border-black px-1.5 py-0 text-center font-normal min-h-[19px] flex items-center justify-center">
+              <div className="flex-1 border border-black px-1.5 py-0 text-center font-normal min-h-[22px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.tipoCuenta ?? ''}
                     onChange={(e) => handleFieldChange('tipoCuenta', e.target.value)}
-                    className="w-full bg-amber-50 text-center text-black font-normal text-[10px] focus:outline-none"
+                    className="w-full bg-amber-50 text-center text-black font-normal text-[12pt] focus:outline-none"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.tipoCuenta
+                  <span className="text-[12pt]">{formData.tipoCuenta}</span>
                 )}
               </div>
             </div>
 
             {/* Fila 2: Fecha de Inicio y Plazo */}
             <div className="flex items-center">
-              <span className="w-[150px] shrink-0 font-normal text-black">Fecha de inicio (Según Acta)</span>
-              <div className="w-[100px] border border-black px-1.5 py-0 text-right font-normal text-black min-h-[19px] flex items-center justify-end bg-white">
+              <span className="w-[160px] shrink-0 font-normal text-black">Fecha de inicio (Según Acta)</span>
+              <div className="w-[110px] border border-black px-1.5 py-0 text-right font-normal text-black min-h-[22px] flex items-center justify-end bg-white">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaInicio ?? ''}
                     onChange={(e) => handleFieldChange('fechaInicio', e.target.value)}
-                    className="w-full bg-amber-50 text-right text-black font-semibold text-[10px] focus:outline-none focus:bg-amber-100"
+                    className="w-full bg-amber-50 text-right text-black font-semibold text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000', WebkitTextFillColor: '#000000', opacity: 1 }}
                   />
                 ) : (
-                  formData.fechaInicio
+                  <span className="text-[12pt]">{formData.fechaInicio}</span>
                 )}
               </div>
               <div className="flex items-center ml-8">
                 <span className="font-normal pr-2 text-black">Plazo de Ejecución</span>
-                <div className="w-[35px] border border-black px-1 py-0 text-center font-bold text-black min-h-[19px] flex items-center justify-center">
+                <div className="w-[45px] border border-black px-1 py-0 text-center font-bold text-black min-h-[22px] flex items-center justify-center">
                   {isEditing ? (
                     <input 
                       type="text"
                       value={formData.plazoMeses}
                       onChange={(e) => handleFieldChange('plazoMeses', e.target.value)}
-                      className="w-full bg-amber-50 text-center font-bold text-black text-[10px] focus:outline-none"
+                      className="w-full bg-amber-50 text-center font-bold text-black text-[12pt] focus:outline-none"
                       style={{ color: '#000000', WebkitTextFillColor: '#000000', opacity: 1 }}
                     />
                   ) : (
-                    formData.plazoMeses
+                    <span className="text-[12pt] font-bold">{formData.plazoMeses}</span>
                   )}
                 </div>
                 <span className="px-1.5 font-normal text-black">meses, y</span>
-                <div className="w-[24px] border border-black px-1 py-0 text-center font-bold text-black min-h-[19px] flex items-center justify-center">
+                <div className="w-[40px] border border-black px-1 py-0 text-center font-bold text-black min-h-[22px] flex items-center justify-center">
                   {isEditing ? (
                     <input 
                       type="text"
                       value={formData.plazoDias}
                       onChange={(e) => handleFieldChange('plazoDias', e.target.value)}
-                      className="w-full bg-amber-50 text-center font-bold text-black text-[10px] focus:outline-none"
+                      className="w-full bg-amber-50 text-center font-bold text-black text-[12pt] focus:outline-none"
                       style={{ color: '#000000', WebkitTextFillColor: '#000000', opacity: 1 }}
                     />
                   ) : (
-                    formData.plazoDias
+                    <span className="text-[12pt] font-bold">{formData.plazoDias}</span>
                   )}
                 </div>
                 <span className="pl-1 font-normal text-black">días</span>
@@ -1441,40 +1440,40 @@ export default function CertificadoSupervisionDoc({
 
             {/* Fila 3: Fecha de Terminación */}
             <div className="flex items-center">
-              <span className="w-[150px] shrink-0 font-normal text-black">Fecha de terminación (Incluye prórrogas)</span>
-              <div className="w-[100px] border border-black px-1.5 py-0 text-right font-normal text-black min-h-[19px] flex items-center justify-end bg-white">
+              <span className="w-[160px] shrink-0 font-normal text-black">Fecha de terminación (Incluye prórrogas)</span>
+              <div className="w-[110px] border border-black px-1.5 py-0 text-right font-normal text-black min-h-[22px] flex items-center justify-end bg-white">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaTerminacion ?? ''}
                     onChange={(e) => handleFieldChange('fechaTerminacion', e.target.value)}
-                    className="w-full bg-amber-50 text-right text-black font-semibold text-[10px] focus:outline-none focus:bg-amber-100"
+                    className="w-full bg-amber-50 text-right text-black font-semibold text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000', WebkitTextFillColor: '#000000', opacity: 1 }}
                   />
                 ) : (
-                  formData.fechaTerminacion
+                  <span className="text-[12pt]">{formData.fechaTerminacion}</span>
                 )}
               </div>
             </div>
 
             {/* Tablas dobles lado a lado: más estrechas y alineadas hacia la izquierda */}
-            <div className="flex items-start gap-4 pt-0.5 justify-start">
+            <div className="flex items-start gap-4 pt-1 justify-start">
               
-              {/* Tabla Izquierda: Valores (Más estrecha ~220px) */}
-              <div className="w-[210px] border border-black">
-                <table className="w-full border-collapse text-[9.5px]">
+              {/* Tabla Izquierda: Valores */}
+              <div className="w-[260px] border border-black">
+                <table className="w-full border-collapse text-[12pt] font-serif">
                   <tbody>
                     <tr className="border-b border-black font-bold">
-                      <td className="p-0.5 px-1 border-r border-black w-[45%] text-[9px]">VALOR INICIAL</td>
-                      <td className="p-0.5 px-1 text-right font-mono flex items-center justify-between">
+                      <td className="p-1 px-1.5 border-r border-black w-[45%] text-[12pt]">VALOR INICIAL</td>
+                      <td className="p-1 px-1.5 text-right font-mono flex items-center justify-between text-[12pt]">
                         <span className="font-bold">$</span>
-                        <span className="font-bold text-[9.5px]">
+                        <span className="font-bold text-[12pt]">
                           {isEditing ? (
                             <input 
                               type="text"
                               value={(formData.valorInicial || '').replace(/^[$\s]+/, '')}
                               onChange={(e) => handleFieldChange('valorInicial', e.target.value)}
-                              className="bg-amber-50 text-right text-black font-mono font-bold text-[9.5px] focus:outline-none w-full"
+                              className="bg-amber-50 text-right text-black font-mono font-bold text-[12pt] focus:outline-none w-full"
                               style={{ color: '#000000' }}
                             />
                           ) : (
@@ -1484,14 +1483,14 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="p-0.5 px-1 border-r border-black text-[9px]">Adición 1</td>
-                      <td className="p-0.5 px-1 text-right font-mono text-[9px]">
+                      <td className="p-1 px-1.5 border-r border-black text-[12pt]">Adición 1</td>
+                      <td className="p-1 px-1.5 text-right font-mono text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.adicion1 || ''}
                             onChange={(e) => handleFieldChange('adicion1', e.target.value)}
-                            className="bg-amber-50 text-right text-black font-mono text-[9px] focus:outline-none w-full pr-0.5"
+                            className="bg-amber-50 text-right text-black font-mono text-[12pt] focus:outline-none w-full pr-0.5"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -1502,14 +1501,14 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="p-0.5 px-1 border-r border-black text-[9px]">Adición 2</td>
-                      <td className="p-0.5 px-1 text-right font-mono text-[9px]">
+                      <td className="p-1 px-1.5 border-r border-black text-[12pt]">Adición 2</td>
+                      <td className="p-1 px-1.5 text-right font-mono text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.adicion2 || ''}
                             onChange={(e) => handleFieldChange('adicion2', e.target.value)}
-                            className="bg-amber-50 text-right text-black font-mono text-[9px] focus:outline-none w-full pr-0.5"
+                            className="bg-amber-50 text-right text-black font-mono text-[12pt] focus:outline-none w-full pr-0.5"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -1520,14 +1519,14 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="p-0.5 px-1 border-r border-black text-[9px]">Adición 3</td>
-                      <td className="p-0.5 px-1 text-right font-mono text-[9px]">
+                      <td className="p-1 px-1.5 border-r border-black text-[12pt]">Adición 3</td>
+                      <td className="p-1 px-1.5 text-right font-mono text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.adicion3 || ''}
                             onChange={(e) => handleFieldChange('adicion3', e.target.value)}
-                            className="bg-amber-50 text-right text-black font-mono text-[9px] focus:outline-none w-full pr-0.5"
+                            className="bg-amber-50 text-right text-black font-mono text-[12pt] focus:outline-none w-full pr-0.5"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -1538,16 +1537,16 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="font-bold">
-                      <td className="p-0.5 px-1 border-r border-black text-[9px]">VALOR TOTAL</td>
-                      <td className="p-0.5 px-1 text-right font-mono flex items-center justify-between">
+                      <td className="p-1 px-1.5 border-r border-black text-[12pt]">VALOR TOTAL</td>
+                      <td className="p-1 px-1.5 text-right font-mono flex items-center justify-between text-[12pt]">
                         <span className="font-bold">$</span>
-                        <span className="font-bold text-[9.5px]">
+                        <span className="font-bold text-[12pt]">
                           {isEditing ? (
                             <input 
                               type="text"
                               value={(formData.valorTotal || '').replace(/^[$\s]+/, '')}
                               onChange={(e) => handleFieldChange('valorTotal', e.target.value)}
-                              className="bg-amber-50 text-right text-black font-mono font-bold text-[9.5px] focus:outline-none w-full"
+                              className="bg-amber-50 text-right text-black font-mono font-bold text-[12pt] focus:outline-none w-full"
                               style={{ color: '#000000' }}
                             />
                           ) : (
@@ -1560,25 +1559,25 @@ export default function CertificadoSupervisionDoc({
                 </table>
               </div>
 
-              {/* Tabla Derecha: Prórrogas (Más estrecha ~240px) */}
-              <div className="w-[220px] border border-black">
-                <table className="w-full border-collapse text-[9.5px]">
+              {/* Tabla Derecha: Prórrogas */}
+              <div className="w-[240px] border border-black">
+                <table className="w-full border-collapse text-[12pt] font-serif">
                   <thead>
                     <tr className="border-b border-black font-bold">
-                      <th className="p-0.5 px-1 text-left border-r border-black w-3/5 font-bold text-[9px]">Prórrogas</th>
-                      <th className="p-0.5 px-1 text-center font-bold text-[9px]">Días</th>
+                      <th className="p-1 px-1.5 text-left border-r border-black w-3/5 font-bold text-[12pt]">Prórrogas</th>
+                      <th className="p-1 px-1.5 text-center font-bold text-[12pt]">Días</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border-b border-black">
-                      <td className="p-0.5 px-1 border-r border-black text-[9px]">Prórroga 1</td>
-                      <td className="p-0.5 px-1 text-center font-mono text-[9px]">
+                      <td className="p-1 px-1.5 border-r border-black text-[12pt]">Prórroga 1</td>
+                      <td className="p-1 px-1.5 text-center font-mono text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.prorroga1Dias}
                             onChange={(e) => handleFieldChange('prorroga1Dias', e.target.value)}
-                            className="bg-amber-50 text-center font-mono text-[9px] focus:outline-none w-full"
+                            className="bg-amber-50 text-center font-mono text-[12pt] focus:outline-none w-full"
                           />
                         ) : (
                           formData.prorroga1Dias
@@ -1586,14 +1585,14 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="p-0.5 px-1 border-r border-black text-[9px]">Prórroga 2</td>
-                      <td className="p-0.5 px-1 text-center font-mono text-[9px]">
+                      <td className="p-1 px-1.5 border-r border-black text-[12pt]">Prórroga 2</td>
+                      <td className="p-1 px-1.5 text-center font-mono text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.prorroga2Dias}
                             onChange={(e) => handleFieldChange('prorroga2Dias', e.target.value)}
-                            className="bg-amber-50 text-center font-mono text-[9px] focus:outline-none w-full"
+                            className="bg-amber-50 text-center font-mono text-[12pt] focus:outline-none w-full"
                           />
                         ) : (
                           formData.prorroga2Dias
@@ -1601,23 +1600,23 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="p-0.5 px-1 border-r border-black text-[9px]">Prórroga 3</td>
-                      <td className="p-0.5 px-1 text-center font-mono text-[9px]">
+                      <td className="p-1 px-1.5 border-r border-black text-[12pt]">Prórroga 3</td>
+                      <td className="p-1 px-1.5 text-center font-mono text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.prorroga3Dias}
                             onChange={(e) => handleFieldChange('prorroga3Dias', e.target.value)}
-                            className="bg-amber-50 text-center font-mono text-[9px] focus:outline-none w-full"
+                            className="bg-amber-50 text-center font-mono text-[12pt] focus:outline-none w-full"
                           />
                         ) : (
                           formData.prorroga3Dias
                         )}
                       </td>
                     </tr>
-                    <tr className="h-[15px]">
-                      <td className="p-0.5 px-1 border-r border-black"></td>
-                      <td className="p-0.5 px-1"></td>
+                    <tr className="h-[20px]">
+                      <td className="p-1 px-1.5 border-r border-black"></td>
+                      <td className="p-1 px-1.5"></td>
                     </tr>
                   </tbody>
                 </table>
@@ -1630,368 +1629,368 @@ export default function CertificadoSupervisionDoc({
 
         {/* 4. INFORMACIÓN PRESUPUESTAL */}
         <div className="w-full mb-1">
-          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[10px] uppercase tracking-wide text-black mb-1 border-y border-black">
+          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[12pt] uppercase tracking-wide text-black mb-1 border-y border-black">
             INFORMACIÓN PRESUPUESTAL
           </div>
           
           {/* Cuadro principal enmarcado con separaciones limpias y columnas individuales con todas las 5 filas siempre visibles */}
-          <div className="border-[2px] border-black bg-white flex items-stretch justify-between px-2.5 py-0">
+          <div className="border-[2px] border-black bg-white flex items-stretch justify-between px-2.5 py-0 font-serif">
             {/* Columna 1: No. Certificado Disponibilidad Presupuestal */}
             <div className="w-[14%] border-x border-black flex flex-col bg-white">
-              <div className="p-1 print:p-0.5 text-center font-bold text-[9px] print:text-[8.5px] leading-tight print:leading-none border-b border-black h-[38px] print:h-[28px] flex items-center justify-center">
+              <div className="p-1 print:p-0.5 text-center font-bold text-[11pt] leading-tight border-b border-black h-[48px] flex items-center justify-center">
                 No. Certificado Disponibilidad Presupuestal
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.cdpNro ?? ''}
                     onChange={(e) => handleFieldChange('cdpNro', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.cdpNro || ''
+                  <span className="text-[12pt] font-mono">{formData.cdpNro || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.cdpNro2 ?? ''}
                     onChange={(e) => handleFieldChange('cdpNro2', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.cdpNro2 || ''
+                  <span className="text-[12pt] font-mono">{formData.cdpNro2 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.cdpNro3 ?? ''}
                     onChange={(e) => handleFieldChange('cdpNro3', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.cdpNro3 || ''
+                  <span className="text-[12pt] font-mono">{formData.cdpNro3 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.cdpNro4 ?? ''}
                     onChange={(e) => handleFieldChange('cdpNro4', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.cdpNro4 || ''
+                  <span className="text-[12pt] font-mono">{formData.cdpNro4 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.cdpNro5 ?? ''}
                     onChange={(e) => handleFieldChange('cdpNro5', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.cdpNro5 || ''
+                  <span className="text-[12pt] font-mono">{formData.cdpNro5 || ''}</span>
                 )}
               </div>
             </div>
 
             {/* Columna 2: No. Registro Presupuestal */}
             <div className="w-[13.5%] border-x border-black flex flex-col bg-white">
-              <div className="p-1 print:p-0.5 text-center font-bold text-[9px] print:text-[8.5px] leading-tight print:leading-none border-b border-black h-[38px] print:h-[28px] flex items-center justify-center">
+              <div className="p-1 print:p-0.5 text-center font-bold text-[11pt] leading-tight border-b border-black h-[48px] flex items-center justify-center">
                 No. Registro Presupuestal
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.crpNro ?? ''}
                     onChange={(e) => handleFieldChange('crpNro', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.crpNro || ''
+                  <span className="text-[12pt] font-mono">{formData.crpNro || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.crpNro2 ?? ''}
                     onChange={(e) => handleFieldChange('crpNro2', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.crpNro2 || ''
+                  <span className="text-[12pt] font-mono">{formData.crpNro2 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.crpNro3 ?? ''}
                     onChange={(e) => handleFieldChange('crpNro3', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.crpNro3 || ''
+                  <span className="text-[12pt] font-mono">{formData.crpNro3 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.crpNro4 ?? ''}
                     onChange={(e) => handleFieldChange('crpNro4', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.crpNro4 || ''
+                  <span className="text-[12pt] font-mono">{formData.crpNro4 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.crpNro5 ?? ''}
                     onChange={(e) => handleFieldChange('crpNro5', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.crpNro5 || ''
+                  <span className="text-[12pt] font-mono">{formData.crpNro5 || ''}</span>
                 )}
               </div>
             </div>
 
             {/* Columna 3: Fecha Registro Presupuestal */}
             <div className="w-[17%] border-x border-black flex flex-col bg-white">
-              <div className="p-1 print:p-0.5 text-center font-bold text-[9px] print:text-[8.5px] leading-tight print:leading-none border-b border-black h-[38px] print:h-[28px] flex items-center justify-center">
+              <div className="p-1 print:p-0.5 text-center font-bold text-[11pt] leading-tight border-b border-black h-[48px] flex items-center justify-center">
                 Fecha Registro Presupuestal
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaRegistroPresupuestal ?? ''}
                     onChange={(e) => handleFieldChange('fechaRegistroPresupuestal', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.fechaRegistroPresupuestal || ''
+                  <span className="text-[12pt] font-mono">{formData.fechaRegistroPresupuestal || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaRegistroPresupuestal2 ?? ''}
                     onChange={(e) => handleFieldChange('fechaRegistroPresupuestal2', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.fechaRegistroPresupuestal2 || ''
+                  <span className="text-[12pt] font-mono">{formData.fechaRegistroPresupuestal2 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaRegistroPresupuestal3 ?? ''}
                     onChange={(e) => handleFieldChange('fechaRegistroPresupuestal3', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.fechaRegistroPresupuestal3 || ''
+                  <span className="text-[12pt] font-mono">{formData.fechaRegistroPresupuestal3 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaRegistroPresupuestal4 ?? ''}
                     onChange={(e) => handleFieldChange('fechaRegistroPresupuestal4', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.fechaRegistroPresupuestal4 || ''
+                  <span className="text-[12pt] font-mono">{formData.fechaRegistroPresupuestal4 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaRegistroPresupuestal5 ?? ''}
                     onChange={(e) => handleFieldChange('fechaRegistroPresupuestal5', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.fechaRegistroPresupuestal5 || ''
+                  <span className="text-[12pt] font-mono">{formData.fechaRegistroPresupuestal5 || ''}</span>
                 )}
               </div>
             </div>
 
             {/* Columna 4: Código Rubro Presupuestal */}
             <div className="w-[23%] border-x border-black flex flex-col bg-white">
-              <div className="p-1 print:p-0.5 text-center font-bold text-[9px] print:text-[8.5px] leading-tight print:leading-none border-b border-black h-[38px] print:h-[28px] flex items-center justify-center">
+              <div className="p-1 print:p-0.5 text-center font-bold text-[11pt] leading-tight border-b border-black h-[48px] flex items-center justify-center">
                 Código Rubro Presupuestal
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[9.5px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.codigoRubro ?? ''}
                     onChange={(e) => handleFieldChange('codigoRubro', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[9.5px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.codigoRubro || ''
+                  <span className="text-[12pt] font-mono">{formData.codigoRubro || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[9.5px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.codigoRubro2 ?? ''}
                     onChange={(e) => handleFieldChange('codigoRubro2', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[9.5px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.codigoRubro2 || ''
+                  <span className="text-[12pt] font-mono">{formData.codigoRubro2 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[9.5px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.codigoRubro3 ?? ''}
                     onChange={(e) => handleFieldChange('codigoRubro3', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[9.5px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.codigoRubro3 || ''
+                  <span className="text-[12pt] font-mono">{formData.codigoRubro3 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[9.5px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.codigoRubro4 ?? ''}
                     onChange={(e) => handleFieldChange('codigoRubro4', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[9.5px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.codigoRubro4 || ''
+                  <span className="text-[12pt] font-mono">{formData.codigoRubro4 || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] text-center font-mono text-[9.5px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.codigoRubro5 ?? ''}
                     onChange={(e) => handleFieldChange('codigoRubro5', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[9.5px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  formData.codigoRubro5 || ''
+                  <span className="text-[12pt] font-mono">{formData.codigoRubro5 || ''}</span>
                 )}
               </div>
             </div>
 
             {/* Columna 5: Valor a pagar por Rubro Presupuestal */}
-            <div className="w-[18%] border-x border-black flex flex-col bg-white">
-              <div className="p-1 print:p-0.5 text-center font-bold text-[8.5px] leading-tight print:leading-none border-b border-black h-[38px] print:h-[28px] flex items-center justify-center">
+            <div className="w-[20%] border-x border-black flex flex-col bg-white">
+              <div className="p-1 print:p-0.5 text-center font-bold text-[10.5pt] leading-tight border-b border-black h-[48px] flex items-center justify-center">
                 Valor a pagar por Rubro Presupuestal en el presente pago
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={quitarDecimales(formData.valorRubro ?? '')}
                     onChange={(e) => handleFieldChange('valorRubro', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  quitarDecimales(formData.valorRubro) || ''
+                  <span className="text-[12pt] font-mono">{quitarDecimales(formData.valorRubro) || ''}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={quitarDecimales(formData.valorRubro2 ?? '')}
                     onChange={(e) => handleFieldChange('valorRubro2', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  quitarDecimales(formData.valorRubro2 || '')
+                  <span className="text-[12pt] font-mono">{quitarDecimales(formData.valorRubro2 || '')}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={quitarDecimales(formData.valorRubro3 ?? '')}
                     onChange={(e) => handleFieldChange('valorRubro3', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  quitarDecimales(formData.valorRubro3 || '')
+                  <span className="text-[12pt] font-mono">{quitarDecimales(formData.valorRubro3 || '')}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] border-b border-black text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={quitarDecimales(formData.valorRubro4 ?? '')}
                     onChange={(e) => handleFieldChange('valorRubro4', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  quitarDecimales(formData.valorRubro4 || '')
+                  <span className="text-[12pt] font-mono">{quitarDecimales(formData.valorRubro4 || '')}</span>
                 )}
               </div>
-              <div className="h-[18px] print:h-[14px] text-center font-mono text-[10px] print:text-[8.5px] flex items-center justify-center">
+              <div className="h-[22px] min-h-[22px] text-center font-mono text-[12pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={quitarDecimales(formData.valorRubro5 ?? '')}
                     onChange={(e) => handleFieldChange('valorRubro5', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10px] print:text-[8.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[12pt] focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  quitarDecimales(formData.valorRubro5 || '')
+                  <span className="text-[12pt] font-mono">{quitarDecimales(formData.valorRubro5 || '')}</span>
                 )}
               </div>
             </div>
@@ -1999,28 +1998,28 @@ export default function CertificadoSupervisionDoc({
         </div>
 
         {/* 5. INFORMACIÓN DE APORTES A SEGURIDAD SOCIAL */}
-        <div className="w-full mb-1">
-          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[10px] uppercase tracking-wide text-black mb-1 border-y border-black/30">
+        <div className="w-full mb-1 font-serif">
+          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[12pt] uppercase tracking-wide text-black mb-1 border-y border-black/30">
             INFORMACIÓN DE APORTES A SEGURIDAD SOCIAL
           </div>
           
           {/* Cuadro principal más corto con doble borde exterior y 3 bloques separados por espacios */}
           <div className="w-[93%] mx-auto border-[2.5px] border-double border-black p-[2px] bg-white">
-            <div className="flex items-stretch justify-between gap-2.5 text-[9.5px]">
+            <div className="flex items-stretch justify-between gap-2.5 text-[12pt]">
               
               {/* Bloque 1: Salud / Pensión / ARP valores */}
               <div className="w-[28%] border border-black bg-white">
                 <table className="w-full border-collapse">
                   <tbody>
                     <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal w-[46%] text-center text-[9.5px]">Salud</td>
-                      <td className="py-0 px-2 font-mono text-right w-[54%] text-[9.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black font-normal w-[46%] text-center text-[12pt]">Salud</td>
+                      <td className="py-0.5 px-2 font-mono text-right w-[54%] text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.saludValor}
                             onChange={(e) => handleFieldChange('saludValor', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
+                            className="bg-amber-50 text-right font-mono text-[12pt] focus:outline-none w-full"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -2029,14 +2028,14 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Pension</td>
-                      <td className="py-0 px-2 font-mono text-right text-[9.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black font-normal text-center text-[12pt]">Pension</td>
+                      <td className="py-0.5 px-2 font-mono text-right text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.pensionValor}
                             onChange={(e) => handleFieldChange('pensionValor', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
+                            className="bg-amber-50 text-right font-mono text-[12pt] focus:outline-none w-full"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -2045,14 +2044,14 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">A.R.P</td>
-                      <td className="py-0 px-2 font-mono text-right text-[9.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black font-normal text-center text-[12pt]">A.R.P</td>
+                      <td className="py-0.5 px-2 font-mono text-right text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.arpValor}
                             onChange={(e) => handleFieldChange('arpValor', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
+                            className="bg-amber-50 text-right font-mono text-[12pt] focus:outline-none w-full"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -2069,14 +2068,14 @@ export default function CertificadoSupervisionDoc({
                 <table className="w-full border-collapse">
                   <tbody>
                     <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal w-[46%] text-center text-[9.5px]">EPS</td>
-                      <td className="py-0 px-2 font-normal uppercase text-right w-[54%] text-[9.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black font-normal w-[46%] text-center text-[12pt]">EPS</td>
+                      <td className="py-0.5 px-2 font-normal uppercase text-right w-[54%] text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.saludEps}
                             onChange={(e) => handleFieldChange('saludEps', e.target.value)}
-                            className="bg-amber-50 text-right uppercase text-[9.5px] focus:outline-none w-full"
+                            className="bg-amber-50 text-right uppercase text-[12pt] focus:outline-none w-full"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -2085,14 +2084,14 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Fondo Pensiones</td>
-                      <td className="py-0 px-2 font-normal uppercase text-right text-[9.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black font-normal text-center text-[12pt]">Fondo Pensiones</td>
+                      <td className="py-0.5 px-2 font-normal uppercase text-right text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.pensionFondo}
                             onChange={(e) => handleFieldChange('pensionFondo', e.target.value)}
-                            className="bg-amber-50 text-right uppercase text-[9.5px] focus:outline-none w-full"
+                            className="bg-amber-50 text-right uppercase text-[12pt] focus:outline-none w-full"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -2101,14 +2100,14 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">A.R.P</td>
-                      <td className="py-0 px-2 font-normal uppercase text-right text-[9.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black font-normal text-center text-[12pt]">A.R.P</td>
+                      <td className="py-0.5 px-2 font-normal uppercase text-right text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.arpAseguradora}
                             onChange={(e) => handleFieldChange('arpAseguradora', e.target.value)}
-                            className="bg-amber-50 text-right uppercase text-[9.5px] focus:outline-none w-full"
+                            className="bg-amber-50 text-right uppercase text-[12pt] focus:outline-none w-full"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -2125,14 +2124,14 @@ export default function CertificadoSupervisionDoc({
                 <table className="w-full border-collapse">
                   <tbody>
                     <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal w-[52%] text-center text-[9.5px]">Número de planilla</td>
-                      <td className="py-0 px-2 font-mono text-right w-[48%] text-[9.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black font-normal w-[52%] text-center text-[12pt]">Número de planilla</td>
+                      <td className="py-0.5 px-2 font-mono text-right w-[48%] text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.saludPlanilla}
                             onChange={(e) => handleFieldChange('saludPlanilla', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
+                            className="bg-amber-50 text-right font-mono text-[12pt] focus:outline-none w-full"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -2141,14 +2140,14 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Número de planilla</td>
-                      <td className="py-0 px-2 font-mono text-right text-[9.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black font-normal text-center text-[12pt]">Número de planilla</td>
+                      <td className="py-0.5 px-2 font-mono text-right text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.pensionPlanilla}
                             onChange={(e) => handleFieldChange('pensionPlanilla', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
+                            className="bg-amber-50 text-right font-mono text-[12pt] focus:outline-none w-full"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -2157,14 +2156,14 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Número de planilla</td>
-                      <td className="py-0 px-2 font-mono text-right text-[9.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black font-normal text-center text-[12pt]">Número de planilla</td>
+                      <td className="py-0.5 px-2 font-mono text-right text-[12pt]">
                         {isEditing ? (
                           <input 
                             type="text"
                             value={formData.arpPlanilla}
                             onChange={(e) => handleFieldChange('arpPlanilla', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
+                            className="bg-amber-50 text-right font-mono text-[12pt] focus:outline-none w-full"
                             style={{ color: '#000000' }}
                           />
                         ) : (
@@ -2179,148 +2178,148 @@ export default function CertificadoSupervisionDoc({
             </div>
           </div>
 
-          <div className="pt-0.5 text-[8.5px] text-center font-normal text-black w-[93%] mx-auto leading-tight">
+          <div className="pt-1 text-[11pt] text-center font-normal text-black w-[93%] mx-auto leading-tight">
             ***Nota: El pago del Fondo de Solidaridad Pensional - FSP, aplica únicamente cuando la base de cotizacion es mayor a 4 SMMLV.
           </div>
         </div>
 
         {/* 6. INFORMACIÓN PARA LA LIQUIDACIÓN DEL PAGO */}
-        <div className="w-full mb-1">
-          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[10px] uppercase tracking-wide text-black mb-1 border-y border-black/30">
+        <div className="w-full mb-1 font-serif">
+          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[12pt] uppercase tracking-wide text-black mb-1 border-y border-black/30">
             INFORMACIÓN PARA LA LIQUIDACIÓN DEL PAGO
           </div>
           
           <div className="border-2 border-black">
-            <table className="w-full border-collapse text-center text-[9.5px]">
+            <table className="w-full border-collapse text-center text-[12pt]">
               <thead className="bg-[#d1d5db]">
                 <tr className="border-b border-black font-bold">
-                  <th rowSpan={2} className="p-1 print:py-0.5 print:px-0.5 print:text-[8px] print:leading-none border-r border-black w-[7%] bg-[#d1d5db]">No. PAGO</th>
-                  <th colSpan={2} className="p-0.5 print:py-0 print:px-0.5 print:text-[8px] print:leading-none border-r border-b border-black bg-[#d1d5db]">PERÍODO DE PAGO</th>
-                  <th rowSpan={2} className="p-1 print:py-0.5 print:px-0.5 print:text-[8px] print:leading-none border-r border-black w-[13%] leading-tight print:leading-none bg-[#d1d5db]">PORCENTAJE DE EJECUCIÓN</th>
-                  <th rowSpan={2} className="p-1 print:py-0.5 print:px-0.5 print:text-[8px] print:leading-none border-r border-black w-[13%] bg-[#d1d5db]">VALOR PAGADO</th>
-                  <th rowSpan={2} className="p-1 print:py-0.5 print:px-0.5 print:text-[8px] print:leading-none border-r border-black w-[14%] leading-tight print:leading-none bg-[#d1d5db]">VALOR A PAGAR SIN IVA</th>
-                  <th rowSpan={2} className="p-1 print:py-0.5 print:px-0.5 print:text-[8px] print:leading-none border-r border-black w-[8%] bg-[#d1d5db]">IVA</th>
-                  <th rowSpan={2} className="p-1 print:py-0.5 print:px-0.5 print:text-[8px] print:leading-none border-r border-black w-[14%] leading-tight print:leading-none bg-[#d1d5db]">VALOR TOTAL A PAGAR</th>
-                  <th rowSpan={2} className="p-1 print:py-0.5 print:px-0.5 print:text-[8px] print:leading-none w-[12%] leading-tight print:leading-none bg-[#d1d5db]">SALDO POR PAGAR</th>
+                  <th rowSpan={2} className="p-1 border-r border-black w-[7%] bg-[#d1d5db] text-[11pt]">No. PAGO</th>
+                  <th colSpan={2} className="p-1 border-r border-b border-black bg-[#d1d5db] text-[11pt]">PERÍODO DE PAGO</th>
+                  <th rowSpan={2} className="p-1 border-r border-black w-[13%] leading-tight bg-[#d1d5db] text-[11pt]">PORCENTAJE DE EJECUCIÓN</th>
+                  <th rowSpan={2} className="p-1 border-r border-black w-[13%] bg-[#d1d5db] text-[11pt]">VALOR PAGADO</th>
+                  <th rowSpan={2} className="p-1 border-r border-black w-[14%] leading-tight bg-[#d1d5db] text-[11pt]">VALOR A PAGAR SIN IVA</th>
+                  <th rowSpan={2} className="p-1 border-r border-black w-[8%] bg-[#d1d5db] text-[11pt]">IVA</th>
+                  <th rowSpan={2} className="p-1 border-r border-black w-[14%] leading-tight bg-[#d1d5db] text-[11pt]">VALOR TOTAL A PAGAR</th>
+                  <th rowSpan={2} className="p-1 w-[12%] leading-tight bg-[#d1d5db] text-[11pt]">SALDO POR PAGAR</th>
                 </tr>
                 <tr className="border-b border-black font-bold">
-                  <th className="p-0.5 print:py-0 print:px-0.5 print:text-[8px] print:leading-none border-r border-black w-[10%] bg-[#d1d5db]">DESDE</th>
-                  <th className="p-0.5 print:py-0 print:px-0.5 print:text-[8px] print:leading-none border-r border-black w-[10%] bg-[#d1d5db]">HASTA</th>
+                  <th className="p-0.5 border-r border-black w-[10%] bg-[#d1d5db] text-[11pt]">DESDE</th>
+                  <th className="p-0.5 border-r border-black w-[10%] bg-[#d1d5db] text-[11pt]">HASTA</th>
                 </tr>
               </thead>
               <tbody className="font-mono bg-white">
                 <tr className="border-b border-black">
-                  <td className="p-1 print:py-0.5 print:px-0.5 print:text-[8.5px] border-r border-black font-bold">
+                  <td className="p-1 border-r border-black font-bold text-[12pt]">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={formData.pagoNro}
                         onChange={(e) => handleFieldChange('pagoNro', e.target.value)}
-                        className="bg-amber-50 text-center font-mono font-bold text-[9.5px] print:text-[8.5px] focus:outline-none w-full"
+                        className="bg-amber-50 text-center font-mono font-bold text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
                       formData.pagoNro
                     )}
                   </td>
-                  <td className="p-1 print:py-0.5 print:px-0.5 print:text-[8.5px] border-r border-black">
+                  <td className="p-1 border-r border-black text-[12pt]">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={formatDateSlash(formData.periodoDesde)}
                         onChange={(e) => handleFieldChange('periodoDesde', e.target.value)}
-                        className="bg-amber-50 text-center font-mono text-[9.5px] print:text-[8.5px] focus:outline-none w-full"
+                        className="bg-amber-50 text-center font-mono text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
                       formatDateSlash(formData.periodoDesde)
                     )}
                   </td>
-                  <td className="p-1 print:py-0.5 print:px-0.5 print:text-[8.5px] border-r border-black">
+                  <td className="p-1 border-r border-black text-[12pt]">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={formatDateSlash(formData.periodoHasta)}
                         onChange={(e) => handleFieldChange('periodoHasta', e.target.value)}
-                        className="bg-amber-50 text-center font-mono text-[9.5px] print:text-[8.5px] focus:outline-none w-full"
+                        className="bg-amber-50 text-center font-mono text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
                       formatDateSlash(formData.periodoHasta)
                     )}
                   </td>
-                  <td className="p-1 print:py-0.5 print:px-0.5 print:text-[8.5px] border-r border-black">
+                  <td className="p-1 border-r border-black text-[12pt]">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={formData.porcentajeEjecucion}
                         onChange={(e) => handleFieldChange('porcentajeEjecucion', e.target.value)}
-                        className="bg-amber-50 text-center font-mono text-[9.5px] print:text-[8.5px] focus:outline-none w-full"
+                        className="bg-amber-50 text-center font-mono text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
                       formData.porcentajeEjecucion
                     )}
                   </td>
-                  <td className="p-1 print:py-0.5 print:px-0.5 print:text-[8.5px] border-r border-black">
+                  <td className="p-1 border-r border-black text-[12pt]">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={quitarDecimales(formData.valorPagadoAcumulado)}
                         onChange={(e) => handleFieldChange('valorPagadoAcumulado', e.target.value)}
-                        className="bg-amber-50 text-center font-mono text-[9.5px] print:text-[8.5px] focus:outline-none w-full"
+                        className="bg-amber-50 text-center font-mono text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
                       quitarDecimales(formData.valorPagadoAcumulado)
                     )}
                   </td>
-                  <td className="p-1 print:py-0.5 print:px-0.5 print:text-[8.5px] border-r border-black">
+                  <td className="p-1 border-r border-black text-[12pt]">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={quitarDecimales(formData.valorAPagarSinIva)}
                         onChange={(e) => handleFieldChange('valorAPagarSinIva', e.target.value)}
-                        className="bg-amber-50 text-center font-mono text-[9.5px] print:text-[8.5px] focus:outline-none w-full"
+                        className="bg-amber-50 text-center font-mono text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
                       quitarDecimales(formData.valorAPagarSinIva)
                     )}
                   </td>
-                  <td className="p-1 print:py-0.5 print:px-0.5 print:text-[8.5px] border-r border-black">
+                  <td className="p-1 border-r border-black text-[12pt]">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={formData.iva}
                         onChange={(e) => handleFieldChange('iva', e.target.value)}
-                        className="bg-amber-50 text-center font-mono text-[9.5px] print:text-[8.5px] focus:outline-none w-full"
+                        className="bg-amber-50 text-center font-mono text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
                       formData.iva
                     )}
                   </td>
-                  <td className="p-1 print:py-0.5 print:px-0.5 print:text-[8.5px] border-r border-black font-bold">
+                  <td className="p-1 border-r border-black font-bold text-[12pt]">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={quitarDecimales(formData.valorTotalAPagar)}
                         onChange={(e) => handleFieldChange('valorTotalAPagar', e.target.value)}
-                        className="bg-amber-50 text-center font-mono font-bold text-[9.5px] print:text-[8.5px] focus:outline-none w-full"
+                        className="bg-amber-50 text-center font-mono font-bold text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
                       quitarDecimales(formData.valorTotalAPagar)
                     )}
                   </td>
-                  <td className="p-1 print:py-0.5 print:px-0.5 print:text-[8.5px]">
+                  <td className="p-1 text-[12pt]">
                     {isEditing ? (
                       <input 
                         type="text"
                         value={quitarDecimales(formData.saldoPorPagar)}
                         onChange={(e) => handleFieldChange('saldoPorPagar', e.target.value)}
-                        className="bg-amber-50 text-center font-mono text-[9.5px] print:text-[8.5px] focus:outline-none w-full"
+                        className="bg-amber-50 text-center font-mono text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
@@ -2344,18 +2343,18 @@ export default function CertificadoSupervisionDoc({
           </div>
 
           {/* Cuadro independiente vacío tal como en el formato oficial */}
-          <div className="mt-1 w-full border border-black min-h-[28px] bg-white p-0.5">
+          <div className="mt-1 w-full border border-black min-h-[32px] bg-white p-1">
             {isEditing ? (
               <textarea
                 value={formData.observacionesLiquidacion || ''}
                 onChange={(e) => handleFieldChange('observacionesLiquidacion', e.target.value)}
                 placeholder="(Espacio para observaciones u otros detalles si aplica...)"
                 rows={1}
-                className="w-full bg-amber-50 text-[9.5px] p-0.5 font-sans focus:outline-none resize-none leading-snug"
+                className="w-full bg-amber-50 text-[12pt] p-0.5 font-serif focus:outline-none resize-none leading-snug"
                 style={{ color: '#000000' }}
               />
             ) : (
-              <div className="text-[9.5px] text-black min-h-[20px] whitespace-pre-wrap leading-snug">
+              <div className="text-[12pt] font-serif text-black min-h-[24px] whitespace-pre-wrap leading-snug">
                 {formData.observacionesLiquidacion || ''}
               </div>
             )}
@@ -2363,12 +2362,12 @@ export default function CertificadoSupervisionDoc({
         </div>
 
         {/* 7. CERTIFICACIÓN */}
-        <div className="w-full mb-1">
-          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[10px] uppercase tracking-wide text-black mb-1 border-y border-black/30">
+        <div className="w-full mb-1 font-serif">
+          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[12pt] uppercase tracking-wide text-black mb-1 border-y border-black/30">
             CERTIFICACIÓN
           </div>
           
-          <div className="text-[9.5px] leading-snug space-y-1 text-black">
+          <div className="text-[12pt] leading-normal space-y-1.5 text-black">
             <p className="font-normal m-0">
               El / la suscrito (a) supervisor (a) / interventor (a) certifica:
             </p>
@@ -2382,7 +2381,7 @@ export default function CertificadoSupervisionDoc({
                     type="text"
                     value={formData.contratistaNombre}
                     onChange={(e) => handleFieldChange('contratistaNombre', e.target.value)}
-                    className="bg-amber-50 text-center font-bold uppercase text-[9.5px] focus:outline-none w-full"
+                    className="bg-amber-50 text-center font-bold uppercase text-[12pt] focus:outline-none w-full"
                     style={{ color: '#000000' }}
                   />
                 ) : (
@@ -2390,13 +2389,13 @@ export default function CertificadoSupervisionDoc({
                 )}
               </span>
               <span className="whitespace-nowrap">, identificado(a) con</span>
-              <span className="w-14 border-b border-black text-center font-bold pb-0.5 print:border-b-[1px]">
+              <span className="w-16 border-b border-black text-center font-bold pb-0.5 print:border-b-[1px]">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.tipoDocumento}
                     onChange={(e) => handleFieldChange('tipoDocumento', e.target.value)}
-                    className="bg-amber-50 text-center font-bold text-[9.5px] focus:outline-none w-full"
+                    className="bg-amber-50 text-center font-bold text-[12pt] focus:outline-none w-full"
                     style={{ color: '#000000' }}
                   />
                 ) : (
@@ -2410,7 +2409,7 @@ export default function CertificadoSupervisionDoc({
                     type="text"
                     value={formData.contratistaDocumento}
                     onChange={(e) => handleFieldChange('contratistaDocumento', e.target.value)}
-                    className="bg-amber-50 text-center font-bold font-mono text-[9.5px] focus:outline-none w-full"
+                    className="bg-amber-50 text-center font-bold font-mono text-[12pt] focus:outline-none w-full"
                     style={{ color: '#000000' }}
                   />
                 ) : (
@@ -2428,7 +2427,7 @@ export default function CertificadoSupervisionDoc({
                     type="text"
                     value={formData.tipoContrato}
                     onChange={(e) => handleFieldChange('tipoContrato', e.target.value)}
-                    className="bg-amber-50 text-center font-bold uppercase text-[9.5px] focus:outline-none w-full"
+                    className="bg-amber-50 text-center font-bold uppercase text-[12pt] focus:outline-none w-full"
                     style={{ color: '#000000' }}
                   />
                 ) : (
@@ -2442,7 +2441,7 @@ export default function CertificadoSupervisionDoc({
                     type="text"
                     value={formData.contratoNro}
                     onChange={(e) => handleFieldChange('contratoNro', e.target.value)}
-                    className="bg-amber-50 text-center font-bold text-[9.5px] focus:outline-none w-full"
+                    className="bg-amber-50 text-center font-bold text-[12pt] focus:outline-none w-full"
                     style={{ color: '#000000' }}
                   />
                 ) : (
@@ -2456,7 +2455,7 @@ export default function CertificadoSupervisionDoc({
                     type="text"
                     value={formData.contratoAno}
                     onChange={(e) => handleFieldChange('contratoAno', e.target.value)}
-                    className="bg-amber-50 text-center font-bold text-[9.5px] focus:outline-none w-full"
+                    className="bg-amber-50 text-center font-bold text-[12pt] focus:outline-none w-full"
                     style={{ color: '#000000' }}
                   />
                 ) : (
@@ -2478,7 +2477,7 @@ export default function CertificadoSupervisionDoc({
                     type="text"
                     value={formData.valorAvalado}
                     onChange={(e) => handleFieldChange('valorAvalado', e.target.value)}
-                    className="bg-amber-50 font-bold text-center text-[9.5px] focus:outline-none w-full"
+                    className="bg-amber-50 font-bold text-center text-[12pt] focus:outline-none w-full"
                     style={{ color: '#000000', fontStyle: 'normal' }}
                   />
                 ) : (
@@ -2489,7 +2488,7 @@ export default function CertificadoSupervisionDoc({
             </p>
 
             {/* Fecha de Expedición: con líneas más largas distribuidas hacia la derecha tal como la imagen 2 */}
-            <div className="pt-0 flex items-start justify-start gap-8 text-[9.5px]">
+            <div className="pt-1 flex items-start justify-start gap-8 text-[12pt]">
               <span className="pt-0.5">Fecha de expedición:</span>
               
               <div className="flex items-start gap-6">
@@ -2501,14 +2500,14 @@ export default function CertificadoSupervisionDoc({
                         type="text"
                         value={formData.expedicionDia}
                         onChange={(e) => handleFieldChange('expedicionDia', e.target.value)}
-                        className="bg-amber-50 font-bold text-center text-[9.5px] focus:outline-none w-full"
+                        className="bg-amber-50 font-bold text-center text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
                       formData.expedicionDia
                     )}
                   </span>
-                  <span className="text-[8.5px] text-black pt-0.5">Día</span>
+                  <span className="text-[10pt] text-black pt-0.5">Día</span>
                 </div>
 
                 {/* Mes */}
@@ -2519,14 +2518,14 @@ export default function CertificadoSupervisionDoc({
                         type="text"
                         value={formData.expedicionMes}
                         onChange={(e) => handleFieldChange('expedicionMes', e.target.value)}
-                        className="bg-amber-50 font-bold text-center text-[9.5px] focus:outline-none w-full"
+                        className="bg-amber-50 font-bold text-center text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
                       formData.expedicionMes
                     )}
                   </span>
-                  <span className="text-[8.5px] text-black pt-0.5">Mes</span>
+                  <span className="text-[10pt] text-black pt-0.5">Mes</span>
                 </div>
 
                 {/* Año */}
@@ -2537,14 +2536,14 @@ export default function CertificadoSupervisionDoc({
                         type="text"
                         value={formData.expedicionAno}
                         onChange={(e) => handleFieldChange('expedicionAno', e.target.value)}
-                        className="bg-amber-50 font-bold text-center text-[9.5px] focus:outline-none w-full"
+                        className="bg-amber-50 font-bold text-center text-[12pt] focus:outline-none w-full"
                         style={{ color: '#000000' }}
                       />
                     ) : (
                       formData.expedicionAno
                     )}
                   </span>
-                  <span className="text-[8.5px] text-black pt-0.5">Año</span>
+                  <span className="text-[10pt] text-black pt-0.5">Año</span>
                 </div>
               </div>
             </div>
@@ -2553,9 +2552,9 @@ export default function CertificadoSupervisionDoc({
         </div>
 
         {/* 8. LÍNEA DE FIRMA DEL SUPERVISOR (Exacto a la imagen) */}
-        <div className="w-full flex flex-col items-center justify-center pt-8 print:pt-4 pb-0">
+        <div className="w-full flex flex-col items-center justify-center pt-8 print:pt-4 pb-0 font-serif">
           <div className="w-56 print:w-44 border-t border-black text-center pt-0.5">
-            <p className="font-bold uppercase tracking-wider text-[10px] print:text-[8.5px]">SUPERVISOR</p>
+            <p className="font-bold uppercase tracking-wider text-[12pt]">SUPERVISOR</p>
           </div>
         </div>
 
