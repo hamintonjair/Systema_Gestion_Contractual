@@ -178,7 +178,41 @@
     line-height: 1.35 !important;
   }
 
-  /* Control estricto de saltos de página */
+  /* Permitir flujo continuo de texto y tablas en el informe evitando espacios vacíos entre hojas */
+  #informe-printable-document,
+  #informe-printable-document > table,
+  #informe-printable-document table,
+  #informe-printable-document tbody,
+  #informe-printable-document tr,
+  #informe-printable-document td,
+  #informe-printable-document td > div {
+    position: static !important;
+    z-index: auto !important;
+  }
+
+  #informe-printable-document table {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  #informe-printable-document .tabla-obligaciones,
+  #informe-printable-document .tabla-obligaciones tbody,
+  #informe-printable-document .tabla-obligaciones tr,
+  #informe-printable-document .tabla-obligaciones td,
+  #informe-printable-document .tabla-obligaciones td > div,
+  #informe-printable-document .font-century-gothic-12 {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+    orphans: 2 !important;
+    widows: 2 !important;
+  }
+
+  .break-inside-auto {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Control estricto de saltos de página para elementos que no deben dividirse */
   .break-inside-avoid {
     page-break-inside: avoid !important;
     break-inside: avoid !important;

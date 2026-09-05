@@ -159,7 +159,7 @@ export default function ReportPreview({
     const hasComment = Boolean(comment);
     const isCorregido = Boolean(comment?.corregido);
 
-    const baseClass = `border border-black px-2 py-1 relative ${className}`;
+    const baseClass = `border border-black px-2 py-1 relative print:static print:break-inside-auto ${className}`;
     const highlightClass = hasComment 
       ? (isCorregido
           ? 'bg-emerald-100/90 text-emerald-950 font-medium border-emerald-500 ring-2 ring-emerald-400 print:bg-transparent print:ring-0'
@@ -174,7 +174,7 @@ export default function ReportPreview({
         onClick={isReviewMode ? () => openCommentModal(effectiveKey, fieldName, fieldValuePreview) : undefined}
         title={isReviewMode ? (isCorregido ? `Corrección realizada por contratista en: ${fieldName}` : `Clic para dejar observación en: ${fieldName}`) : undefined}
       >
-        <div className="relative">
+        <div className="relative print:static print:break-inside-auto">
           {content}
 
           {/* Botón flotante para la administradora en Modo Revisión */}
@@ -255,7 +255,7 @@ export default function ReportPreview({
       )}
 
       {/* HEADER REPETITIVO EN CADA PÁGINA */}
-      <table className="w-full relative z-10">
+      <table className="w-full relative z-10 print:static print:z-auto">
         <thead className="table-header-group">
           <tr>
             <th className="px-8 align-top relative border-none pb-3">
@@ -330,7 +330,7 @@ export default function ReportPreview({
         </thead>
         <tbody>
           <tr>
-            <td className="px-8 pb-4">
+            <td className="px-8 pb-4 print:static print:break-inside-auto">
               {/* DATOS DEL INFORME */}
               <table className="w-full border-collapse border border-black mb-3">
                 <tbody>
@@ -607,7 +607,7 @@ export default function ReportPreview({
               </table>
 
               {/* EJECUCIÓN DE ACTIVIDADES */}
-              <table className="w-full border-collapse border border-black mb-3">
+              <table className="w-full border-collapse border border-black mb-3 tabla-obligaciones print:break-inside-auto">
                 <thead>
                   <tr>
                     <th colSpan={3} className="border border-black bg-gray-200 text-center font-bold py-1 text-xs uppercase font-century-gothic">
@@ -620,14 +620,14 @@ export default function ReportPreview({
                     <th className="border border-black px-2 py-1 text-center w-[15%] font-bold font-century-gothic">Soportes</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="print:break-inside-auto">
                   {data.obligaciones.map((obs, idx) => (
-                    <tr key={obs.id} className="break-inside-avoid">
+                    <tr key={obs.id} className="break-inside-auto print:break-inside-auto">
                       {renderReviewedTd(
                         `obligacion_${obs.id}_descripcion`,
                         `Obligación #${idx + 1} (Descripción)`,
                         obs.descripcion,
-                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12">
+                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12 print:break-inside-auto">
                           {obs.descripcion}
                         </div>,
                         'align-top font-century-gothic-12'
@@ -636,7 +636,7 @@ export default function ReportPreview({
                         `obligacion_${obs.id}_actividades`,
                         `Obligación #${idx + 1} (Actividades Desarrolladas)`,
                         obs.actividades,
-                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12">
+                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12 print:break-inside-auto">
                           {obs.actividades}
                         </div>,
                         'align-top font-century-gothic-12'
@@ -645,7 +645,7 @@ export default function ReportPreview({
                         `obligacion_${obs.id}_soportes`,
                         `Obligación #${idx + 1} (Soportes)`,
                         obs.soportes,
-                        <div className="text-center text-[12pt] font-medium font-century-gothic-12">
+                        <div className="text-center text-[12pt] font-medium font-century-gothic-12 print:break-inside-auto">
                           {obs.soportes}
                         </div>,
                         'align-top text-center font-century-gothic-12'
@@ -655,8 +655,8 @@ export default function ReportPreview({
                 </tbody>
               </table>
 
-              {/* BLOQUE UNIFICADO: OBSERVACIONES Y SUSCRIPCIÓN */}
-              <div className="break-inside-avoid">
+              {/* BLOQUE: OBSERVACIONES Y SUSCRIPCIÓN */}
+              <div>
                 {/* OBSERVACIONES Y RECOMENDACIONES */}
                 <table className="w-full border-collapse border border-black mb-3">
                   <tbody>
