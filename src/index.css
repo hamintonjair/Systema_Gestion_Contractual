@@ -23,19 +23,9 @@
   line-height: 1.35 !important;
 }
 
-/* Tipografía Oficial: Documento Equivalente a la Factura / Desembolso debe usar Times New Roman tamaño 12 */
+/* Tipografía Oficial: Documento Equivalente a la Factura / Desembolso debe usar Times New Roman */
 #desembolso-document,
 #desembolso-document *:not(.font-arial-narrow):not(.font-arial-narrow *) {
-  font-family: "Times New Roman", Times, serif !important;
-}
-
-#desembolso-document {
-  font-size: 12pt;
-}
-
-#desembolso-document input,
-#desembolso-document textarea,
-#desembolso-document select {
   font-family: "Times New Roman", Times, serif !important;
 }
 
@@ -44,21 +34,14 @@
   font-family: 'Arial Narrow', 'Nimbus Sans Narrow', Arial, sans-serif !important;
 }
 
-/* Reglas de visualización y tipografía oficial para el Certificado de Supervisión (Times New Roman tamaño 12) */
-#certificado-supervision-document,
-#certificado-supervision-document * {
-  font-family: "Times New Roman", Times, Georgia, serif !important;
-}
-
+/* Reglas de visualización y texto de alto contraste para el Certificado de Supervisión */
 #certificado-supervision-document {
   color: #000000 !important;
-  font-size: 12pt;
 }
 
 #certificado-supervision-document input,
 #certificado-supervision-document textarea,
 #certificado-supervision-document select {
-  font-family: "Times New Roman", Times, Georgia, serif !important;
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
   caret-color: #000000 !important;
@@ -104,10 +87,9 @@
     display: none !important;
   }
 
-  /* Si se está imprimiendo el Certificado o Desembolso dentro de un modal */
+  /* Si se está imprimiendo el Certificado dentro de un modal */
   .fixed:has(#certificado-supervision-document),
-  .fixed:has(#informe-printable-document),
-  .fixed:has(#desembolso-document) {
+  .fixed:has(#informe-printable-document) {
     position: static !important;
     background: transparent !important;
     backdrop-filter: none !important;
@@ -119,26 +101,27 @@
     display: block !important;
   }
 
-  /* Reglas para el contenedor del Certificado de Supervisión */
+  /* Reglas para el contenedor del Certificado de Supervisión - 1 SOLA HOJA EXACTA */
   #certificado-supervision-document {
     display: block !important;
     visibility: visible !important;
     width: 200mm !important;
     max-width: 200mm !important;
-    height: auto !important;
-    min-height: 265mm !important;
+    height: 265mm !important;
+    max-height: 268mm !important;
     margin: 2mm auto 0 auto !important;
     padding: 5mm 7mm !important;
     box-shadow: none !important;
     border: 2px solid #000000 !important;
     color: #000000 !important;
     background-color: #ffffff !important;
-    font-family: "Times New Roman", Times, Georgia, serif !important;
-    font-size: 12pt !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
+    overflow: hidden !important;
+    transform: scale(0.95) !important;
+    transform-origin: top center !important;
   }
 
   #certificado-supervision-document * {
@@ -178,147 +161,15 @@
     line-height: 1.35 !important;
   }
 
-  /* Preservar la visualización y posición exacta del membrete institucional */
-  #informe-printable-document thead th img[alt="Membrete"] {
-    display: block !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: -10mm !important;
-    width: 215.9mm !important;
-    height: 279.4mm !important;
-    object-fit: fill !important;
-    z-index: -1 !important;
-    pointer-events: none !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Repetir thead en cada página con espaciado adecuado para no solapar texto */
-  thead.table-header-group,
-  #informe-printable-document thead {
-    display: table-header-group !important;
-  }
-
-  #informe-printable-document thead th {
-    padding-bottom: 12px !important;
-  }
-
-  /* El encabezado interno de la tabla de obligaciones se muestra como table-row-group para evitar colisión de headers repetidos */
-  #informe-printable-document .tabla-obligaciones > thead {
-    display: table-row-group !important;
-  }
-
-  /* Espaciador de pie de página repetitivo (tfoot exterior) para garantizar que el texto NUNCA solape el pie de página institucional */
-  .outer-page-footer-spacer,
-  #informe-printable-document > table > tfoot,
-  #informe-printable-document > table > tfoot > tr,
-  #informe-printable-document > table > tfoot > tr > td {
-    display: table-footer-group !important;
-    height: 28mm !important;
-    min-height: 28mm !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
-    background: transparent !important;
-  }
-
-  /* Línea horizontal de cierre inferior del cuadro al final de cada hoja en la tabla de obligaciones */
-  #informe-printable-document .tabla-obligaciones > tfoot,
-  #informe-printable-document .tabla-obligaciones tfoot {
-    display: table-footer-group !important;
-    height: 0 !important;
-    max-height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
-    line-height: 0 !important;
-  }
-
-  #informe-printable-document .tabla-obligaciones > tfoot > tr,
-  #informe-printable-document .tabla-obligaciones tfoot tr {
-    height: 0 !important;
-    max-height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
-    line-height: 0 !important;
-  }
-
-  #informe-printable-document .tabla-obligaciones > tfoot td,
-  #informe-printable-document .tabla-obligaciones tfoot td {
-    height: 0 !important;
-    max-height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    line-height: 0 !important;
-    border-top: 1px solid black !important;
-    border-bottom: none !important;
-    border-left: 1px solid black !important;
-    border-right: 1px solid black !important;
-    background: transparent !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Decoración continua de bordes en fragmentación de celdas para cerrar cuadros en saltos de hoja */
-  #informe-printable-document .tabla-obligaciones,
-  #informe-printable-document .tabla-obligaciones tr,
-  #informe-printable-document .tabla-obligaciones td {
-    -webkit-box-decoration-break: clone !important;
-    box-decoration-break: clone !important;
-  }
-
-  /* Permitir flujo continuo y división automática de filas y celdas sin dejar espacios vacíos en ninguna hoja */
-  #informe-printable-document .tabla-obligaciones {
-    border-collapse: collapse !important;
-    page-break-inside: auto !important;
-    break-inside: auto !important;
-  }
-
-  #informe-printable-document .tabla-obligaciones tbody {
-    page-break-inside: auto !important;
-    break-inside: auto !important;
-  }
-
-  #informe-printable-document .tabla-obligaciones tr {
-    page-break-inside: auto !important;
-    break-inside: auto !important;
-    page-break-before: auto !important;
-    break-before: auto !important;
-    page-break-after: auto !important;
-    break-after: auto !important;
-  }
-
-  #informe-printable-document .tabla-obligaciones td,
-  #informe-printable-document .tabla-obligaciones td > div,
-  #informe-printable-document .tabla-obligaciones td *,
-  #informe-printable-document .font-century-gothic-12 {
-    position: static !important;
-    page-break-inside: auto !important;
-    break-inside: auto !important;
-    orphans: 1 !important;
-    widows: 1 !important;
-    box-sizing: border-box !important;
-  }
-
-  .break-inside-auto {
-    page-break-inside: auto !important;
-    break-inside: auto !important;
-  }
-
-  /* Control estricto de saltos de página para elementos que no deben dividirse */
+  /* Control estricto de saltos de página */
   .break-inside-avoid {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
-  .break-after-avoid {
-    page-break-after: avoid !important;
-    break-after: avoid !important;
-  }
-
-  .break-before-avoid {
-    page-break-before: avoid !important;
-    break-before: avoid !important;
+  /* Repetir thead en cada página */
+  thead.table-header-group {
+    display: table-header-group !important;
   }
 }
 

@@ -59,15 +59,6 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges, currentView]);
 
-  // Asegurar que el membrete institucional esté siempre precargado
-  useEffect(() => {
-    supabaseService.getGlobalMembreteUrl().then(url => {
-      if (url) {
-        setActiveReportData(prev => prev.watermarkImage ? prev : { ...prev, watermarkImage: url });
-      }
-    }).catch(() => {});
-  }, []);
-
   // Al cambiar de usuario, redirigir a su vista correspondiente
   useEffect(() => {
     if (currentUser) {
@@ -152,14 +143,6 @@ export default function App() {
 
     if (currentUser?.documentoIdentidad) {
       supabaseService.marcarNotificacionesInformeResueltas(currentUser.documentoIdentidad, reportToLoad.informeNro, reportToLoad.id).catch(e => {});
-    }
-
-    if (!reportToLoad.watermarkImage) {
-      supabaseService.getGlobalMembreteUrl().then(url => {
-        if (url) {
-          setActiveReportData(prev => prev.watermarkImage ? prev : { ...prev, watermarkImage: url });
-        }
-      }).catch(() => {});
     }
 
     setActiveReportData(reportToLoad);

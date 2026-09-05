@@ -45,7 +45,7 @@ export const exportInformeToPDF = async (options: PDFExportOptions): Promise<boo
       windowWidth: 1024
     },
     jsPDF: { unit: 'mm' as const, format: 'letter' as const, orientation: 'portrait' as const },
-    pagebreak: { mode: ['css', 'legacy'] }
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
   };
 
   try {

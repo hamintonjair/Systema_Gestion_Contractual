@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ReportData, FieldComment } from '../types';
 import QuibdoLogo from './QuibdoLogo';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
 import { MessageSquare, AlertTriangle, Edit3, CheckCircle2 } from 'lucide-react';
 import FieldCommentModal from './FieldCommentModal';
-import { supabaseService } from '../services/supabaseService';
 
 interface Props {
   data: ReportData;
@@ -32,24 +31,6 @@ export default function ReportPreview({
     fieldId: '',
     fieldName: '',
   });
-
-  const [globalMembrete, setGlobalMembrete] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    if (!data.watermarkImage) {
-      supabaseService.getGlobalMembreteUrl().then(url => {
-        if (isMounted && url) {
-          setGlobalMembrete(url);
-        }
-      }).catch(() => {});
-    }
-    return () => {
-      isMounted = false;
-    };
-  }, [data.watermarkImage]);
-
-  const watermarkUrl = data.watermarkImage || globalMembrete;
 
   const findCommentForField = (fieldId: string, fieldName: string): { key: string; comment: FieldComment } | null => {
     if (!data.comentariosCampos || Object.keys(data.comentariosCampos).length === 0) return null;
@@ -178,7 +159,7 @@ export default function ReportPreview({
     const hasComment = Boolean(comment);
     const isCorregido = Boolean(comment?.corregido);
 
-    const baseClass = `border border-black px-2 py-1 relative print:static ${className}`;
+    const baseClass = `border border-black px-2 py-1 relative ${className}`;
     const highlightClass = hasComment 
       ? (isCorregido
           ? 'bg-emerald-100/90 text-emerald-950 font-medium border-emerald-500 ring-2 ring-emerald-400 print:bg-transparent print:ring-0'
@@ -193,7 +174,7 @@ export default function ReportPreview({
         onClick={isReviewMode ? () => openCommentModal(effectiveKey, fieldName, fieldValuePreview) : undefined}
         title={isReviewMode ? (isCorregido ? `Corrección realizada por contratista en: ${fieldName}` : `Clic para dejar observación en: ${fieldName}`) : undefined}
       >
-        <div className="relative print:static">
+        <div className="relative">
           {content}
 
           {/* Botón flotante para la administradora en Modo Revisión */}
@@ -261,11 +242,11 @@ export default function ReportPreview({
       />
 
       {/* FONDO / MEMBRETE INSTITUCIONAL (PREVIEW) */}
-      {watermarkUrl && (
+      {data.watermarkImage && (
         <div 
           className="print:hidden absolute inset-0 w-full z-0 pointer-events-none opacity-100"
           style={{
-            backgroundImage: `url(${watermarkUrl})`,
+            backgroundImage: `url(${data.watermarkImage})`,
             backgroundSize: '100% 279.4mm',
             backgroundRepeat: 'repeat-y',
             backgroundPosition: 'top center'
@@ -278,9 +259,9 @@ export default function ReportPreview({
         <thead className="table-header-group">
           <tr>
             <th className="px-8 align-top relative border-none pb-3">
-              {watermarkUrl && (
+              {data.watermarkImage && (
                 <img 
-                  src={watermarkUrl}
+                  src={data.watermarkImage}
                   alt="Membrete"
                   className="hidden print:block absolute max-w-none"
                   style={{
@@ -297,7 +278,7 @@ export default function ReportPreview({
 
               {/* Espaciador para el logo superior */}
               <div className="h-[98px] w-full relative">
-                {!watermarkUrl && (
+                {!data.watermarkImage && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-4">
                     <img 
                       src="https://usdsynzkedjydlynkala.supabase.co/storage/v1/object/public/anexos/logo/logo%20alcaldia.png" 
@@ -626,7 +607,7 @@ export default function ReportPreview({
               </table>
 
               {/* EJECUCIÓN DE ACTIVIDADES */}
-              <table className="w-full border-collapse border border-black mb-3 tabla-obligaciones print:break-inside-auto">
+              <table className="w-full border-collapse border border-black mb-3">
                 <thead>
                   <tr>
                     <th colSpan={3} className="border border-black bg-gray-200 text-center font-bold py-1 text-xs uppercase font-century-gothic">
@@ -639,14 +620,14 @@ export default function ReportPreview({
                     <th className="border border-black px-2 py-1 text-center w-[15%] font-bold font-century-gothic">Soportes</th>
                   </tr>
                 </thead>
-                <tbody className="print:break-inside-auto">
+                <tbody>
                   {data.obligaciones.map((obs, idx) => (
-                    <tr key={obs.id} className="break-inside-auto print:break-inside-auto">
+                    <tr key={obs.id} className="break-inside-avoid">
                       {renderReviewedTd(
                         `obligacion_${obs.id}_descripcion`,
                         `Obligación #${idx + 1} (Descripción)`,
                         obs.descripcion,
-                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12 print:break-inside-auto print:static">
+                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12">
                           {obs.descripcion}
                         </div>,
                         'align-top font-century-gothic-12'
@@ -655,7 +636,7 @@ export default function ReportPreview({
                         `obligacion_${obs.id}_actividades`,
                         `Obligación #${idx + 1} (Actividades Desarrolladas)`,
                         obs.actividades,
-                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12 print:break-inside-auto print:static">
+                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12">
                           {obs.actividades}
                         </div>,
                         'align-top font-century-gothic-12'
@@ -664,7 +645,7 @@ export default function ReportPreview({
                         `obligacion_${obs.id}_soportes`,
                         `Obligación #${idx + 1} (Soportes)`,
                         obs.soportes,
-                        <div className="text-center text-[12pt] font-medium font-century-gothic-12 print:break-inside-auto print:static">
+                        <div className="text-center text-[12pt] font-medium font-century-gothic-12">
                           {obs.soportes}
                         </div>,
                         'align-top text-center font-century-gothic-12'
@@ -672,17 +653,10 @@ export default function ReportPreview({
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="tabla-obligaciones-foot print:table-footer-group">
-                  <tr>
-                    <td className="border-t border-black p-0 m-0 h-0" style={{ height: 0, padding: 0, margin: 0, borderTop: '1px solid black', borderBottom: 'none' }}></td>
-                    <td className="border-t border-black p-0 m-0 h-0" style={{ height: 0, padding: 0, margin: 0, borderTop: '1px solid black', borderBottom: 'none' }}></td>
-                    <td className="border-t border-black p-0 m-0 h-0" style={{ height: 0, padding: 0, margin: 0, borderTop: '1px solid black', borderBottom: 'none' }}></td>
-                  </tr>
-                </tfoot>
               </table>
 
-              {/* BLOQUE: OBSERVACIONES Y SUSCRIPCIÓN */}
-              <div>
+              {/* BLOQUE UNIFICADO: OBSERVACIONES Y SUSCRIPCIÓN */}
+              <div className="break-inside-avoid">
                 {/* OBSERVACIONES Y RECOMENDACIONES */}
                 <table className="w-full border-collapse border border-black mb-3">
                   <tbody>
@@ -801,42 +775,34 @@ export default function ReportPreview({
           {data.anexos && data.anexos.length > 0 && (
             <tr>
               <td className="px-8 pt-2 pb-4">
-                <div className="space-y-4">
+                <div className="text-center mb-3">
+                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-900">ANEXOS FOTOGRÁFICOS</h3>
+                  <div className="w-14 h-0.5 bg-[#2a7a38] mx-auto mt-0.5"></div>
+                </div>
+                
+                <div className="space-y-6">
                   {/* Agrupamiento inteligente por Obligación */}
                   {data.obligaciones.some(o => o.fotos && o.fotos.length > 0) ? (
-                    (() => {
-                      const firstObsWithFotosIndex = data.obligaciones.findIndex(o => o.fotos && o.fotos.length > 0);
+                    data.obligaciones.map((obs, oIdx) => {
+                      const obsFotos = obs.fotos || [];
+                      if (obsFotos.length === 0) return null;
 
-                      return data.obligaciones.map((obs, oIdx) => {
-                        const obsFotos = obs.fotos || [];
-                        if (obsFotos.length === 0) return null;
-                        const isFirstSection = oIdx === firstObsWithFotosIndex;
-
-                        return (
-                          <div key={obs.id} className="space-y-2.5">
-                            {/* ENCABEZADO: Si es la primera obligación con fotos, ANEXOS FOTOGRÁFICOS queda directamente unido a OBLIGACIÓN Nº 1 en el mismo bloque para que nunca quede solo */}
-                            {isFirstSection ? (
-                              <div className="break-inside-avoid print:break-inside-avoid break-after-avoid print:break-after-avoid mb-2.5">
-                                <div className="text-center mb-2.5">
-                                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-900">ANEXOS FOTOGRÁFICOS</h3>
-                                  <div className="w-14 h-0.5 bg-[#2a7a38] mx-auto mt-0.5"></div>
-                                </div>
-                                <div className="bg-[#f0f7f2] border border-[#b8dec2] px-3 py-1 rounded text-center print:bg-[#f0f7f2]">
-                                  <span className="font-bold text-[11.5px] uppercase text-[#005226] tracking-wide block">
-                                    OBLIGACIÓN Nº {oIdx + 1}
-                                  </span>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="bg-[#f0f7f2] border border-[#b8dec2] px-3 py-1 rounded text-center print:bg-[#f0f7f2] break-inside-avoid print:break-inside-avoid break-after-avoid print:break-after-avoid mb-2.5">
-                                <span className="font-bold text-[11.5px] uppercase text-[#005226] tracking-wide block">
-                                  OBLIGACIÓN Nº {oIdx + 1}
-                                </span>
-                              </div>
+                      return (
+                        <div key={obs.id} className="space-y-3 break-inside-avoid">
+                          {/* ÚNICO ENCABEZADO PARA LA OBLIGACIÓN Y TODAS SUS FOTOS */}
+                          <div className="bg-[#f0f7f2] border border-[#b8dec2] px-3 py-1.5 rounded text-center print:bg-[#f0f7f2]">
+                            <span className="font-bold text-[11.5px] uppercase text-[#005226] tracking-wide block">
+                              OBLIGACIÓN Nº {oIdx + 1}
+                            </span>
+                            {obs.descripcion && (
+                              <p className="text-[10pt] font-century-gothic text-gray-700 italic mt-0.5 leading-snug">
+                                {obs.descripcion}
+                              </p>
                             )}
+                          </div>
 
-                            {/* TODAS LAS FOTOS DE ESTA OBLIGACIÓN DEBAJO DEL ENCABEZADO */}
-                            <div className="space-y-2.5">
+                          {/* TODAS LAS FOTOS DE ESTA OBLIGACIÓN DEBAJO DEL ENCABEZADO */}
+                          <div className="space-y-3">
                             {obsFotos.map((anexo, aIdx) => {
                               const anexoKey = `anexo_${anexo.id || aIdx}`;
                               const hasAnexoComment = Boolean(data.comentariosCampos?.[anexoKey]);
@@ -889,15 +855,9 @@ export default function ReportPreview({
                           </div>
                         </div>
                       );
-                    });
-                  })()
-                ) : (
-                  <>
-                    <div className="text-center mb-3 break-inside-avoid print:break-inside-avoid break-after-avoid print:break-after-avoid">
-                      <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-900">ANEXOS FOTOGRÁFICOS</h3>
-                      <div className="w-14 h-0.5 bg-[#2a7a38] mx-auto mt-0.5"></div>
-                    </div>
-                    {data.anexos.map((anexo, aIdx) => {
+                    })
+                  ) : (
+                    data.anexos.map((anexo, aIdx) => {
                       const anexoKey = `anexo_${anexo.id || aIdx}`;
                       const hasAnexoComment = Boolean(data.comentariosCampos?.[anexoKey]);
 
@@ -945,19 +905,15 @@ export default function ReportPreview({
                         </div>
                       );
                     })
-                  }
-                  </>
-                )}
+                  )}
                 </div>
               </td>
             </tr>
           )}
         </tbody>
-        <tfoot className="outer-page-footer-spacer table-footer-group print:table-footer-group">
+        <tfoot className="table-footer-group print:table-footer-group">
           <tr>
-            <td className="border-none p-0 m-0" style={{ height: '28mm', minHeight: '28mm' }}>
-              <div style={{ height: '28mm', minHeight: '28mm', width: '100%' }} className="pointer-events-none">&nbsp;</div>
-            </td>
+            <td className="h-[25mm] border-none"></td>
           </tr>
         </tfoot>
       </table>
