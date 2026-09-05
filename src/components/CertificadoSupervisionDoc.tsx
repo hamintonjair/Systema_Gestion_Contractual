@@ -1464,8 +1464,8 @@ export default function CertificadoSupervisionDoc({
                 <table className="w-full border-collapse text-[10.5px] font-serif">
                   <tbody>
                     <tr className="border-b border-black font-bold">
-                      <td className="p-1 px-1.5 border-r border-black w-[45%] text-[10.5px]">VALOR INICIAL</td>
-                      <td className="p-1 px-1.5 text-right font-mono flex items-center justify-between text-[10.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black w-[45%] text-[10.5px]">VALOR INICIAL</td>
+                      <td className="py-0.5 px-1.5 text-right font-mono flex items-center justify-between text-[10.5px]">
                         <span className="font-bold">$</span>
                         <span className="font-bold text-[10.5px]">
                           {isEditing ? (
@@ -1483,8 +1483,8 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="p-1 px-1.5 border-r border-black text-[10.5px]">Adición 1</td>
-                      <td className="p-1 px-1.5 text-right font-mono text-[10.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black text-[10.5px]">Adición 1</td>
+                      <td className="py-0.5 px-1.5 text-right font-mono text-[10.5px]">
                         {isEditing ? (
                           <input 
                             type="text"
@@ -1501,8 +1501,8 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="p-1 px-1.5 border-r border-black text-[10.5px]">Adición 2</td>
-                      <td className="p-1 px-1.5 text-right font-mono text-[10.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black text-[10.5px]">Adición 2</td>
+                      <td className="py-0.5 px-1.5 text-right font-mono text-[10.5px]">
                         {isEditing ? (
                           <input 
                             type="text"
@@ -1519,8 +1519,8 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="p-1 px-1.5 border-r border-black text-[10.5px]">Adición 3</td>
-                      <td className="p-1 px-1.5 text-right font-mono text-[10.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black text-[10.5px]">Adición 3</td>
+                      <td className="py-0.5 px-1.5 text-right font-mono text-[10.5px]">
                         {isEditing ? (
                           <input 
                             type="text"
@@ -1537,8 +1537,8 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="font-bold">
-                      <td className="p-1 px-1.5 border-r border-black text-[10.5px]">VALOR TOTAL</td>
-                      <td className="p-1 px-1.5 text-right font-mono flex items-center justify-between text-[10.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black text-[10.5px]">VALOR TOTAL</td>
+                      <td className="py-0.5 px-1.5 text-right font-mono flex items-center justify-between text-[10.5px]">
                         <span className="font-bold">$</span>
                         <span className="font-bold text-[10.5px]">
                           {isEditing ? (
@@ -1564,14 +1564,14 @@ export default function CertificadoSupervisionDoc({
                 <table className="w-full border-collapse text-[10.5px] font-serif">
                   <thead>
                     <tr className="border-b border-black font-bold">
-                      <th className="p-1 px-1.5 text-left border-r border-black w-3/5 font-bold text-[10.5px]">Prórrogas</th>
-                      <th className="p-1 px-1.5 text-center font-bold text-[10.5px]">Días</th>
+                      <th className="py-0.5 px-1.5 text-left border-r border-black w-3/5 font-bold text-[10.5px]">Prórrogas</th>
+                      <th className="py-0.5 px-1.5 text-center font-bold text-[10.5px]">Días</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border-b border-black">
-                      <td className="p-1 px-1.5 border-r border-black text-[10.5px]">Prórroga 1</td>
-                      <td className="p-1 px-1.5 text-center font-mono text-[10.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black text-[10.5px]">Prórroga 1</td>
+                      <td className="py-0.5 px-1.5 text-center font-mono text-[10.5px]">
                         {isEditing ? (
                           <input 
                             type="text"
@@ -1585,8 +1585,8 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="p-1 px-1.5 border-r border-black text-[10.5px]">Prórroga 2</td>
-                      <td className="p-1 px-1.5 text-center font-mono text-[10.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black text-[10.5px]">Prórroga 2</td>
+                      <td className="py-0.5 px-1.5 text-center font-mono text-[10.5px]">
                         {isEditing ? (
                           <input 
                             type="text"
@@ -1600,8 +1600,8 @@ export default function CertificadoSupervisionDoc({
                       </td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="p-1 px-1.5 border-r border-black text-[10.5px]">Prórroga 3</td>
-                      <td className="p-1 px-1.5 text-center font-mono text-[10.5px]">
+                      <td className="py-0.5 px-1.5 border-r border-black text-[10.5px]">Prórroga 3</td>
+                      <td className="py-0.5 px-1.5 text-center font-mono text-[10.5px]">
                         {isEditing ? (
                           <input 
                             type="text"
@@ -1614,9 +1614,9 @@ export default function CertificadoSupervisionDoc({
                         )}
                       </td>
                     </tr>
-                    <tr className="h-[20px]">
-                      <td className="p-1 px-1.5 border-r border-black"></td>
-                      <td className="p-1 px-1.5"></td>
+                    <tr className="h-[15px]">
+                      <td className="py-0.5 px-1.5 border-r border-black"></td>
+                      <td className="py-0.5 px-1.5"></td>
                     </tr>
                   </tbody>
                 </table>
@@ -1637,360 +1637,360 @@ export default function CertificadoSupervisionDoc({
           <div className="border-[2px] border-black bg-white flex items-stretch justify-between px-2.5 py-0 font-serif">
             {/* Columna 1: No. Certificado Disponibilidad Presupuestal */}
             <div className="w-[14%] border-x border-black flex flex-col bg-white">
-              <div className="p-1 print:p-0.5 text-center font-bold text-[10.5px] leading-tight border-b border-black h-[48px] flex items-center justify-center">
+              <div className="p-0.5 text-center font-bold text-[10.5px] leading-tight border-b border-black h-[30px] print:h-[28px] flex items-center justify-center">
                 No. Certificado Disponibilidad Presupuestal
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.cdpNro ?? ''}
                     onChange={(e) => handleFieldChange('cdpNro', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.cdpNro || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.cdpNro || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.cdpNro2 ?? ''}
                     onChange={(e) => handleFieldChange('cdpNro2', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.cdpNro2 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.cdpNro2 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.cdpNro3 ?? ''}
                     onChange={(e) => handleFieldChange('cdpNro3', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.cdpNro3 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.cdpNro3 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.cdpNro4 ?? ''}
                     onChange={(e) => handleFieldChange('cdpNro4', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.cdpNro4 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.cdpNro4 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.cdpNro5 ?? ''}
                     onChange={(e) => handleFieldChange('cdpNro5', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.cdpNro5 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.cdpNro5 || ''}</span>
                 )}
               </div>
             </div>
 
             {/* Columna 2: No. Registro Presupuestal */}
             <div className="w-[13.5%] border-x border-black flex flex-col bg-white">
-              <div className="p-1 print:p-0.5 text-center font-bold text-[10.5px] leading-tight border-b border-black h-[48px] flex items-center justify-center">
+              <div className="p-0.5 text-center font-bold text-[10.5px] leading-tight border-b border-black h-[30px] print:h-[28px] flex items-center justify-center">
                 No. Registro Presupuestal
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.crpNro ?? ''}
                     onChange={(e) => handleFieldChange('crpNro', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.crpNro || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.crpNro || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.crpNro2 ?? ''}
                     onChange={(e) => handleFieldChange('crpNro2', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.crpNro2 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.crpNro2 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.crpNro3 ?? ''}
                     onChange={(e) => handleFieldChange('crpNro3', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.crpNro3 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.crpNro3 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.crpNro4 ?? ''}
                     onChange={(e) => handleFieldChange('crpNro4', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.crpNro4 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.crpNro4 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.crpNro5 ?? ''}
                     onChange={(e) => handleFieldChange('crpNro5', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.crpNro5 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.crpNro5 || ''}</span>
                 )}
               </div>
             </div>
 
             {/* Columna 3: Fecha Registro Presupuestal */}
             <div className="w-[17%] border-x border-black flex flex-col bg-white">
-              <div className="p-1 print:p-0.5 text-center font-bold text-[10.5px] leading-tight border-b border-black h-[48px] flex items-center justify-center">
+              <div className="p-0.5 text-center font-bold text-[10.5px] leading-tight border-b border-black h-[30px] print:h-[28px] flex items-center justify-center">
                 Fecha Registro Presupuestal
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaRegistroPresupuestal ?? ''}
                     onChange={(e) => handleFieldChange('fechaRegistroPresupuestal', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.fechaRegistroPresupuestal || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.fechaRegistroPresupuestal || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaRegistroPresupuestal2 ?? ''}
                     onChange={(e) => handleFieldChange('fechaRegistroPresupuestal2', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.fechaRegistroPresupuestal2 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.fechaRegistroPresupuestal2 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaRegistroPresupuestal3 ?? ''}
                     onChange={(e) => handleFieldChange('fechaRegistroPresupuestal3', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.fechaRegistroPresupuestal3 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.fechaRegistroPresupuestal3 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaRegistroPresupuestal4 ?? ''}
                     onChange={(e) => handleFieldChange('fechaRegistroPresupuestal4', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.fechaRegistroPresupuestal4 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.fechaRegistroPresupuestal4 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.fechaRegistroPresupuestal5 ?? ''}
                     onChange={(e) => handleFieldChange('fechaRegistroPresupuestal5', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.fechaRegistroPresupuestal5 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.fechaRegistroPresupuestal5 || ''}</span>
                 )}
               </div>
             </div>
 
             {/* Columna 4: Código Rubro Presupuestal */}
             <div className="w-[23%] border-x border-black flex flex-col bg-white">
-              <div className="p-1 print:p-0.5 text-center font-bold text-[10.5px] leading-tight border-b border-black h-[48px] flex items-center justify-center">
+              <div className="p-0.5 text-center font-bold text-[10.5px] leading-tight border-b border-black h-[30px] print:h-[28px] flex items-center justify-center">
                 Código Rubro Presupuestal
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.codigoRubro ?? ''}
                     onChange={(e) => handleFieldChange('codigoRubro', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.codigoRubro || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.codigoRubro || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.codigoRubro2 ?? ''}
                     onChange={(e) => handleFieldChange('codigoRubro2', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.codigoRubro2 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.codigoRubro2 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.codigoRubro3 ?? ''}
                     onChange={(e) => handleFieldChange('codigoRubro3', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.codigoRubro3 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.codigoRubro3 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.codigoRubro4 ?? ''}
                     onChange={(e) => handleFieldChange('codigoRubro4', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.codigoRubro4 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.codigoRubro4 || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={formData.codigoRubro5 ?? ''}
                     onChange={(e) => handleFieldChange('codigoRubro5', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{formData.codigoRubro5 || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{formData.codigoRubro5 || ''}</span>
                 )}
               </div>
             </div>
 
             {/* Columna 5: Valor a pagar por Rubro Presupuestal */}
             <div className="w-[20%] border-x border-black flex flex-col bg-white">
-              <div className="p-1 print:p-0.5 text-center font-bold text-[10px] leading-tight border-b border-black h-[48px] flex items-center justify-center">
+              <div className="p-0.5 text-center font-bold text-[10px] leading-tight border-b border-black h-[30px] print:h-[28px] flex items-center justify-center">
                 Valor a pagar por Rubro Presupuestal en el presente pago
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={quitarDecimales(formData.valorRubro ?? '')}
                     onChange={(e) => handleFieldChange('valorRubro', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{quitarDecimales(formData.valorRubro) || ''}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{quitarDecimales(formData.valorRubro) || ''}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={quitarDecimales(formData.valorRubro2 ?? '')}
                     onChange={(e) => handleFieldChange('valorRubro2', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{quitarDecimales(formData.valorRubro2 || '')}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{quitarDecimales(formData.valorRubro2 || '')}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={quitarDecimales(formData.valorRubro3 ?? '')}
                     onChange={(e) => handleFieldChange('valorRubro3', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{quitarDecimales(formData.valorRubro3 || '')}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{quitarDecimales(formData.valorRubro3 || '')}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] border-b border-black text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={quitarDecimales(formData.valorRubro4 ?? '')}
                     onChange={(e) => handleFieldChange('valorRubro4', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{quitarDecimales(formData.valorRubro4 || '')}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{quitarDecimales(formData.valorRubro4 || '')}</span>
                 )}
               </div>
-              <div className="h-[22px] min-h-[22px] text-center font-mono text-[10.5px] flex items-center justify-center">
+              <div className="h-[16px] min-h-[16px] print:h-[15px] text-center font-mono text-[10.5px] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text"
                     value={quitarDecimales(formData.valorRubro5 ?? '')}
                     onChange={(e) => handleFieldChange('valorRubro5', e.target.value)}
-                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] focus:outline-none focus:bg-amber-100"
+                    className="w-full h-full bg-amber-50 text-center font-mono text-black text-[10.5px] leading-none py-0 focus:outline-none focus:bg-amber-100"
                     style={{ color: '#000000' }}
                   />
                 ) : (
-                  <span className="text-[10.5px] font-mono">{quitarDecimales(formData.valorRubro5 || '')}</span>
+                  <span className="text-[10.5px] font-mono leading-none">{quitarDecimales(formData.valorRubro5 || '')}</span>
                 )}
               </div>
             </div>
