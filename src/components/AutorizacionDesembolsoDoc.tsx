@@ -416,14 +416,14 @@ export default function AutorizacionDesembolsoDoc({
                 margin: 0 !important;
                 padding: 4mm 5mm !important;
                 font-family: "Times New Roman", Times, serif !important;
-                font-size: 12pt !important;
+                font-size: 11pt !important;
               }
               #desembolso-document {
                 width: 100% !important;
                 max-width: 20.59cm !important;
                 margin: 0 auto !important;
                 padding: 0 !important;
-                font-size: 12pt !important;
+                font-size: 11pt !important;
               }
               #desembolso-document,
               #desembolso-document *:not(.font-arial-narrow):not(.font-arial-narrow *) {
@@ -742,12 +742,13 @@ export default function AutorizacionDesembolsoDoc({
           style={{
             width: '21.59cm',
             fontFamily: '"Times New Roman", Times, serif',
+            fontSize: '11pt',
             color: '#000000',
             position: 'relative'
           }}
         >
         {/* Contenedor Principal con borde perimetral grueso */}
-        <div className="w-full text-[12pt] leading-snug border-2 border-black font-serif">
+        <div className="w-full text-[11pt] leading-snug border-2 border-black font-serif">
           
           {/* ENCABEZADO: Logo a la izquierda y Texto perfectamente centrado en todo el ancho */}
           <div className="relative pt-2.5 pb-2 px-3 print:pt-2 print:pb-1.5">
@@ -758,77 +759,77 @@ export default function AutorizacionDesembolsoDoc({
 
             {/* Bloque de títulos centrado en toda la página */}
             <div className="w-full text-center font-bold font-serif flex flex-col justify-center items-center">
-              <div className="text-[13pt] uppercase tracking-wide">MUNICIPIO DE QUIBDÓ</div>
-              <div className="text-[13pt] uppercase mt-0.5">DOCUMENTO EQUIVALENTE A LA FACTURA</div>
-              <div className="text-[12pt] uppercase mt-0.5">GESTIÓN FINANCIERA</div>
+              <div className="text-[11pt] uppercase tracking-wide">MUNICIPIO DE QUIBDÓ</div>
+              <div className="text-[11pt] uppercase mt-0.5">DOCUMENTO EQUIVALENTE A LA FACTURA</div>
+              <div className="text-[11pt] uppercase mt-0.5">GESTIÓN FINANCIERA</div>
               
-              <div className="text-[12pt] font-bold mt-1.5 print:mt-1">Aplica para personas naturales no comerciantes</div>
-              <div className="text-[13pt] font-black uppercase mt-0.5 tracking-wider">
+              <div className="text-[11pt] font-bold mt-1.5 print:mt-1">Aplica para personas naturales no comerciantes</div>
+              <div className="text-[11pt] font-black uppercase mt-0.5 tracking-wider">
                 NO RESPONSABLES DEL IMPUESTO A LAS VENTAS
               </div>
             </div>
           </div>
 
           {/* SECCIÓN FECHA Y CONSECUTIVO (Sin línea superior divisoria, cajas con fondo gris y borde negro) */}
-          <div className="flex justify-between items-center px-2 py-1.5 print:py-1 font-bold font-serif text-[12pt]">
+          <div className="flex justify-between items-center px-2 py-1.5 print:py-1 font-bold font-serif text-[11pt]">
             <div className="flex items-center gap-2 pl-2">
-              <span className="uppercase tracking-tight text-[12pt]">FECHA DE EXPEDICIÓN</span>
+              <span className="uppercase tracking-tight text-[11pt]">FECHA DE EXPEDICIÓN</span>
               <div className="border-2 border-black bg-gray-200 px-4 py-0.5 min-w-[150px] text-center shadow-none">
                 {isEditing ? (
                   <input 
                     type="text" 
                     value={formData.fechaExpedicion} 
                     onChange={(e) => handleFieldChange('fechaExpedicion', e.target.value)} 
-                    className="w-full text-center bg-amber-50 outline-none text-[12pt] font-serif font-bold" 
+                    className="w-full text-center bg-amber-50 outline-none text-[11pt] font-serif font-bold" 
                   />
                 ) : (
-                  <span className="text-[12pt]">{formData.fechaExpedicion}</span>
+                  <span className="text-[11pt]">{formData.fechaExpedicion}</span>
                 )}
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="uppercase tracking-tight text-[12pt]">CONSECUTIVO NRO.</span>
+              <span className="uppercase tracking-tight text-[11pt]">CONSECUTIVO NRO.</span>
               <div className="border-2 border-black bg-gray-200 px-3 py-0.5 min-w-[50px] text-center shadow-none mr-0">
                 {isEditing ? (
                   <input 
                     type="text" 
                     value={formData.consecutivoNro} 
                     onChange={(e) => handleFieldChange('consecutivoNro', e.target.value)} 
-                    className="w-full text-center bg-amber-50 outline-none text-[12pt] font-serif font-bold" 
+                    className="w-full text-center bg-amber-50 outline-none text-[11pt] font-serif font-bold" 
                   />
                 ) : (
-                  <span className="text-[12pt]">{formData.consecutivoNro}</span>
+                  <span className="text-[11pt]">{formData.consecutivoNro}</span>
                 )}
               </div>
             </div>
           </div>
 
           {/* SECCIÓN ENTIDAD CONTRATANTE (Sin líneas divisorias arriba/abajo directas, centrado limpio) */}
-          <div className="text-center font-bold pb-1.5 pt-0.5 print:pb-1 font-serif text-[12pt]">
+          <div className="text-center font-bold pb-1.5 pt-0.5 print:pb-1 font-serif text-[11pt]">
             <div>ENTIDAD CONTRATANTE: MUNICIPIO DE QUIBDÓ</div>
-            <div className="text-[12pt] mt-0.5">NIT. 891.680.011-0</div>
+            <div className="text-[11pt] mt-0.5">NIT. 891.680.011-0</div>
           </div>
 
           {/* DATOS DEL CONTRATISTA (Título con fondo gris y bordes) */}
-          <div className="w-full text-center bg-gray-200 border-t-2 border-b-2 border-black font-bold text-[12pt] py-1 uppercase tracking-wide font-serif">
+          <div className="w-full text-center bg-gray-200 border-t-2 border-b-2 border-black font-bold text-[11pt] py-1 uppercase tracking-wide font-serif">
             DATOS DEL CONTRATISTA
           </div>
 
           {/* TABLA DE DATOS DEL CONTRATISTA */}
-          <div className="flex flex-col w-full border-b-2 border-black font-serif text-[12pt]">
+          <div className="flex flex-col w-full border-b-2 border-black font-serif text-[11pt]">
             {/* Fila 1: NOMBRE / NIT Ó C.C */}
             <div className="flex w-full border-b border-black">
               <div className="w-[18%] px-2 py-1 font-bold border-r border-black uppercase text-[11pt] flex items-center">
                 NOMBRE
               </div>
-              <div className="w-[42%] px-2 py-1 font-bold text-center border-r border-black uppercase text-[12pt] flex items-center justify-center">
+              <div className="w-[42%] px-2 py-1 font-bold text-center border-r border-black uppercase text-[11pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text" 
                     value={formData.nombre} 
                     onChange={(e) => handleFieldChange('nombre', e.target.value)} 
-                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[12pt]" 
+                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11pt]" 
                   />
                 ) : (
                   <span>{formData.nombre}</span>
@@ -837,13 +838,13 @@ export default function AutorizacionDesembolsoDoc({
               <div className="w-[18%] px-2 py-1 font-bold border-r border-black uppercase text-[11pt] flex items-center">
                 NIT. Ó C.C
               </div>
-              <div className="w-[22%] px-2 py-1 font-bold text-center uppercase text-[12pt] flex items-center justify-center">
+              <div className="w-[22%] px-2 py-1 font-bold text-center uppercase text-[11pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text" 
                     value={formData.nitCc} 
                     onChange={(e) => handleFieldChange('nitCc', e.target.value)} 
-                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[12pt]" 
+                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11pt]" 
                   />
                 ) : (
                   <span>{formData.nitCc}</span>
@@ -856,13 +857,13 @@ export default function AutorizacionDesembolsoDoc({
               <div className="w-[18%] px-2 py-1 font-bold border-r border-black uppercase text-[11pt] flex items-center">
                 NRO. DE CUENTA
               </div>
-              <div className="w-[42%] px-2 py-1 font-bold text-center border-r border-black text-[12pt] flex items-center justify-center">
+              <div className="w-[42%] px-2 py-1 font-bold text-center border-r border-black text-[11pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text" 
                     value={formData.nroCuenta} 
                     onChange={(e) => handleFieldChange('nroCuenta', e.target.value)} 
-                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[12pt]" 
+                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11pt]" 
                   />
                 ) : (
                   <span>{formData.nroCuenta}</span>
@@ -871,13 +872,13 @@ export default function AutorizacionDesembolsoDoc({
               <div className="w-[18%] px-2 py-1 font-bold border-r border-black uppercase text-[11pt] flex items-center">
                 TIPO DE CUENTA
               </div>
-              <div className="w-[22%] px-2 py-1 font-bold text-center uppercase text-[12pt] flex items-center justify-center">
+              <div className="w-[22%] px-2 py-1 font-bold text-center uppercase text-[11pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text" 
                     value={formData.tipoCuenta} 
                     onChange={(e) => handleFieldChange('tipoCuenta', e.target.value)} 
-                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[12pt]" 
+                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11pt]" 
                   />
                 ) : (
                   <span>{formData.tipoCuenta}</span>
@@ -890,13 +891,13 @@ export default function AutorizacionDesembolsoDoc({
               <div className="w-[18%] px-2 py-1 font-bold border-r border-black uppercase text-[11pt] flex items-center">
                 BANCO
               </div>
-              <div className="w-[42%] px-2 py-1 font-bold text-center border-r border-black uppercase text-[12pt] flex items-center justify-center">
+              <div className="w-[42%] px-2 py-1 font-bold text-center border-r border-black uppercase text-[11pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text" 
                     value={formData.banco} 
                     onChange={(e) => handleFieldChange('banco', e.target.value)} 
-                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[12pt]" 
+                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11pt]" 
                   />
                 ) : (
                   <span>{formData.banco}</span>
@@ -905,13 +906,13 @@ export default function AutorizacionDesembolsoDoc({
               <div className="w-[18%] px-2 py-1 font-bold border-r border-black uppercase text-[11pt] flex items-center">
                 CIUDAD
               </div>
-              <div className="w-[22%] px-2 py-1 font-bold text-center uppercase text-[12pt] flex items-center justify-center">
+              <div className="w-[22%] px-2 py-1 font-bold text-center uppercase text-[11pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text" 
                     value={formData.ciudad} 
                     onChange={(e) => handleFieldChange('ciudad', e.target.value)} 
-                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[12pt]" 
+                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11pt]" 
                   />
                 ) : (
                   <span>{formData.ciudad}</span>
@@ -924,13 +925,13 @@ export default function AutorizacionDesembolsoDoc({
               <div className="w-[18%] px-2 py-1 font-bold border-r border-black uppercase text-[11pt] flex items-center">
                 DIRECCIÓN
               </div>
-              <div className="w-[42%] px-2 py-1 font-bold text-center border-r border-black uppercase text-[12pt] flex items-center justify-center">
+              <div className="w-[42%] px-2 py-1 font-bold text-center border-r border-black uppercase text-[11pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text" 
                     value={formData.direccion} 
                     onChange={(e) => handleFieldChange('direccion', e.target.value)} 
-                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[12pt]" 
+                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11pt]" 
                   />
                 ) : (
                   <span>{formData.direccion}</span>
@@ -939,13 +940,13 @@ export default function AutorizacionDesembolsoDoc({
               <div className="w-[18%] px-2 py-1 font-bold border-r border-black uppercase text-[11pt] flex items-center">
                 TELÉFONO
               </div>
-              <div className="w-[22%] px-2 py-1 font-bold text-center uppercase text-[12pt] flex items-center justify-center">
+              <div className="w-[22%] px-2 py-1 font-bold text-center uppercase text-[11pt] flex items-center justify-center">
                 {isEditing ? (
                   <input 
                     type="text" 
                     value={formData.telefono} 
                     onChange={(e) => handleFieldChange('telefono', e.target.value)} 
-                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[12pt]" 
+                    className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11pt]" 
                   />
                 ) : (
                   <span>{formData.telefono}</span>
@@ -955,18 +956,18 @@ export default function AutorizacionDesembolsoDoc({
           </div>
 
           {/* SECCIÓN CONCEPTO Y OBJETO */}
-          <div className="pt-2 pb-1.5 print:pt-1 print:pb-1 border-b-2 border-black font-serif text-[12pt]">
+          <div className="pt-2 pb-1.5 print:pt-1 print:pb-1 border-b-2 border-black font-serif text-[11pt]">
             {/* Concepto y Nro con márgenes laterales px-8 */}
             <div className="flex justify-between items-center px-6 print:px-4 py-1 mb-1">
               <div className="flex items-center gap-3">
-                <span className="font-bold text-[12pt] uppercase tracking-wide">CONCEPTO</span>
-                <div className="border-2 border-black px-4 py-1 w-[380px] max-w-[400px] text-center bg-white font-bold uppercase text-[12pt] shadow-none">
+                <span className="font-bold text-[11pt] uppercase tracking-wide">CONCEPTO</span>
+                <div className="border-2 border-black px-4 py-1 w-[380px] max-w-[400px] text-center bg-white font-bold uppercase text-[11pt] shadow-none">
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.concepto || 'PRESTACION DE SERVICIOS'} 
                       onChange={(e) => handleFieldChange('concepto', e.target.value)} 
-                      className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[12pt]" 
+                      className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11pt]" 
                     />
                   ) : (
                     <span>{formData.concepto || 'PRESTACION DE SERVICIOS'}</span>
@@ -975,8 +976,8 @@ export default function AutorizacionDesembolsoDoc({
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="font-bold text-[12pt] uppercase tracking-wide">NRO.</span>
-                <div className="border-2 border-black px-3 py-1 min-w-[50px] text-center bg-white font-bold uppercase text-[12pt] shadow-none">
+                <span className="font-bold text-[11pt] uppercase tracking-wide">NRO.</span>
+                <div className="border-2 border-black px-3 py-1 min-w-[50px] text-center bg-white font-bold uppercase text-[11pt] shadow-none">
                   {isEditing ? (
                     <input 
                       type="text" 
@@ -987,7 +988,7 @@ export default function AutorizacionDesembolsoDoc({
                         handleFieldChange('contratoNro', cleanVal);
                         handleFieldChange('conceptoNro', cleanVal);
                       }} 
-                      className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[12pt]" 
+                      className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11pt]" 
                     />
                   ) : (
                     <span>{(formData.contratoNro || formData.conceptoNro || '590').replace(/\D/g, '')}</span>
@@ -998,7 +999,7 @@ export default function AutorizacionDesembolsoDoc({
 
             {/* Texto "Cuyo objeto es" con margen izquierdo ml-8 */}
             <div className="flex items-center justify-between mb-1 mx-6 print:mx-4">
-              <div className="text-[12pt] font-bold">
+              <div className="text-[11pt] font-bold">
                 Cuyo objeto es
               </div>
               {isEditing && reportData && (
@@ -1026,40 +1027,40 @@ export default function AutorizacionDesembolsoDoc({
             </div>
 
             {/* Caja descriptiva del contrato con márgenes laterales mx-8 */}
-            <div className="mx-6 print:mx-4 mb-2 print:mb-1 border-2 border-black p-2 print:p-1.5 text-center text-[12pt] font-normal uppercase bg-white leading-relaxed">
+            <div className="mx-6 print:mx-4 mb-2 print:mb-1 border-2 border-black p-2 print:p-1.5 text-center text-[11pt] font-normal uppercase bg-white leading-relaxed">
               {isEditing ? (
                 <textarea 
                   value={formData.objeto} 
                   onChange={(e) => handleFieldChange('objeto', e.target.value)} 
                   rows={4}
                   placeholder="OBJETO DEL CONTRATO...\nCORRESPONDIENTE AL PERIODO DEL 01 DE JULIO AL 31 DE JULIO 2026"
-                  className="w-full min-h-[65px] text-center bg-amber-50 outline-none resize-y font-serif text-[12pt] font-normal leading-relaxed uppercase border border-amber-300 rounded p-1" 
+                  className="w-full min-h-[65px] text-center bg-amber-50 outline-none resize-y font-serif text-[11pt] font-normal leading-relaxed uppercase border border-amber-300 rounded p-1" 
                 />
               ) : (
-                <div className="whitespace-pre-wrap leading-relaxed tracking-tight font-serif text-[12pt] font-normal">{formData.objeto}</div>
+                <div className="whitespace-pre-wrap leading-relaxed tracking-tight font-serif text-[11pt] font-normal">{formData.objeto}</div>
               )}
             </div>
           </div>
 
           {/* TABLA DE VALORES (Números y Letras con tipografía Arial Narrow y estructura idéntica) */}
           <div 
-            className="flex w-full border-b-2 border-black font-arial-narrow text-[12pt]" 
+            className="flex w-full border-b-2 border-black font-arial-narrow text-[11pt]" 
             style={{ fontFamily: "'Arial Narrow', 'Nimbus Sans Narrow', Arial, sans-serif" }}
           >
             {/* Lado Izquierdo: Valor en Números en la esquina superior izquierda */}
             <div className="w-[62%] p-2 border-r-2 border-black flex flex-col justify-start">
-              <div className="text-[12pt] font-bold uppercase tracking-tight flex items-baseline gap-2">
+              <div className="text-[11pt] font-bold uppercase tracking-tight flex items-baseline gap-2">
                 <span>VALOR EN NÚMEROS</span>
                 {isEditing ? (
                   <input 
                     type="text" 
                     value={formData.valorNumeros} 
                     onChange={(e) => handleFieldChange('valorNumeros', e.target.value)} 
-                    className="bg-amber-50 outline-none font-bold text-[12pt] px-1 italic font-serif" 
+                    className="bg-amber-50 outline-none font-bold text-[11pt] px-1 italic font-serif" 
                     style={{ fontStyle: 'italic' }}
                   />
                 ) : (
-                  <span className="text-[12pt] font-bold italic font-serif">{formData.valorNumeros}</span>
+                  <span className="text-[11pt] font-bold italic font-serif">{formData.valorNumeros}</span>
                 )}
               </div>
             </div>
@@ -1068,60 +1069,60 @@ export default function AutorizacionDesembolsoDoc({
             <div className="w-[38%] flex flex-col">
               {/* Fila SUBTOTAL */}
               <div className="flex w-full border-b border-black">
-                <div className="w-[45%] bg-[#e5e7eb] px-2 py-0.5 text-[12pt] font-bold border-r border-black uppercase flex items-center">
+                <div className="w-[45%] bg-[#e5e7eb] px-2 py-0.5 text-[11pt] font-bold border-r border-black uppercase flex items-center">
                   SUBTOTAL
                 </div>
-                <div className="w-[55%] bg-white px-2 py-0.5 text-right text-[12pt] font-bold flex items-center justify-end">
+                <div className="w-[55%] bg-white px-2 py-0.5 text-right text-[11pt] font-bold flex items-center justify-end">
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.subtotal} 
                       onChange={(e) => handleFieldChange('subtotal', e.target.value)} 
-                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[12pt] italic font-serif" 
+                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[11pt] italic font-serif" 
                       style={{ fontStyle: 'italic' }}
                     />
                   ) : (
-                    <span className="italic font-serif text-[12pt]">{formData.subtotal}</span>
+                    <span className="italic font-serif text-[11pt]">{formData.subtotal}</span>
                   )}
                 </div>
               </div>
 
               {/* Fila IVA ASUMIDO */}
               <div className="flex w-full border-b border-black">
-                <div className="w-[45%] bg-[#e5e7eb] px-2 py-0.5 text-[12pt] font-bold border-r border-black uppercase flex items-center">
+                <div className="w-[45%] bg-[#e5e7eb] px-2 py-0.5 text-[11pt] font-bold border-r border-black uppercase flex items-center">
                   IVA ASUMIDO
                 </div>
-                <div className="w-[55%] bg-white px-2 py-0.5 text-right text-[12pt] font-bold flex items-center justify-end">
+                <div className="w-[55%] bg-white px-2 py-0.5 text-right text-[11pt] font-bold flex items-center justify-end">
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.ivaAsumido} 
                       onChange={(e) => handleFieldChange('ivaAsumido', e.target.value)} 
-                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[12pt] italic font-serif" 
+                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[11pt] italic font-serif" 
                       style={{ fontStyle: 'italic' }}
                     />
                   ) : (
-                    <span className="italic font-serif text-[12pt]">{formData.ivaAsumido}</span>
+                    <span className="italic font-serif text-[11pt]">{formData.ivaAsumido}</span>
                   )}
                 </div>
               </div>
 
               {/* Fila TOTAL */}
               <div className="flex w-full">
-                <div className="w-[45%] bg-[#e5e7eb] px-2 py-0.5 text-[12pt] font-bold border-r border-black uppercase flex items-center">
+                <div className="w-[45%] bg-[#e5e7eb] px-2 py-0.5 text-[11pt] font-bold border-r border-black uppercase flex items-center">
                   TOTAL
                 </div>
-                <div className="w-[55%] bg-white px-2 py-0.5 text-right text-[12pt] font-bold flex items-center justify-end">
+                <div className="w-[55%] bg-white px-2 py-0.5 text-right text-[11pt] font-bold flex items-center justify-end">
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.total} 
                       onChange={(e) => handleFieldChange('total', e.target.value)} 
-                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[12pt] italic font-serif" 
+                      className="w-full text-right bg-amber-50 outline-none uppercase font-bold text-[11pt] italic font-serif" 
                       style={{ fontStyle: 'italic' }}
                     />
                   ) : (
-                    <span className="italic font-serif text-[12pt]">{formData.total}</span>
+                    <span className="italic font-serif text-[11pt]">{formData.total}</span>
                   )}
                 </div>
               </div>
@@ -1130,23 +1131,23 @@ export default function AutorizacionDesembolsoDoc({
 
           {/* VALOR EN LETRAS: Etiqueta con fondo gris y valor en celda derecha */}
           <div 
-            className="flex w-full border-b-2 border-black text-[12pt]"
+            className="flex w-full border-b-2 border-black text-[11pt]"
             style={{ fontFamily: "'Arial Narrow', 'Nimbus Sans Narrow', Arial, sans-serif" }}
           >
-            <div className="w-[20%] bg-[#e5e7eb] px-2 py-1 font-bold text-[12pt] border-r-2 border-black uppercase flex items-center">
+            <div className="w-[20%] bg-[#e5e7eb] px-2 py-1 font-bold text-[11pt] border-r-2 border-black uppercase flex items-center">
               VALOR EN LETRAS:
             </div>
-            <div className="w-[80%] bg-white px-3 py-1 font-bold text-center text-[12pt] uppercase flex items-center justify-center font-serif italic">
+            <div className="w-[80%] bg-white px-3 py-1 font-bold text-center text-[11pt] uppercase flex items-center justify-center font-serif italic">
               {isEditing ? (
                 <input 
                   type="text" 
                   value={formData.valorLetras} 
                   onChange={(e) => handleFieldChange('valorLetras', e.target.value)} 
-                  className="w-full text-center bg-amber-50 outline-none uppercase font-serif text-[12pt] font-bold italic" 
+                  className="w-full text-center bg-amber-50 outline-none uppercase font-serif text-[11pt] font-bold italic" 
                   style={{ fontStyle: 'italic' }}
                 />
               ) : (
-                <span className="font-bold tracking-tight italic font-serif text-[12pt]">{formData.valorLetras}</span>
+                <span className="font-bold tracking-tight italic font-serif text-[11pt]">{formData.valorLetras}</span>
               )}
             </div>
           </div>
@@ -1155,7 +1156,7 @@ export default function AutorizacionDesembolsoDoc({
           <div className="py-2 px-2 print:py-1 print:px-1 border-b-2 border-black font-serif text-[11pt] space-y-1.5 print:space-y-1">
             {/* Endoso 1 */}
             <div className="mx-6 print:mx-4 border-2 border-black p-1.5 print:p-1 font-normal">
-              <div className="mb-1 print:mb-0.5 font-bold uppercase text-[11.5pt]">ENDOSO 1:</div>
+              <div className="mb-1 print:mb-0.5 font-bold uppercase text-[11pt]">ENDOSO 1:</div>
               <div className="flex items-center mb-1 print:mb-0.5">
                 <span className="w-40 font-normal">Beneficiario del endoso:</span>
                 <div className="flex-grow border-b border-black text-center mx-2 h-5">
@@ -1194,7 +1195,7 @@ export default function AutorizacionDesembolsoDoc({
 
             {/* Endoso 2 */}
             <div className="mx-6 print:mx-4 border-2 border-black p-1.5 print:p-1 font-normal">
-              <div className="mb-1 print:mb-0.5 font-bold uppercase text-[11.5pt]">ENDOSO 2:</div>
+              <div className="mb-1 print:mb-0.5 font-bold uppercase text-[11pt]">ENDOSO 2:</div>
               <div className="flex items-center mb-1 print:mb-0.5">
                 <span className="w-40 font-normal">Beneficiario del endoso:</span>
                 <div className="flex-grow border-b border-black text-center mx-2 h-5">
@@ -1233,12 +1234,12 @@ export default function AutorizacionDesembolsoDoc({
           </div>
 
           {/* SECCIÓN FINAL (FIRMA, DIRECCIÓN, TELÉFONO con márgenes ml-10 y anchos definidos) */}
-          <div className="pt-2 pb-1 px-3 print:pt-1 print:pb-0.5 font-serif text-[12pt]">
+          <div className="pt-2 pb-1 px-3 print:pt-1 print:pb-0.5 font-serif text-[11pt]">
             <div className="ml-8 print:ml-6 mb-1 mt-1 space-y-1 print:space-y-0.5">
               
               {/* Fila FIRMA */}
               <div className="flex flex-row items-end">
-                <div className="w-[120px] font-bold text-[12pt] leading-none pb-1">FIRMA</div>
+                <div className="w-[120px] font-bold text-[11pt] leading-none pb-1">FIRMA</div>
                 <div className="border-b-2 border-black w-[300px] h-9 flex items-end pl-2 pb-0.5 relative">
                   {formData.firmaContratista ? (
                     <img 
@@ -1258,14 +1259,14 @@ export default function AutorizacionDesembolsoDoc({
 
               {/* Fila DIRECCIÓN */}
               <div className="flex flex-row items-center">
-                <div className="w-[120px] font-bold text-[12pt] uppercase leading-none">DIRECCIÓN</div>
-                <div className="bg-[#e5e7eb] w-[400px] px-3 py-1 text-[12pt] font-normal uppercase text-black leading-none">
+                <div className="w-[120px] font-bold text-[11pt] uppercase leading-none">DIRECCIÓN</div>
+                <div className="bg-[#e5e7eb] w-[400px] px-3 py-1 text-[11pt] font-normal uppercase text-black leading-none">
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.direccion} 
                       onChange={(e) => handleFieldChange('direccion', e.target.value)} 
-                      className="w-full bg-amber-50 outline-none font-serif uppercase text-[12pt] leading-none" 
+                      className="w-full bg-amber-50 outline-none font-serif uppercase text-[11pt] leading-none" 
                     />
                   ) : (
                     <span className="leading-none">{formData.direccion || 'BARRIO BUENOS AIRES'}</span>
@@ -1275,14 +1276,14 @@ export default function AutorizacionDesembolsoDoc({
 
               {/* Fila TELÉFONO */}
               <div className="flex flex-row items-center">
-                <div className="w-[120px] font-bold text-[12pt] uppercase leading-none">TELÉFONO</div>
-                <div className="bg-[#e5e7eb] w-[400px] px-3 py-1 text-[12pt] font-normal uppercase text-black leading-none">
+                <div className="w-[120px] font-bold text-[11pt] uppercase leading-none">TELÉFONO</div>
+                <div className="bg-[#e5e7eb] w-[400px] px-3 py-1 text-[11pt] font-normal uppercase text-black leading-none">
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.telefono} 
                       onChange={(e) => handleFieldChange('telefono', e.target.value)} 
-                      className="w-full bg-amber-50 outline-none font-serif uppercase text-[12pt] leading-none" 
+                      className="w-full bg-amber-50 outline-none font-serif uppercase text-[11pt] leading-none" 
                     />
                   ) : (
                     <span className="leading-none">{formData.telefono || '3124943527'}</span>
