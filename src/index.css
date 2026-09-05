@@ -163,6 +163,7 @@
     padding: 0 10mm !important;
     box-shadow: none !important;
     border: none !important;
+    overflow: visible !important;
     font-family: 'Calibri', 'Segoe UI', Candara, Arial, sans-serif !important;
   }
 
@@ -174,8 +175,8 @@
   #informe-printable-document .font-century-gothic-12,
   #informe-printable-document .font-century-gothic-12 * {
     font-family: 'Century Gothic', CenturyGothic, 'Apple Gothic', 'Didact Gothic', Questrial, sans-serif !important;
-    font-size: 12pt !important;
-    line-height: 1.35 !important;
+    font-size: 11.5pt !important;
+    line-height: 1.28 !important;
   }
 
   /* Preservar la visualización y posición exacta del membrete institucional */
@@ -193,34 +194,56 @@
     print-color-adjust: exact !important;
   }
 
-  /* Permitir flujo continuo de texto y tablas en las obligaciones evitando espacios vacíos entre hojas */
-
-  #informe-printable-document .tabla-obligaciones,
-  #informe-printable-document .tabla-obligaciones tbody,
-  #informe-printable-document .tabla-obligaciones tr,
-  #informe-printable-document .tabla-obligaciones td,
-  #informe-printable-document .tabla-obligaciones td > div,
-  #informe-printable-document .font-century-gothic-12 {
-    page-break-inside: auto !important;
-    break-inside: auto !important;
-    orphans: 2 !important;
-    widows: 2 !important;
+  /* Asegurar que thead y tfoot se repitan y reserven el espacio exacto en cada página de impresión */
+  thead.table-header-group,
+  thead {
+    display: table-header-group !important;
   }
 
-  .break-inside-auto {
+  tfoot.table-footer-group,
+  tfoot {
+    display: table-footer-group !important;
+    height: 28mm !important;
+  }
+
+  tfoot tr,
+  tfoot td {
+    height: 28mm !important;
+    border: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  /* Tabla de obligaciones: la tabla y su cuerpo fluyen entre hojas */
+  #informe-printable-document .tabla-obligaciones {
     page-break-inside: auto !important;
     break-inside: auto !important;
+    border-collapse: collapse !important;
+  }
+
+  #informe-printable-document .tabla-obligaciones tbody {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Cada fila es atómica (break-inside: avoid):
+     - Evita que el texto se corte a la mitad
+     - Evita colisiones con el membrete y pie de página
+     - Garantiza que cada hoja termine con la línea horizontal de cierre del cuadro */
+  #informe-printable-document .tabla-obligaciones tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #informe-printable-document .tabla-obligaciones td {
+    vertical-align: top !important;
+    border: 1px solid #000000 !important;
   }
 
   /* Control estricto de saltos de página para elementos que no deben dividirse */
   .break-inside-avoid {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-  }
-
-  /* Repetir thead en cada página */
-  thead.table-header-group {
-    display: table-header-group !important;
   }
 }
 

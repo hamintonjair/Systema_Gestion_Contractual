@@ -626,7 +626,7 @@ export default function ReportPreview({
               </table>
 
               {/* EJECUCIÓN DE ACTIVIDADES */}
-              <table className="w-full border-collapse border border-black mb-3 tabla-obligaciones print:break-inside-auto">
+              <table className="w-full border-collapse border border-black mb-3 tabla-obligaciones">
                 <thead>
                   <tr>
                     <th colSpan={3} className="border border-black bg-gray-200 text-center font-bold py-1 text-xs uppercase font-century-gothic">
@@ -639,14 +639,14 @@ export default function ReportPreview({
                     <th className="border border-black px-2 py-1 text-center w-[15%] font-bold font-century-gothic">Soportes</th>
                   </tr>
                 </thead>
-                <tbody className="print:break-inside-auto">
+                <tbody>
                   {data.obligaciones.map((obs, idx) => (
-                    <tr key={obs.id} className="break-inside-auto print:break-inside-auto">
+                    <tr key={obs.id} className="break-inside-avoid print:break-inside-avoid">
                       {renderReviewedTd(
                         `obligacion_${obs.id}_descripcion`,
                         `Obligación #${idx + 1} (Descripción)`,
                         obs.descripcion,
-                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12 print:break-inside-auto">
+                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12">
                           {obs.descripcion}
                         </div>,
                         'align-top font-century-gothic-12'
@@ -655,7 +655,7 @@ export default function ReportPreview({
                         `obligacion_${obs.id}_actividades`,
                         `Obligación #${idx + 1} (Actividades Desarrolladas)`,
                         obs.actividades,
-                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12 print:break-inside-auto">
+                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12">
                           {obs.actividades}
                         </div>,
                         'align-top font-century-gothic-12'
@@ -664,7 +664,7 @@ export default function ReportPreview({
                         `obligacion_${obs.id}_soportes`,
                         `Obligación #${idx + 1} (Soportes)`,
                         obs.soportes,
-                        <div className="text-center text-[12pt] font-medium font-century-gothic-12 print:break-inside-auto">
+                        <div className="text-center text-[12pt] font-medium font-century-gothic-12">
                           {obs.soportes}
                         </div>,
                         'align-top text-center font-century-gothic-12'
@@ -674,113 +674,110 @@ export default function ReportPreview({
                 </tbody>
               </table>
 
-              {/* BLOQUE: OBSERVACIONES Y SUSCRIPCIÓN */}
-              <div>
-                {/* OBSERVACIONES Y RECOMENDACIONES */}
-                <table className="w-full border-collapse border border-black mb-3">
-                  <tbody>
-                    <tr>
-                      <td className="border border-black bg-gray-200 text-center font-bold py-1 uppercase text-xs">
-                        OBSERVACIONES Y RECOMENDACIONES
-                      </td>
-                    </tr>
-                    <tr>
-                      {renderReviewedTd(
-                        'observaciones',
-                        'Observaciones y Recomendaciones Generales',
-                        data.observaciones,
-                        <div className="text-justify min-h-8 align-top whitespace-pre-wrap text-[10px] leading-snug">
-                          {data.observaciones || ''}
-                        </div>,
-                        'px-2 py-2'
-                      )}
-                    </tr>
-                  </tbody>
-                </table>
+              {/* OBSERVACIONES Y RECOMENDACIONES */}
+              <table className="w-full border-collapse border border-black mb-2.5 bg-white break-inside-avoid print:break-inside-avoid">
+                <tbody>
+                  <tr>
+                    <td className="border border-black bg-gray-200 text-center font-bold py-1 uppercase text-xs">
+                      OBSERVACIONES Y RECOMENDACIONES
+                    </td>
+                  </tr>
+                  <tr>
+                    {renderReviewedTd(
+                      'observaciones',
+                      'Observaciones y Recomendaciones Generales',
+                      data.observaciones,
+                      <div className="text-justify min-h-6 align-top whitespace-pre-wrap text-[10px] leading-snug">
+                        {data.observaciones || ''}
+                      </div>,
+                      'px-2 py-1.5'
+                    )}
+                  </tr>
+                </tbody>
+              </table>
 
-                {/* SUSCRIPCIÓN DEL INFORME */}
-                <div className="border border-black mb-4 bg-white relative break-inside-avoid">
-                  {/* 1. Título con fondo gris */}
-                  <div className="bg-gray-200 border-b border-black text-center font-bold py-1 uppercase text-[11px] tracking-wide text-black">
-                    SUSCRIPCIÓN DEL INFORME
-                  </div>
+              {/* SUSCRIPCIÓN DEL INFORME */}
+              <div className="border border-black mb-3 bg-white relative break-inside-avoid print:break-inside-avoid">
+                {/* 1. Título con fondo gris */}
+                <div className="bg-gray-200 border-b border-black text-center font-bold py-1 uppercase text-[11px] tracking-wide text-black">
+                  SUSCRIPCIÓN DEL INFORME
+                </div>
+                
+                {/* 2. Párrafo de certificación con el MISMO fondo gris que el título */}
+                <div 
+                  className={`bg-gray-200 border-b border-black px-3 py-2 text-justify text-[10.5px] leading-snug italic text-black relative ${
+                    data.comentariosCampos?.['valorPagar'] ? 'ring-2 ring-amber-400 bg-amber-100/90' : (isReviewMode ? 'hover:bg-gray-300/80 cursor-pointer group' : '')
+                  }`}
+                  onClick={isReviewMode ? () => openCommentModal('valorPagar', 'Texto de Certificación y Valor a Pagar', data.valorPagar) : undefined}
+                >
+                  El supervisor con la firma del presente documento certifica que verificó el cumplimiento de las obligaciones contractuales para el período de presentación de este informe, como el pago de los aportes respectivos al Sistema de Seguridad Social, por concepto de salud, pensiones y ARL, por tal razón, se autoriza el pago al Contratista de la suma de{' '}
+                  <span className="italic uppercase font-semibold">
+                    {data.valorPagar ? data.valorPagar.trim().replace(/\.$/, '') : ''}
+                  </span>.
                   
-                  {/* 2. Párrafo de certificación con el MISMO fondo gris que el título */}
-                  <div 
-                    className={`bg-gray-200 border-b border-black p-3 text-justify text-[11px] leading-relaxed italic text-black relative ${
-                      data.comentariosCampos?.['valorPagar'] ? 'ring-2 ring-amber-400 bg-amber-100/90' : (isReviewMode ? 'hover:bg-gray-300/80 cursor-pointer group' : '')
-                    }`}
-                    onClick={isReviewMode ? () => openCommentModal('valorPagar', 'Texto de Certificación y Valor a Pagar', data.valorPagar) : undefined}
-                  >
-                    El supervisor con la firma del presente documento certifica que verificó el cumplimiento de las obligaciones contractuales para el período de presentación de este informe, como el pago de los aportes respectivos al Sistema de Seguridad Social, por concepto de salud, pensiones y ARL, por tal razón, se autoriza el pago al Contratista de la suma de{' '}
-                    <span className="italic uppercase">
-                      {data.valorPagar ? data.valorPagar.trim().replace(/\.$/, '') : ''}
-                    </span>.
-                    
-                    {isReviewMode && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openCommentModal('valorPagar', 'Texto de Certificación y Valor a Pagar', data.valorPagar);
-                        }}
-                        className={`print:hidden absolute top-2 right-2 p-1 rounded text-white text-[10px] ${
-                          data.comentariosCampos?.['valorPagar'] ? 'bg-amber-500' : 'bg-emerald-700 opacity-0 group-hover:opacity-100'
-                        }`}
-                        title="Dejar observación sobre certificación y valor"
+                  {isReviewMode && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openCommentModal('valorPagar', 'Texto de Certificación y Valor a Pagar', data.valorPagar);
+                      }}
+                      className={`print:hidden absolute top-2 right-2 p-1 rounded text-white text-[10px] ${
+                        data.comentariosCampos?.['valorPagar'] ? 'bg-amber-500' : 'bg-emerald-700 opacity-0 group-hover:opacity-100'
+                      }`}
+                      title="Dejar observación sobre certificación y valor"
+                    >
+                      <MessageSquare size={11} />
+                    </button>
+                  )}
+
+                  {data.comentariosCampos?.['valorPagar'] && (
+                    <div className="print:hidden mt-1.5 p-1 bg-amber-100 border border-amber-300 rounded text-amber-950 text-[9.5px] font-bold not-italic flex items-center gap-1">
+                      <AlertTriangle size={11} className="text-amber-700 shrink-0" />
+                      <span>Observación sobre valor a pagar: {data.comentariosCampos['valorPagar'].comentario}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* 3. Cuadro de Firmas en 2 Columnas con división central */}
+                <div className="grid grid-cols-2 divide-x divide-black text-center min-h-[130px] print:min-h-[110px] bg-white">
+                  {/* Columna Contratista */}
+                  <div className="p-2.5 pt-3 print:pt-1.5 flex flex-col justify-between">
+                    <div className="h-14 print:h-12 flex items-end justify-center pb-1">
+                      {/* Espacio para firma visual */}
+                      <div className="text-[10px] text-gray-300 italic"></div>
+                    </div>
+                    <div>
+                      <div className="w-[85%] mx-auto border-t border-black pt-1 mb-1">
+                        <p className="font-bold text-[10.5px] text-black">Firma del contratista</p>
+                      </div>
+                      <div 
+                        className="mt-2 px-1 relative group"
+                        onClick={isReviewMode ? () => openCommentModal('contratistaNombre', 'Nombre del Contratista', data.contratistaNombre) : undefined}
                       >
-                        <MessageSquare size={11} />
-                      </button>
-                    )}
-
-                    {data.comentariosCampos?.['valorPagar'] && (
-                      <div className="print:hidden mt-1.5 p-1 bg-amber-100 border border-amber-300 rounded text-amber-950 text-[9.5px] font-bold not-italic flex items-center gap-1">
-                        <AlertTriangle size={11} className="text-amber-700 shrink-0" />
-                        <span>Observación sobre valor a pagar: {data.comentariosCampos['valorPagar'].comentario}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* 3. Cuadro de Firmas en 2 Columnas con división central */}
-                  <div className="grid grid-cols-2 divide-x divide-black text-center min-h-[160px] bg-white">
-                    {/* Columna Contratista */}
-                    <div className="p-3 pt-6 flex flex-col justify-between">
-                      <div className="h-20 flex items-end justify-center pb-2">
-                        {/* Espacio para firma visual */}
-                        <div className="text-[10px] text-gray-300 italic"></div>
-                      </div>
-                      <div>
-                        <div className="w-[85%] mx-auto border-t border-black pt-1 mb-1">
-                          <p className="font-bold text-[11px] text-black">Firma del contratista</p>
-                        </div>
-                        <div 
-                          className="mt-3 px-1 relative group"
-                          onClick={isReviewMode ? () => openCommentModal('contratistaNombre', 'Nombre del Contratista', data.contratistaNombre) : undefined}
-                        >
-                          <div className="bg-gray-300 py-1 px-2 text-[11px] font-semibold italic uppercase text-black w-full text-center shadow-xs">
-                            {data.contratistaNombre}
-                          </div>
+                        <div className="bg-gray-300 py-0.5 px-2 text-[10.5px] font-semibold italic uppercase text-black w-full text-center shadow-xs">
+                          {data.contratistaNombre}
                         </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Columna Supervisor */}
-                    <div className="p-3 pt-6 flex flex-col justify-between">
-                      <div className="h-20 flex items-end justify-center pb-2">
-                        {/* Espacio para firma visual */}
-                        <div className="text-[10px] text-gray-300 italic"></div>
+                  {/* Columna Supervisor */}
+                  <div className="p-2.5 pt-3 print:pt-1.5 flex flex-col justify-between">
+                    <div className="h-14 print:h-12 flex items-end justify-center pb-1">
+                      {/* Espacio para firma visual */}
+                      <div className="text-[10px] text-gray-300 italic"></div>
+                    </div>
+                    <div>
+                      <div className="w-[85%] mx-auto border-t border-black pt-1 mb-1">
+                        <p className="font-bold text-[10.5px] text-black">Firma Supervisor</p>
                       </div>
-                      <div>
-                        <div className="w-[85%] mx-auto border-t border-black pt-1 mb-1">
-                          <p className="font-bold text-[11px] text-black">Firma Supervisor</p>
-                        </div>
-                        <div 
-                          className="mt-3 px-1 relative group"
-                          onClick={isReviewMode ? () => openCommentModal('supervisorNombre', 'Nombre del Supervisor', data.supervisorNombre) : undefined}
-                        >
-                          <div className="bg-gray-300 py-1 px-2 text-[11px] font-semibold italic uppercase text-black w-full text-center shadow-xs">
-                            {data.supervisorNombre}
-                          </div>
+                      <div 
+                        className="mt-2 px-1 relative group"
+                        onClick={isReviewMode ? () => openCommentModal('supervisorNombre', 'Nombre del Supervisor', data.supervisorNombre) : undefined}
+                      >
+                        <div className="bg-gray-300 py-0.5 px-2 text-[10.5px] font-semibold italic uppercase text-black w-full text-center shadow-xs">
+                          {data.supervisorNombre}
                         </div>
                       </div>
                     </div>
@@ -932,7 +929,7 @@ export default function ReportPreview({
         </tbody>
         <tfoot className="table-footer-group print:table-footer-group">
           <tr>
-            <td className="h-[25mm] border-none"></td>
+            <td className="h-[28mm] border-none"></td>
           </tr>
         </tfoot>
       </table>
