@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ReportData, FieldComment } from '../types';
 import QuibdoLogo from './QuibdoLogo';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
 import { MessageSquare, AlertTriangle, Edit3, CheckCircle2 } from 'lucide-react';
 import FieldCommentModal from './FieldCommentModal';
+import { supabaseService } from '../services/supabaseService';
 
 interface Props {
   data: ReportData;
@@ -31,6 +32,24 @@ export default function ReportPreview({
     fieldId: '',
     fieldName: '',
   });
+
+  const [globalMembrete, setGlobalMembrete] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!data.watermarkImage) {
+      supabaseService.getGlobalMembreteUrl().then(url => {
+        if (isMounted && url) {
+          setGlobalMembrete(url);
+        }
+      }).catch(() => {});
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [data.watermarkImage]);
+
+  const watermarkUrl = data.watermarkImage || globalMembrete;
 
   const findCommentForField = (fieldId: string, fieldName: string): { key: string; comment: FieldComment } | null => {
     if (!data.comentariosCampos || Object.keys(data.comentariosCampos).length === 0) return null;
@@ -159,7 +178,7 @@ export default function ReportPreview({
     const hasComment = Boolean(comment);
     const isCorregido = Boolean(comment?.corregido);
 
-    const baseClass = `border border-black px-2 py-1 relative print:static print:break-inside-auto ${className}`;
+    const baseClass = `border border-black px-2 py-1 relative ${className}`;
     const highlightClass = hasComment 
       ? (isCorregido
           ? 'bg-emerald-100/90 text-emerald-950 font-medium border-emerald-500 ring-2 ring-emerald-400 print:bg-transparent print:ring-0'
@@ -174,7 +193,7 @@ export default function ReportPreview({
         onClick={isReviewMode ? () => openCommentModal(effectiveKey, fieldName, fieldValuePreview) : undefined}
         title={isReviewMode ? (isCorregido ? `Corrección realizada por contratista en: ${fieldName}` : `Clic para dejar observación en: ${fieldName}`) : undefined}
       >
-        <div className="relative print:static print:break-inside-auto">
+        <div className="relative">
           {content}
 
           {/* Botón flotante para la administradora en Modo Revisión */}
@@ -242,11 +261,11 @@ export default function ReportPreview({
       />
 
       {/* FONDO / MEMBRETE INSTITUCIONAL (PREVIEW) */}
-      {data.watermarkImage && (
+      {watermarkUrl && (
         <div 
           className="print:hidden absolute inset-0 w-full z-0 pointer-events-none opacity-100"
           style={{
-            backgroundImage: `url(${data.watermarkImage})`,
+            backgroundImage: `url(${watermarkUrl})`,
             backgroundSize: '100% 279.4mm',
             backgroundRepeat: 'repeat-y',
             backgroundPosition: 'top center'
@@ -255,13 +274,13 @@ export default function ReportPreview({
       )}
 
       {/* HEADER REPETITIVO EN CADA PÁGINA */}
-      <table className="w-full relative z-10 print:static print:z-auto">
+      <table className="w-full relative z-10">
         <thead className="table-header-group">
           <tr>
             <th className="px-8 align-top relative border-none pb-3">
-              {data.watermarkImage && (
+              {watermarkUrl && (
                 <img 
-                  src={data.watermarkImage}
+                  src={watermarkUrl}
                   alt="Membrete"
                   className="hidden print:block absolute max-w-none"
                   style={{
@@ -278,7 +297,7 @@ export default function ReportPreview({
 
               {/* Espaciador para el logo superior */}
               <div className="h-[98px] w-full relative">
-                {!data.watermarkImage && (
+                {!watermarkUrl && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-4">
                     <img 
                       src="https://usdsynzkedjydlynkala.supabase.co/storage/v1/object/public/anexos/logo/logo%20alcaldia.png" 
@@ -330,7 +349,7 @@ export default function ReportPreview({
         </thead>
         <tbody>
           <tr>
-            <td className="px-8 pb-4 print:static print:break-inside-auto">
+            <td className="px-8 pb-4">
               {/* DATOS DEL INFORME */}
               <table className="w-full border-collapse border border-black mb-3">
                 <tbody>

@@ -178,22 +178,22 @@
     line-height: 1.35 !important;
   }
 
-  /* Permitir flujo continuo de texto y tablas en el informe evitando espacios vacíos entre hojas */
-  #informe-printable-document,
-  #informe-printable-document > table,
-  #informe-printable-document table,
-  #informe-printable-document tbody,
-  #informe-printable-document tr,
-  #informe-printable-document td,
-  #informe-printable-document td > div {
-    position: static !important;
-    z-index: auto !important;
+  /* Preservar la visualización y posición exacta del membrete institucional */
+  #informe-printable-document thead th img[alt="Membrete"] {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -10mm !important;
+    width: 215.9mm !important;
+    height: 279.4mm !important;
+    object-fit: fill !important;
+    z-index: -1 !important;
+    pointer-events: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  #informe-printable-document table {
-    page-break-inside: auto !important;
-    break-inside: auto !important;
-  }
+  /* Permitir flujo continuo de texto y tablas en las obligaciones evitando espacios vacíos entre hojas */
 
   #informe-printable-document .tabla-obligaciones,
   #informe-printable-document .tabla-obligaciones tbody,
