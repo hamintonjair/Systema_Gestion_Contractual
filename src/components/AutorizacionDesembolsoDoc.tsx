@@ -23,6 +23,22 @@ interface Props {
   authorName?: string;
 }
 
+function parseObjetoConPeriodo(objetoTexto?: string): { objetoBase: string; periodoTexto: string } {
+  if (!objetoTexto) return { objetoBase: '', periodoTexto: '' };
+  
+  const match = objetoTexto.match(/([\s\S]*?)(?:\n\s*|\s+)(CORRESPONDIENTE\s+AL\s+PERIODO[\s\S]*)$/i);
+  if (match) {
+    return {
+      objetoBase: match[1].trim(),
+      periodoTexto: match[2].trim()
+    };
+  }
+  return {
+    objetoBase: objetoTexto.trim(),
+    periodoTexto: ''
+  };
+}
+
 export default function AutorizacionDesembolsoDoc({
   data,
   reportData,
@@ -954,27 +970,27 @@ export default function AutorizacionDesembolsoDoc({
 
           {/* SECCIÓN CONCEPTO Y OBJETO */}
           <div className="pt-2 pb-1.5 print:pt-1 print:pb-1 border-b-2 border-black font-serif">
-            {/* Concepto y Nro con márgenes laterales px-8 */}
-            <div className="flex justify-between items-center px-6 print:px-4 py-1 mb-1">
-              <div className="flex items-center gap-3">
-                <span className="font-bold text-[11px] uppercase tracking-wide">CONCEPTO</span>
-                <div className="border-2 border-black px-4 py-1 w-[380px] max-w-[400px] text-center bg-white font-bold uppercase text-[11px] shadow-none">
+            {/* Concepto y Nro alineados a la derecha dejando el margen izquierdo correspondiente a la columna de títulos */}
+            <div className="flex justify-between items-center ml-[18%] mr-4 print:mr-3 py-1 mb-1">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <span className="font-bold text-[11px] uppercase tracking-wide text-black">CONCEPTO</span>
+                <div className="border border-black px-3 py-0.5 w-[260px] sm:w-[300px] max-w-[320px] text-center bg-white font-arial font-bold uppercase text-[11px] shadow-none">
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={formData.concepto || 'PRESTACION DE SERVICIOS'} 
                       onChange={(e) => handleFieldChange('concepto', e.target.value)} 
-                      className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11px]" 
+                      className="w-full text-center bg-amber-50 outline-none uppercase font-arial font-bold text-[11px]" 
                     />
                   ) : (
-                    <span>{formData.concepto || 'PRESTACION DE SERVICIOS'}</span>
+                    <span className="font-arial font-bold">{formData.concepto || 'PRESTACION DE SERVICIOS'}</span>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className="font-bold text-[11px] uppercase tracking-wide">NRO.</span>
-                <div className="border-2 border-black px-3 py-1 min-w-[50px] text-center bg-white font-bold uppercase text-[11px] shadow-none">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[11px] uppercase tracking-wide text-black">NRO.</span>
+                <div className="border border-black px-2.5 py-0.5 min-w-[50px] text-center bg-white font-arial font-bold uppercase text-[11px] shadow-none">
                   {isEditing ? (
                     <input 
                       type="text" 
@@ -985,18 +1001,18 @@ export default function AutorizacionDesembolsoDoc({
                         handleFieldChange('contratoNro', cleanVal);
                         handleFieldChange('conceptoNro', cleanVal);
                       }} 
-                      className="w-full text-center bg-amber-50 outline-none uppercase font-serif font-bold text-[11px]" 
+                      className="w-full text-center bg-amber-50 outline-none uppercase font-arial font-bold text-[11px]" 
                     />
                   ) : (
-                    <span>{(formData.contratoNro || formData.conceptoNro || '590').replace(/\D/g, '')}</span>
+                    <span className="font-arial font-bold">{(formData.contratoNro || formData.conceptoNro || '590').replace(/\D/g, '')}</span>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Texto "Cuyo objeto es" con margen izquierdo ml-8 */}
-            <div className="flex items-center justify-between mb-1 mx-6 print:mx-4">
-              <div className="text-[11px] font-bold">
+            {/* Texto "Cuyo objeto es" alineado con el cuadro del objeto */}
+            <div className="flex items-center justify-between mb-1 ml-[18%] mr-4 print:mr-3">
+              <div className="text-[11px] font-normal text-black font-serif">
                 Cuyo objeto es
               </div>
               {isEditing && reportData && (
@@ -1023,18 +1039,32 @@ export default function AutorizacionDesembolsoDoc({
               )}
             </div>
 
-            {/* Caja descriptiva del contrato con márgenes laterales mx-8 */}
-            <div className="mx-6 print:mx-4 mb-2 print:mb-1 border-2 border-black p-2 print:p-1.5 text-center text-[11px] font-normal uppercase bg-white leading-relaxed">
+            {/* Caja descriptiva del contrato más estrecha y alineada a la derecha con margen izquierdo */}
+            <div className="ml-[18%] mr-4 print:mr-3 mb-2 print:mb-1 border-2 border-[#107c41] p-2.5 print:p-2 bg-white leading-snug">
               {isEditing ? (
                 <textarea 
                   value={formData.objeto} 
                   onChange={(e) => handleFieldChange('objeto', e.target.value)} 
                   rows={4}
                   placeholder="OBJETO DEL CONTRATO...\nCORRESPONDIENTE AL PERIODO DEL 01 DE JULIO AL 31 DE JULIO 2026"
-                  className="w-full min-h-[65px] text-center bg-amber-50 outline-none resize-y font-serif text-[11px] font-normal leading-relaxed uppercase border border-amber-300 rounded p-1" 
+                  className="w-full min-h-[65px] text-left bg-amber-50 outline-none resize-y font-arial text-[11px] font-normal leading-snug uppercase border border-amber-300 rounded p-1.5 text-black" 
                 />
               ) : (
-                <div className="whitespace-pre-wrap leading-relaxed tracking-tight font-serif text-[11px] font-normal">{formData.objeto}</div>
+                (() => {
+                  const { objetoBase, periodoTexto } = parseObjetoConPeriodo(formData.objeto);
+                  return (
+                    <div className="leading-snug">
+                      <div className="font-arial font-normal text-black text-left sm:text-justify text-[11px] leading-snug tracking-normal uppercase whitespace-pre-wrap">
+                        {objetoBase || formData.objeto}
+                      </div>
+                      {periodoTexto && (
+                        <div className="font-serif font-normal text-[#002060] text-center mt-1 text-[11px] tracking-normal uppercase">
+                          {periodoTexto}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
               )}
             </div>
           </div>
@@ -1149,100 +1179,238 @@ export default function AutorizacionDesembolsoDoc({
             </div>
           </div>
 
-          {/* SECCIÓN ENDOSOS CON MÁRGENES mx-6 (BLOQUES FLOTANTES) */}
-          <div className="py-2.5 px-2 print:py-1.5 print:px-1 border-b-2 border-black font-serif text-[10px] space-y-2 print:space-y-1">
+          {/* SECCIÓN ENDOSOS CON MÁRGENES ALINEADOS A LA DERECHA (ml-[18%] mr-4) SIN BORDE INFERIOR */}
+          <div className="py-2 print:py-1 font-arial text-[11px] space-y-2 print:space-y-1.5">
             {/* Endoso 1 */}
-            <div className="mx-6 print:mx-4 border-2 border-black p-1.5 print:p-1 font-normal">
-              <div className="mb-1 print:mb-0.5 font-bold uppercase text-[10px]">ENDOSO 1:</div>
-              <div className="flex items-center mb-1 print:mb-0.5">
-                <span className="w-36 font-normal">Beneficiario del endoso:</span>
-                <div className="flex-grow border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso1Beneficiario} onChange={(e) => handleFieldChange('endoso1Beneficiario', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso1Beneficiario}
+            <div className="ml-[18%] mr-4 print:mr-3 border border-black p-2 print:p-1.5 font-normal bg-white">
+              <div className="mb-1.5 print:mb-1 font-bold uppercase text-[11px] font-arial text-black">ENDOSO 1:</div>
+              
+              {/* Fila 1: Beneficiario del endoso / NIT/CC */}
+              <div className="flex items-end mb-1.5 print:mb-1 text-[11px] leading-none">
+                <span className="shrink-0 font-normal pr-1 text-black font-arial">Beneficiario del endoso:</span>
+                <div className="flex-grow border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso1Beneficiario} 
+                      onChange={(e) => handleFieldChange('endoso1Beneficiario', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso1Beneficiario}</span>
+                  )}
                 </div>
-                <span className="w-14 text-center font-normal">NIT/CC</span>
-                <div className="w-36 border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso1NitCc} onChange={(e) => handleFieldChange('endoso1NitCc', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso1NitCc}
+                <span className="shrink-0 font-normal px-2 text-black font-arial">NIT/CC</span>
+                <div className="w-[140px] sm:w-[160px] shrink-0 border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso1NitCc} 
+                      onChange={(e) => handleFieldChange('endoso1NitCc', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso1NitCc}</span>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center mb-1 print:mb-0.5">
-                <span className="w-14 font-normal">Cuenta</span>
-                <div className="flex-grow border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso1Cuenta} onChange={(e) => handleFieldChange('endoso1Cuenta', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso1Cuenta}
+
+              {/* Fila 2: Cuenta / Banco / Tipo */}
+              <div className="flex items-end mb-1.5 print:mb-1 text-[11px] leading-none">
+                <span className="shrink-0 font-normal pr-1 text-black font-arial">Cuenta</span>
+                <div className="flex-grow border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso1Cuenta} 
+                      onChange={(e) => handleFieldChange('endoso1Cuenta', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso1Cuenta}</span>
+                  )}
                 </div>
-                <span className="w-14 text-center font-normal">Banco</span>
-                <div className="flex-grow border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso1Banco} onChange={(e) => handleFieldChange('endoso1Banco', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso1Banco}
+                <span className="shrink-0 font-normal px-2 text-black font-arial">Banco</span>
+                <div className="w-[140px] sm:w-[160px] shrink-0 border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso1Banco} 
+                      onChange={(e) => handleFieldChange('endoso1Banco', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso1Banco}</span>
+                  )}
                 </div>
-                <span className="w-12 text-center font-normal">Tipo</span>
-                <div className="flex-grow border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso1Tipo} onChange={(e) => handleFieldChange('endoso1Tipo', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso1Tipo}
+                <span className="shrink-0 font-normal px-2 text-black font-arial">Tipo</span>
+                <div className="w-[110px] sm:w-[130px] shrink-0 border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso1Tipo} 
+                      onChange={(e) => handleFieldChange('endoso1Tipo', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso1Tipo}</span>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center">
-                <span className="w-14 font-normal">Concepto</span>
-                <div className="flex-grow border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso1Concepto} onChange={(e) => handleFieldChange('endoso1Concepto', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso1Concepto}
+
+              {/* Fila 3: Concepto / Valor */}
+              <div className="flex items-end text-[11px] leading-none">
+                <span className="shrink-0 font-normal pr-1 text-black font-arial">Concepto</span>
+                <div className="flex-grow border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso1Concepto} 
+                      onChange={(e) => handleFieldChange('endoso1Concepto', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso1Concepto}</span>
+                  )}
                 </div>
-                <span className="w-14 text-center font-normal">Valor</span>
-                <div className="w-36 border border-black text-left px-2 mx-1 h-4 flex items-center">
-                  {isEditing ? <input type="text" value={formData.endoso1Valor || '$ 0'} onChange={(e) => handleFieldChange('endoso1Valor', e.target.value)} className="w-full bg-amber-50 outline-none text-left h-4 font-serif text-[10px]" /> : (formData.endoso1Valor || '$ 0')}
+                <span className="shrink-0 font-normal px-2 text-black font-arial">Valor</span>
+                <div className="w-[140px] sm:w-[160px] shrink-0 border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso1Valor || '$ 0'} 
+                      onChange={(e) => handleFieldChange('endoso1Valor', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso1Valor || '$ 0'}</span>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Endoso 2 */}
-            <div className="mx-6 print:mx-4 border-2 border-black p-1.5 print:p-1 font-normal">
-              <div className="mb-1 print:mb-0.5 font-bold uppercase text-[10px]">ENDOSO 2:</div>
-              <div className="flex items-center mb-1 print:mb-0.5">
-                <span className="w-36 font-normal">Beneficiario del endoso:</span>
-                <div className="flex-grow border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso2Beneficiario} onChange={(e) => handleFieldChange('endoso2Beneficiario', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso2Beneficiario}
+            <div className="ml-[18%] mr-4 print:mr-3 border border-black p-2 print:p-1.5 font-normal bg-white">
+              <div className="mb-1.5 print:mb-1 font-bold uppercase text-[11px] font-arial text-black">ENDOSO 2:</div>
+              
+              {/* Fila 1: Beneficiario del endoso / NIT/CC */}
+              <div className="flex items-end mb-1.5 print:mb-1 text-[11px] leading-none">
+                <span className="shrink-0 font-normal pr-1 text-black font-arial">Beneficiario del endoso:</span>
+                <div className="flex-grow border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso2Beneficiario} 
+                      onChange={(e) => handleFieldChange('endoso2Beneficiario', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso2Beneficiario}</span>
+                  )}
                 </div>
-                <span className="w-14 text-center font-normal">NIT/CC</span>
-                <div className="w-36 border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso2NitCc} onChange={(e) => handleFieldChange('endoso2NitCc', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso2NitCc}
+                <span className="shrink-0 font-normal px-2 text-black font-arial">NIT/CC</span>
+                <div className="w-[140px] sm:w-[160px] shrink-0 border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso2NitCc} 
+                      onChange={(e) => handleFieldChange('endoso2NitCc', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso2NitCc}</span>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center mb-1 print:mb-0.5">
-                <span className="w-14 font-normal">Cuenta</span>
-                <div className="flex-grow border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso2Cuenta} onChange={(e) => handleFieldChange('endoso2Cuenta', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso2Cuenta}
+
+              {/* Fila 2: Cuenta / Banco / Tipo */}
+              <div className="flex items-end mb-1.5 print:mb-1 text-[11px] leading-none">
+                <span className="shrink-0 font-normal pr-1 text-black font-arial">Cuenta</span>
+                <div className="flex-grow border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso2Cuenta} 
+                      onChange={(e) => handleFieldChange('endoso2Cuenta', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso2Cuenta}</span>
+                  )}
                 </div>
-                <span className="w-14 text-center font-normal">Banco</span>
-                <div className="flex-grow border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso2Banco} onChange={(e) => handleFieldChange('endoso2Banco', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso2Banco}
+                <span className="shrink-0 font-normal px-2 text-black font-arial">Banco</span>
+                <div className="w-[140px] sm:w-[160px] shrink-0 border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso2Banco} 
+                      onChange={(e) => handleFieldChange('endoso2Banco', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso2Banco}</span>
+                  )}
                 </div>
-                <span className="w-12 text-center font-normal">Tipo</span>
-                <div className="flex-grow border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso2Tipo} onChange={(e) => handleFieldChange('endoso2Tipo', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso2Tipo}
+                <span className="shrink-0 font-normal px-2 text-black font-arial">Tipo</span>
+                <div className="w-[110px] sm:w-[130px] shrink-0 border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso2Tipo} 
+                      onChange={(e) => handleFieldChange('endoso2Tipo', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso2Tipo}</span>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center">
-                <span className="w-14 font-normal">Concepto</span>
-                <div className="flex-grow border-b border-black text-center mx-2 h-4">
-                  {isEditing ? <input type="text" value={formData.endoso2Concepto} onChange={(e) => handleFieldChange('endoso2Concepto', e.target.value)} className="w-full bg-amber-50 outline-none text-center h-4 font-serif text-[10px]" /> : formData.endoso2Concepto}
+
+              {/* Fila 3: Concepto / Valor */}
+              <div className="flex items-end text-[11px] leading-none">
+                <span className="shrink-0 font-normal pr-1 text-black font-arial">Concepto</span>
+                <div className="flex-grow border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso2Concepto} 
+                      onChange={(e) => handleFieldChange('endoso2Concepto', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso2Concepto}</span>
+                  )}
                 </div>
-                <span className="w-14 text-center font-normal">Valor</span>
-                <div className="w-36 border border-black text-left px-2 mx-1 h-4 flex items-center">
-                  {isEditing ? <input type="text" value={formData.endoso2Valor || '$ 0'} onChange={(e) => handleFieldChange('endoso2Valor', e.target.value)} className="w-full bg-amber-50 outline-none text-left h-4 font-serif text-[10px]" /> : (formData.endoso2Valor || '$ 0')}
+                <span className="shrink-0 font-normal px-2 text-black font-arial">Valor</span>
+                <div className="w-[140px] sm:w-[160px] shrink-0 border-b border-dotted border-black text-left px-1 min-h-[16px] flex items-end">
+                  {isEditing ? (
+                    <input 
+                      type="text" 
+                      value={formData.endoso2Valor || '$ 0'} 
+                      onChange={(e) => handleFieldChange('endoso2Valor', e.target.value)} 
+                      className="w-full bg-amber-50 outline-none font-arial text-[11px] leading-none h-4" 
+                    />
+                  ) : (
+                    <span className="font-arial text-[11px] leading-none">{formData.endoso2Valor || '$ 0'}</span>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* SECCIÓN FINAL (FIRMA, DIRECCIÓN, TELÉFONO con márgenes ml-10 y anchos definidos) */}
-          <div className="pt-2 pb-1.5 px-3 print:pt-1 print:pb-0.5 font-serif">
-            <div className="ml-8 print:ml-6 mb-1 mt-1.5 print:mt-0.5 space-y-1 print:space-y-0.5">
+          {/* SECCIÓN FINAL (FIRMA, DIRECCIÓN, TELÉFONO alineados a la derecha con ml-[18%]) */}
+          <div className="pt-2 pb-1.5 font-serif">
+            <div className="ml-[18%] mr-4 print:mr-3 mb-1 mt-1 print:mt-0.5 space-y-1 print:space-y-0.5">
               
               {/* Fila FIRMA */}
               <div className="flex flex-row items-end">
-                <div className="w-[120px] font-bold text-[12px] leading-none pb-1">FIRMA</div>
-                <div className="border-b-2 border-black w-[300px] h-8 flex items-end pl-2 pb-0.5 relative">
+                <div className="w-[110px] font-bold text-[12px] leading-none pb-1">FIRMA</div>
+                <div className="border-b-2 border-black w-[320px] sm:w-[360px] h-9 flex items-end pl-2 pb-0.5 relative">
                   {formData.firmaContratista ? (
                     <img 
                       src={formData.firmaContratista} 
                       alt="Firma Contratista" 
-                      className="max-h-10 print:max-h-8 object-contain"
+                      className="max-h-11 print:max-h-9 object-contain absolute bottom-0.5 left-2"
                     />
                   ) : isEditing ? (
                     <input 
@@ -1256,8 +1424,8 @@ export default function AutorizacionDesembolsoDoc({
 
               {/* Fila DIRECCIÓN */}
               <div className="flex flex-row items-center">
-                <div className="w-[120px] font-bold text-[11px] uppercase leading-none">DIRECCIÓN</div>
-                <div className="bg-[#e5e7eb] w-[400px] px-3 py-1 text-[11px] font-normal uppercase text-black leading-none">
+                <div className="w-[110px] font-bold text-[11px] uppercase leading-none">DIRECCIÓN</div>
+                <div className="bg-[#e5e7eb] w-[320px] sm:w-[360px] px-2 py-1 text-[11px] font-normal uppercase text-black leading-none">
                   {isEditing ? (
                     <input 
                       type="text" 
@@ -1273,8 +1441,8 @@ export default function AutorizacionDesembolsoDoc({
 
               {/* Fila TELÉFONO */}
               <div className="flex flex-row items-center">
-                <div className="w-[120px] font-bold text-[11px] uppercase leading-none">TELÉFONO</div>
-                <div className="bg-[#e5e7eb] w-[400px] px-3 py-1 text-[11px] font-normal uppercase text-black leading-none">
+                <div className="w-[110px] font-bold text-[11px] uppercase leading-none">TELÉFONO</div>
+                <div className="bg-[#e5e7eb] w-[320px] sm:w-[360px] px-2 py-1 text-[11px] font-normal uppercase text-black leading-none">
                   {isEditing ? (
                     <input 
                       type="text" 

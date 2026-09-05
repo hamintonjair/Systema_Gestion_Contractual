@@ -25,7 +25,7 @@
 
 /* Tipografía Oficial: Documento Equivalente a la Factura / Desembolso debe usar Times New Roman tamaño 12 */
 #desembolso-document,
-#desembolso-document *:not(.font-arial-narrow):not(.font-arial-narrow *) {
+#desembolso-document *:not(.font-arial-narrow):not(.font-arial-narrow *):not(.font-arial):not(.font-arial *):not(.font-sans):not(.font-sans *) {
   font-family: "Times New Roman", Times, serif !important;
 }
 
@@ -33,10 +33,15 @@
   font-size: 12pt;
 }
 
-#desembolso-document input,
-#desembolso-document textarea,
-#desembolso-document select {
+#desembolso-document input:not(.font-arial):not(.font-sans),
+#desembolso-document textarea:not(.font-arial):not(.font-sans),
+#desembolso-document select:not(.font-arial):not(.font-sans) {
   font-family: "Times New Roman", Times, serif !important;
+}
+
+.font-arial,
+.font-arial * {
+  font-family: Arial, Helvetica, sans-serif !important;
 }
 
 .font-arial-narrow,
