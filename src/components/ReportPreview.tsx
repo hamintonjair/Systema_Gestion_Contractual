@@ -672,6 +672,13 @@ export default function ReportPreview({
                     </tr>
                   ))}
                 </tbody>
+                <tfoot className="tabla-obligaciones-foot print:table-footer-group">
+                  <tr>
+                    <td className="border-t border-black p-0 m-0 h-0" style={{ height: 0, padding: 0, margin: 0, borderTop: '1px solid black', borderBottom: 'none' }}></td>
+                    <td className="border-t border-black p-0 m-0 h-0" style={{ height: 0, padding: 0, margin: 0, borderTop: '1px solid black', borderBottom: 'none' }}></td>
+                    <td className="border-t border-black p-0 m-0 h-0" style={{ height: 0, padding: 0, margin: 0, borderTop: '1px solid black', borderBottom: 'none' }}></td>
+                  </tr>
+                </tfoot>
               </table>
 
               {/* BLOQUE: OBSERVACIONES Y SUSCRIPCIÓN */}
@@ -930,7 +937,7 @@ export default function ReportPreview({
             </tr>
           )}
         </tbody>
-        <tfoot className="table-footer-group print:table-footer-group">
+        <tfoot className="outer-page-footer-spacer table-footer-group print:table-footer-group">
           <tr>
             <td className="border-none p-0 m-0" style={{ height: '28mm', minHeight: '28mm' }}>
               <div style={{ height: '28mm', minHeight: '28mm', width: '100%' }} className="pointer-events-none">&nbsp;</div>

@@ -208,11 +208,11 @@
     display: table-row-group !important;
   }
 
-  /* Espaciador de pie de página repetitivo (tfoot) para garantizar que el texto NUNCA solape el pie de página institucional */
-  tfoot.table-footer-group,
-  #informe-printable-document tfoot,
-  #informe-printable-document tfoot tr,
-  #informe-printable-document tfoot td {
+  /* Espaciador de pie de página repetitivo (tfoot exterior) para garantizar que el texto NUNCA solape el pie de página institucional */
+  .outer-page-footer-spacer,
+  #informe-printable-document > table > tfoot,
+  #informe-printable-document > table > tfoot > tr,
+  #informe-printable-document > table > tfoot > tr > td {
     display: table-footer-group !important;
     height: 28mm !important;
     min-height: 28mm !important;
@@ -220,6 +220,51 @@
     margin: 0 !important;
     border: none !important;
     background: transparent !important;
+  }
+
+  /* Línea horizontal de cierre inferior del cuadro al final de cada hoja en la tabla de obligaciones */
+  #informe-printable-document .tabla-obligaciones > tfoot,
+  #informe-printable-document .tabla-obligaciones tfoot {
+    display: table-footer-group !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    line-height: 0 !important;
+  }
+
+  #informe-printable-document .tabla-obligaciones > tfoot > tr,
+  #informe-printable-document .tabla-obligaciones tfoot tr {
+    height: 0 !important;
+    max-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    line-height: 0 !important;
+  }
+
+  #informe-printable-document .tabla-obligaciones > tfoot td,
+  #informe-printable-document .tabla-obligaciones tfoot td {
+    height: 0 !important;
+    max-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 0 !important;
+    border-top: 1px solid black !important;
+    border-bottom: none !important;
+    border-left: 1px solid black !important;
+    border-right: 1px solid black !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Decoración continua de bordes en fragmentación de celdas para cerrar cuadros en saltos de hoja */
+  #informe-printable-document .tabla-obligaciones,
+  #informe-printable-document .tabla-obligaciones tr,
+  #informe-printable-document .tabla-obligaciones td {
+    -webkit-box-decoration-break: clone !important;
+    box-decoration-break: clone !important;
   }
 
   /* Permitir flujo continuo y división automática de filas y celdas sin dejar espacios vacíos en ninguna hoja */
