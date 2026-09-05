@@ -193,18 +193,66 @@
     print-color-adjust: exact !important;
   }
 
-  /* Permitir flujo continuo de texto y tablas en las obligaciones evitando espacios vacíos entre hojas */
+  /* Repetir thead en cada página con espaciado adecuado para no solapar texto */
+  thead.table-header-group,
+  #informe-printable-document thead {
+    display: table-header-group !important;
+  }
 
-  #informe-printable-document .tabla-obligaciones,
-  #informe-printable-document .tabla-obligaciones tbody,
-  #informe-printable-document .tabla-obligaciones tr,
-  #informe-printable-document .tabla-obligaciones td,
-  #informe-printable-document .tabla-obligaciones td > div,
-  #informe-printable-document .font-century-gothic-12 {
+  #informe-printable-document thead th {
+    padding-bottom: 12px !important;
+  }
+
+  /* El encabezado interno de la tabla de obligaciones se muestra como table-row-group para evitar colisión de headers repetidos */
+  #informe-printable-document .tabla-obligaciones > thead {
+    display: table-row-group !important;
+  }
+
+  /* Espaciador de pie de página repetitivo (tfoot) para garantizar que el texto NUNCA solape el pie de página institucional */
+  tfoot.table-footer-group,
+  #informe-printable-document tfoot,
+  #informe-printable-document tfoot tr,
+  #informe-printable-document tfoot td {
+    display: table-footer-group !important;
+    height: 28mm !important;
+    min-height: 28mm !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  /* Permitir flujo continuo y división automática de filas y celdas sin dejar espacios vacíos en ninguna hoja */
+  #informe-printable-document .tabla-obligaciones {
+    border-collapse: collapse !important;
     page-break-inside: auto !important;
     break-inside: auto !important;
-    orphans: 2 !important;
-    widows: 2 !important;
+  }
+
+  #informe-printable-document .tabla-obligaciones tbody {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  #informe-printable-document .tabla-obligaciones tr {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+    page-break-before: auto !important;
+    break-before: auto !important;
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  #informe-printable-document .tabla-obligaciones td,
+  #informe-printable-document .tabla-obligaciones td > div,
+  #informe-printable-document .tabla-obligaciones td *,
+  #informe-printable-document .font-century-gothic-12 {
+    position: static !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+    orphans: 1 !important;
+    widows: 1 !important;
+    box-sizing: border-box !important;
   }
 
   .break-inside-auto {
@@ -216,11 +264,6 @@
   .break-inside-avoid {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-  }
-
-  /* Repetir thead en cada página */
-  thead.table-header-group {
-    display: table-header-group !important;
   }
 }
 

@@ -178,7 +178,7 @@ export default function ReportPreview({
     const hasComment = Boolean(comment);
     const isCorregido = Boolean(comment?.corregido);
 
-    const baseClass = `border border-black px-2 py-1 relative ${className}`;
+    const baseClass = `border border-black px-2 py-1 relative print:static ${className}`;
     const highlightClass = hasComment 
       ? (isCorregido
           ? 'bg-emerald-100/90 text-emerald-950 font-medium border-emerald-500 ring-2 ring-emerald-400 print:bg-transparent print:ring-0'
@@ -193,7 +193,7 @@ export default function ReportPreview({
         onClick={isReviewMode ? () => openCommentModal(effectiveKey, fieldName, fieldValuePreview) : undefined}
         title={isReviewMode ? (isCorregido ? `Corrección realizada por contratista en: ${fieldName}` : `Clic para dejar observación en: ${fieldName}`) : undefined}
       >
-        <div className="relative">
+        <div className="relative print:static">
           {content}
 
           {/* Botón flotante para la administradora en Modo Revisión */}
@@ -646,7 +646,7 @@ export default function ReportPreview({
                         `obligacion_${obs.id}_descripcion`,
                         `Obligación #${idx + 1} (Descripción)`,
                         obs.descripcion,
-                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12 print:break-inside-auto">
+                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12 print:break-inside-auto print:static">
                           {obs.descripcion}
                         </div>,
                         'align-top font-century-gothic-12'
@@ -655,7 +655,7 @@ export default function ReportPreview({
                         `obligacion_${obs.id}_actividades`,
                         `Obligación #${idx + 1} (Actividades Desarrolladas)`,
                         obs.actividades,
-                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12 print:break-inside-auto">
+                        <div className="text-justify whitespace-pre-wrap text-[12pt] leading-snug font-century-gothic-12 print:break-inside-auto print:static">
                           {obs.actividades}
                         </div>,
                         'align-top font-century-gothic-12'
@@ -664,7 +664,7 @@ export default function ReportPreview({
                         `obligacion_${obs.id}_soportes`,
                         `Obligación #${idx + 1} (Soportes)`,
                         obs.soportes,
-                        <div className="text-center text-[12pt] font-medium font-century-gothic-12 print:break-inside-auto">
+                        <div className="text-center text-[12pt] font-medium font-century-gothic-12 print:break-inside-auto print:static">
                           {obs.soportes}
                         </div>,
                         'align-top text-center font-century-gothic-12'
@@ -932,7 +932,9 @@ export default function ReportPreview({
         </tbody>
         <tfoot className="table-footer-group print:table-footer-group">
           <tr>
-            <td className="h-[25mm] border-none"></td>
+            <td className="border-none p-0 m-0" style={{ height: '28mm', minHeight: '28mm' }}>
+              <div style={{ height: '28mm', minHeight: '28mm', width: '100%' }} className="pointer-events-none">&nbsp;</div>
+            </td>
           </tr>
         </tfoot>
       </table>
