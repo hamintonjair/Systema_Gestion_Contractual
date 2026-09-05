@@ -1058,7 +1058,7 @@ export default function AutorizacionDesembolsoDoc({
                         {objetoBase || formData.objeto}
                       </div>
                       {periodoTexto && (
-                        <div className="font-serif font-normal text-[#002060] text-center mt-1 text-[11px] tracking-normal uppercase">
+                        <div className="font-arial font-normal text-black text-center mt-1 text-[11px] tracking-normal uppercase">
                           {periodoTexto}
                         </div>
                       )}
