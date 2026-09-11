@@ -2,66 +2,87 @@
 
 ![React](https://img.shields.io/badge/React-18.0-blue?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)
-![Vite](https://img.shields.io/badge/Vite-4.0-purple?logo=vite)
+![Vite](https://img.shields.io/badge/Vite-5.0-purple?logo=vite)
+![Google Gemini](https://img.shields.io/badge/Google_Gemini-3.8_Flash-orange?logo=google)
 ![Supabase](https://img.shields.io/badge/Supabase-Database-green?logo=supabase)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.0-cyan?logo=tailwind-css)
 
-Una plataforma integral y segura diseñada para la modernización, diligenciamiento, y seguimiento de los **Informes Mensuales de Actividades** y **Obligaciones Contractuales** de los contratistas de la Alcaldía de Quibdó. 
-
-Este sistema elimina el uso excesivo de papel, automatiza la validación de reportes, mejora la trazabilidad documental y permite a los supervisores auditar eficientemente la ejecución de los recursos públicos.
+Una plataforma integral, moderna y segura diseñada para la modernización, radicación, auditoría y seguimiento de los **Informes Mensuales de Actividades**, **Cuentas de Cobro**, y el **Informe Final de Ejecución Contractual con Inteligencia Artificial** para los contratistas y supervisores de la **Alcaldía Municipal de Quibdó**.
 
 ---
 
-## ✨ Características Principales
+## ✨ Módulos y Funcionalidades Principales
 
-### 👷‍♂️ Módulo para Contratistas
-*   **Diligenciamiento Guiado:** Interfaz intuitiva para redactar actividades por cada obligación contractual.
-*   **Gestión Fotográfica:** Carga, compresión en el navegador (para ahorrar datos) y asociación de hasta 5 fotografías probatorias por obligación.
-*   **Autoguardado y Tolerancia a Fallos:** Sincronización continua en `localStorage` combinada con copias en la nube (Supabase) para evitar pérdida de datos si se pierde la conexión.
-*   **Suite Documental:** Autogeneración en PDF de Planilla de Seguridad Social, Declaración Juramentada, y Soportes de Fiduciaria.
-*   **Corrección de Observaciones:** Visualización de comentarios de rechazo a nivel de campo específico (casilla por casilla) hechos por la supervisión.
+### 1. 👷‍♂️ Módulo para Contratistas (Dashboard Integral)
+* **Diligenciamiento Guiado de Informes Mensuales:** Redacción estructurada de actividades ejecutadas por cada obligación contractual pactada.
+* **Registro y Bitácora Fotográfica:** Carga y compresión en el navegador de hasta 5 fotografías probatorias por obligación con fecha y descripción.
+* **Suite Documental para Cuenta de Cobro (7 Módulos en 1):**
+  1. **Informe Mensual de Actividades:** Generación y exportación oficial en PDF y Word.
+  2. **Certificado de Supervisión:** Emisión y cálculo automático para revisión del supervisor.
+  3. **Soporte Fiduciaria:** Certificación bancaria y datos de desembolso fiduciario.
+  4. **Declaración Juramentada de Renta:** Cumplimiento legal del Art. 3 Decreto 522/2003.
+  5. **Autorización de Desembolso:** Documento equivalente a factura para personas naturales no comerciantes.
+  6. **Orden de Documentos:** Checklist interactivo y guía paso a paso para radicación de cuenta de cobro.
+  7. **Informe Final de Ejecución Contractual (IA):** Consolidación de todo el periodo contractual.
+* **Auditoría y Corrección:** Visualización inmediata de observaciones puntuales casilla por casilla devueltas por el supervisor.
+* **Notificaciones en Tiempo Real:** Avisos instantáneos de radicación, devolución o aprobación de informes.
 
-### 👩‍💼 Módulo para Supervisores (Secretarías)
-*   **Panel de Control (Dashboard):** Vista general de los informes recibidos, en revisión, aprobados y pendientes de firmas.
-*   **Auditoría Granular:** Capacidad de devolver informes dejando observaciones específicas directamente sobre las obligaciones, fechas o montos que presentan inconsistencias.
-*   **Certificación Automática:** Emisión y firma digital de los **Certificados de Supervisión**, Autorizaciones de Desembolso y Soportes de Liquidación.
-*   **Gestión de Contratos:** Control de prorrogas, adiciones, CDP, CRP y vigencia de pólizas de los contratistas a cargo.
+### 2. 🤖 Módulo de Inteligencia Artificial (Google Gemini)
+* **Consolidación Automática:** Analiza y agrupa todos los informes mensuales y obligaciones ejecutadas del contrato desde Supabase y almacenamiento local.
+* **Alineación con el Plan de Desarrollo Municipal:** Cruza las actividades ejecutadas con las metas e indicadores del Plan de Desarrollo de Quibdó.
+* **Redacción Técnica Profesional:** Genera introducción, metodología de intervención por zonas, cuadro consolidado de actividades por periodos, análisis técnico, impacto y recomendaciones.
+* **Exportación Oficial a Word (.docx):** Genera el archivo editable con diseño institucional listo para firma y radicación.
 
-### ⚙️ Características del Sistema
-*   **Generador PDF Nativo:** Conversión precisa de las vistas HTML a documentos PDF con membretes oficiales y diseño institucional listo para radicación, sin depender de costosos servicios de terceros.
-*   **Autenticación y Roles (RBAC):** Accesos diferenciados para Super Administradores, Administradores de Secretaría y Contratistas.
+### 3. 👩‍💼 Módulo para Supervisores y Secretarías
+* **Auditoría Granular en Tiempo Real:** Aprobación o devolución de informes con comentarios específicos por campo u obligación.
+* **Gestión de Dependencia:** Control consolidado de contratistas adscritos, estados de informes y fechas de radicación.
+* **Firma y Validación:** Emisión ágil de certificados de cumplimiento a satisfacción.
+
+### 4. 👑 Módulo Super Administrador
+* **Gestión Global de Secretarías:** Creación, edición y administración de dependencias municipales y sus supervisores.
+* **Directorio Maestro de Usuarios:** Control de roles, credenciales, contratos y asignaciones.
+* **Panel de Configuración de IA (Google Gemini):**
+  * Configuración institucional de API Key.
+  * Selector de modelos activos: `gemini-3.8-flash` (Recomendado/Gratuito), `gemini-3.1-flash-lite`, `gemini-3.1-pro-preview`.
+  * Herramienta de **Diagnóstico y Prueba de Conexión en Vivo**.
+  * Visualizador y copiador del script SQL para Supabase en 1 clic.
 
 ---
 
 ## 🛠️ Arquitectura y Tecnologías
 
-*   **Frontend Core:** React 18 (Funcional) + TypeScript.
-*   **Build Tool:** Vite (Optimizado para tiempos de compilación rápidos).
-*   **Estilos y UI:** Tailwind CSS (Mobile-first, utilitario) y Lucide React (Iconografía).
-*   **Backend as a Service (BaaS):** Supabase.
-    *   *PostgreSQL:* Modelado de datos relacional (Contratos, Informes, Obligaciones, Usuarios).
-    *   *Storage:* Almacenamiento seguro de anexos fotográficos.
-*   **Procesamiento de Archivos:**
-    *   `browser-image-compression`: Reducción del peso de las imágenes antes de enviarlas al servidor.
-    *   `jspdf` y `html2canvas`: Motor de renderizado PDF en el lado del cliente.
+* **Frontend:** React 18 (Hooks y Componentes Funcionales) + TypeScript.
+* **Estilos y Maquetación:** Tailwind CSS + Lucide React (iconografía).
+* **Motor de Inteligencia Artificial:** `@google/genai` (Google Gen AI SDK oficial).
+* **Base de Datos y Tiempo Real:** Supabase (PostgreSQL + Row Level Security + Realtime).
+* **Persistencia Híbrida:** Sincronización en la nube con respaldo y caché en `localStorage` tolerante a fallos de red.
+* **Generación Documental:**
+  * `docx`: Motor de construcción y exportación a Microsoft Word (.docx).
+  * `jspdf` + `html2canvas`: Motor de renderizado e impresión en PDF.
+  * `browser-image-compression`: Optimización de imágenes en el cliente antes de la carga.
 
 ---
 
-## 📂 Estructura del Proyecto
+## 🗄️ Esquema de Base de Datos (Supabase / PostgreSQL)
 
-```text
-src/
-├── components/          # Componentes reutilizables de UI y vistas modulares (Dashboards, Editores)
-├── services/            # Lógica de negocio y conexión con APIs (SupabaseService)
-├── utils/               # Funciones de ayuda (formateo de fechas, moneda, cálculos de liquidación)
-├── App.tsx              # Punto de entrada principal y enrutador de vistas por roles
-├── types.ts             # Definición estricta de interfaces y tipos de TypeScript
-└── index.css            # Archivo global de estilos Tailwind
-```
+El sistema opera sobre las siguientes tablas en Supabase:
+
+1. **`secretarias`**: Dependencias de la Alcaldía de Quibdó (código, nombre, NIT).
+2. **`usuarios`**: Perfiles de usuarios (SuperAdmin, Supervisores de Secretaría, Contratistas).
+3. **`informes_mensuales`**: Informes radicados, periodos, valores, obligaciones y estados.
+4. **`comentarios_campos`**: Observaciones de auditoría por casilla específica.
+5. **`notificaciones`**: Alertas institucionales para contratistas y supervisores.
+6. **`configuracion_ia`**: API Key y modelo de Google Gemini activo a nivel municipal.
+7. **`informes_finales`**: Consolidado técnico, cuadro de actividades y metas del Plan de Desarrollo.
+
+### Scripts de Migración SQL
+Los scripts de creación de tablas y políticas de seguridad RLS se encuentran en:
+* `/src/db/informes_finales_y_configuracion_schema.sql` (Tablas de IA e Informes Finales)
+* `/src/db/notifications_schema.sql` (Tabla de Notificaciones)
 
 ---
 
-## 🚀 Instalación y Desarrollo Local
+## 🚀 Instalación y Ejecución Local
 
 1. **Clonar el repositorio:**
    ```bash
@@ -69,51 +90,40 @@ src/
    cd alcaldia-gestion-contractual
    ```
 
-2. **Instalar las dependencias:**
+2. **Instalar dependencias:**
    ```bash
    npm install
    ```
 
-3. **Configurar las Variables de Entorno:**
-   Crea un archivo `.env` en la raíz del proyecto. Deberás enlazarlo con tu proyecto de Supabase:
+3. **Variables de Entorno (`.env`):**
+   Crea un archivo `.env` en la raíz del proyecto:
    ```env
    VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
    VITE_SUPABASE_ANON_KEY=tu_clave_anon_publica
+   GEMINI_API_KEY=tu_api_key_de_google_ai_studio
    ```
 
-4. **Iniciar el Servidor de Desarrollo:**
+4. **Iniciar el servidor de desarrollo:**
    ```bash
    npm run dev
    ```
-   El proyecto estará disponible en `http://localhost:3000`.
+   Disponible en `http://localhost:3000`.
 
----
-
-## ☁️ Guía de Despliegue en Render (Producción)
-
-Esta aplicación está optimizada para ser desplegada como un **Static Site** (Sitio Estático) en plataformas modernas como Render, Vercel o Netlify.
-
-Si utilizas [Render.com](https://render.com/), configura tu servicio Web Estático de la siguiente manera:
-
-1. Conecta este repositorio de GitHub.
-2. **Build Command:** 
+5. **Compilación para Producción:**
    ```bash
-   npm install && npm run build
+   npm run build
    ```
-3. **Publish directory:** 
-   ```text
-   dist
-   ```
-4. **Environment Variables:**
-   Añade las variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en la configuración de Render.
-
-### ⚠️ Regla de Redirección (Crucial para SPA)
-Dado que React Router o la navegación interna en Single Page Applications maneja el ruteo del lado del cliente, debes configurar una regla de reescritura para evitar el error `404 Not Found` al recargar la página.
-
-En el panel de tu proyecto en Render, ve a la pestaña **Redirects/Rewrites** y agrega:
-*   **Source:** `/*`
-*   **Destination:** `/index.html`
-*   **Action:** `Rewrite` (Reescritura, no redirección).
 
 ---
-*Desarrollado para promover la transparencia, la seguridad de la información y la eficiencia administrativa en la gestión pública.*
+
+## ☁️ Despliegue en Producción (Render / Cloud Run / Vercel)
+
+La aplicación está optimizada para ser desplegada como Single Page Application (SPA).
+
+* **Build Command:** `npm run build`
+* **Publish Directory:** `dist`
+* **Regla de Reescritura (SPA Rewrite):** Redirigir todas las rutas `/*` a `/index.html` para soportar navegación del lado del cliente sin errores 404 al recargar.
+
+---
+
+*Desarrollado para la Alcaldía Municipal de Quibdó — Fortaleciendo la transparencia, la innovación tecnológica y la eficiencia en la gestión pública.*

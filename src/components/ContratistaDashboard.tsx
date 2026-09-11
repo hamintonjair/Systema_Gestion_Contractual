@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AuthUser, ReportData, EstadoInforme, initialMockData, Obligacion, CertificadoSupervisionData, createDefaultCertificadoData, SoporteFiduciariaData, createDefaultFiduciariaData } from '../types';
+import { 
+  AuthUser, 
+  ReportData, 
+  EstadoInforme, 
+  initialMockData, 
+  Obligacion, 
+  CertificadoSupervisionData, 
+  createDefaultCertificadoData, 
+  SoporteFiduciariaData, 
+  createDefaultFiduciariaData,
+  InformeFinalData,
+  createDefaultInformeFinalData,
+  parseContractNumberAndYear
+} from '../types';
 import { formatColombianCurrency, formatFechaAplicacion, formatPlazoLetraYNumero, formatDateSlash } from '../utils/formatters';
 import { supabaseService } from '../services/supabaseService';
 import { supabase } from '../lib/supabase';
@@ -8,11 +21,13 @@ import CertificadoSupervisionDoc from './CertificadoSupervisionDoc';
 import SoporteFiduciariaDoc from './SoporteFiduciariaDoc';
 import DeclaracionRentaDoc from './DeclaracionRentaDoc';
 import AutorizacionDesembolsoDoc from './AutorizacionDesembolsoDoc';
+import InformeFinalDoc from './InformeFinalDoc';
 import { OrdenDocumentosGuia } from './OrdenDocumentosGuia';
 import Footer from './Footer';
 import ValidationAlertModal from './ValidationAlertModal';
 import UserProfileModal from './UserProfileModal';
 import { validateReportForRadicacion, RadicacionValidationError } from '../utils/validationUtils';
+import { descargarInformeWord } from '../export/informeWord';
 import { 
   FileText, 
   Plus, 
@@ -57,7 +72,7 @@ interface Props {
   onGoToAdminView?: () => void;
 }
 
-export type ContratistaModuleTab = 'informe' | 'supervision' | 'fiduciaria' | 'juramento' | 'desembolso' | 'orden';
+export type ContratistaModuleTab = 'informe' | 'supervision' | 'fiduciaria' | 'juramento' | 'desembolso' | 'orden' | 'informe_final';
 
 export default function ContratistaDashboard({ user, onOpenReportEditor, onDirectPrint, onUserUpdated, onGoToAdminView }: Props) {
   const [activeModuleTab, setActiveModuleTab] = useState<ContratistaModuleTab>('informe');
@@ -66,6 +81,114 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     moduleTabsRef.current?.scrollBy({ left: dir === 'left' ? -250 : 250, behavior: 'smooth' });
   };
   const [reportsList, setReportsList] = useState<ReportData[]>([]);
+
+  // Estado del Informe Final de Ejecución Contractual (IA)
+  const [informeFinalData, setInformeFinalData] = useState<InformeFinalData | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadInformeFinal = async () => {
+      // 0. Si el perfil del usuario no tiene contrato real o supervisor, intentar consultar su perfil completo de BD
+      if (!user.contratoNro || user.contratoNro.includes('590') || !user.objetoContrato || !user.supervisorNombre) {
+        try {
+          const fullProf = await supabaseService.getUserProfile(user.documentoIdentidad);
+          if (fullProf) {
+            if ((!user.contratoNro || user.contratoNro.includes('590')) && fullProf.contratoNro) {
+              user.contratoNro = fullProf.contratoNro;
+            }
+            if (!user.objetoContrato && fullProf.objetoContrato) user.objetoContrato = fullProf.objetoContrato;
+            if (!user.supervisorNombre && fullProf.supervisorNombre) user.supervisorNombre = fullProf.supervisorNombre;
+            if (!user.supervisorCargo && fullProf.supervisorCargo) user.supervisorCargo = fullProf.supervisorCargo;
+            if (!user.secretariaNombre && fullProf.secretariaNombre) user.secretariaNombre = fullProf.secretariaNombre;
+            if ((!user.nombreCompleto || user.nombreCompleto === 'USUARIO REGISTRADO') && fullProf.nombreCompleto) {
+              user.nombreCompleto = fullProf.nombreCompleto;
+            }
+          }
+        } catch (ue) {}
+      }
+
+      const cleanDoc = (user.documentoIdentidad || '').trim().replace(/\D/g, '');
+      const storageKey = `informe_final_${cleanDoc || user.documentoIdentidad || ''}`;
+      const saved = localStorage.getItem(storageKey) || (user.documentoIdentidad ? localStorage.getItem(`informe_final_${user.documentoIdentidad}`) : null);
+      let validSaved: InformeFinalData | null = null;
+
+      if (saved) {
+        try {
+          validSaved = JSON.parse(saved);
+        } catch (e) {
+          console.warn('Error al leer informe final guardado:', e);
+        }
+      }
+
+      // Intentar cargar desde Supabase si no hay en localStorage o para verificar versión más reciente
+      let fromDb: InformeFinalData | null = null;
+      if (user.documentoIdentidad) {
+        try {
+          fromDb = await supabaseService.getInformeFinal(user.documentoIdentidad, user.contratoNro);
+        } catch (e) {
+          console.warn('Error cargando informe final de Supabase:', e);
+        }
+      }
+
+      const candidate = validSaved || fromDb;
+      if (candidate && isMounted) {
+        // Hidratar con datos oficiales de perfil / informes mensuales si faltaban
+        const hydrated: InformeFinalData = {
+          ...candidate,
+          contratistaNombre: candidate.contratistaNombre && candidate.contratistaNombre !== 'USUARIO REGISTRADO' && candidate.contratistaNombre !== 'CONTRATISTA'
+            ? candidate.contratistaNombre 
+            : (user.nombreCompleto || reportsList[0]?.contratistaNombre || ''),
+          contratistaDocumento: candidate.contratistaDocumento || user.documentoIdentidad || reportsList[0]?.contratistaDocumento || '',
+          dependencia: candidate.dependencia || user.secretariaNombre || reportsList[0]?.secretariaNombre || '',
+          supervisorNombre: candidate.supervisorNombre || user.supervisorNombre || reportsList[0]?.supervisorNombre || '',
+          supervisorCargo: candidate.supervisorCargo || user.supervisorCargo || reportsList[0]?.supervisorCargo || '',
+          objetoContractual: candidate.objetoContractual || user.objetoContrato || reportsList[0]?.objeto || '',
+          contratistaLugarDoc: (candidate.contratistaLugarDoc && candidate.contratistaLugarDoc !== 'Quibdó')
+            ? candidate.contratistaLugarDoc
+            : (user.ciudad || (reportsList[0] as any)?.contratistaLugarDoc || candidate.contratistaLugarDoc || 'Bogotá D.C'),
+          contratoNro: parseContractNumberAndYear(
+            (candidate.contratoNro && !candidate.contratoNro.includes('590')) ? candidate.contratoNro : (user.contratoNro || reportsList[0]?.contratoNro),
+            user,
+            reportsList
+          ).full
+        };
+        setInformeFinalData(hydrated);
+        localStorage.setItem(storageKey, JSON.stringify(hydrated));
+        if (user.documentoIdentidad) {
+          localStorage.setItem(`informe_final_${user.documentoIdentidad}`, JSON.stringify(hydrated));
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setInformeFinalData(createDefaultInformeFinalData(user, reportsList));
+      }
+    };
+
+    if (user) {
+      loadInformeFinal();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user.documentoIdentidad, user.contratoNro]);
+
+  const handleSaveInformeFinal = async (updated: InformeFinalData) => {
+    setInformeFinalData(updated);
+    const cleanDoc = (user.documentoIdentidad || updated.contratistaDocumento || '').trim().replace(/\D/g, '');
+    const jsonStr = JSON.stringify(updated);
+    if (cleanDoc) localStorage.setItem(`informe_final_${cleanDoc}`, jsonStr);
+    if (user.documentoIdentidad) localStorage.setItem(`informe_final_${user.documentoIdentidad}`, jsonStr);
+    if (updated.contratistaDocumento) localStorage.setItem(`informe_final_${updated.contratistaDocumento}`, jsonStr);
+
+    // Persistir en Supabase
+    try {
+      await supabaseService.saveInformeFinal(updated, user);
+    } catch (e) {
+      console.warn('Aviso guardando informe final en Supabase:', e);
+    }
+  };
 
   // Estados de ID seleccionados en los selectors de los módulos
   const [selectedCertInformeId, setSelectedCertInformeId] = useState<string>('');
@@ -131,6 +254,19 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   const [loadingDb, setLoadingDb] = useState(true);
   const [savingReportId, setSavingReportId] = useState<string | null>(null);
   const [successSavedId, setSuccessSavedId] = useState<string | null>(null);
+  const [exportingWordId, setExportingWordId] = useState<string | null>(null);
+
+  const handleExportWord = async (report: ReportData) => {
+    try {
+      setExportingWordId(report.informeNro);
+      await descargarInformeWord(report);
+    } catch (error) {
+      console.error('Error al exportar a Word:', error);
+      alert('Ocurrió un error al generar el documento de Word: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setExportingWordId(null);
+    }
+  };
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreatingReport, setIsCreatingReport] = useState(false);
@@ -780,7 +916,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   const totalEnviados = reportsList.filter(r => r.estado === 'Enviado').length;
   const totalBorradores = reportsList.filter(r => (!r.estado || r.estado === 'Borrador') && !(r.comentariosCampos && Object.keys(r.comentariosCampos).length > 0)).length;
 
-  const activeContractNro = user.contratoNro || reportsList[0]?.contratoNro || '015';
+  const activeContractNro = user.contratoNro || reportsList[0]?.contratoNro || '';
   const activeValor = user.valorContrato || reportsList[0]?.valorContrato || '$ 20.029.800';
   const activeSupervisor = user.supervisorNombre || reportsList[0]?.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA';
 
@@ -1171,6 +1307,21 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
             <span>6. Orden de Documentos</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-amber-400 text-amber-950">
               Guía
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveModuleTab('informe_final')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 relative ${
+              activeModuleTab === 'informe_final'
+                ? 'bg-gradient-to-r from-purple-700 to-indigo-800 text-white shadow-md ring-2 ring-purple-300'
+                : 'text-purple-800 hover:text-purple-950 bg-purple-50/70 hover:bg-purple-100/80 border border-purple-200/80'
+            }`}
+          >
+            <Sparkles size={16} className={activeModuleTab === 'informe_final' ? 'text-amber-300 animate-spin' : 'text-purple-600'} />
+            <span>7. Informe Final de Ejecución (IA)</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-black bg-purple-200 text-purple-900 border border-purple-300">
+              IA
             </span>
           </button>
 
@@ -1615,6 +1766,26 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                         })()}
 
 
+
+                        {/* 2. Botón Exportar a Word (.docx) */}
+                        <button
+                          onClick={() => handleExportWord(report)}
+                          disabled={exportingWordId === report.informeNro}
+                          className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 shadow-xs transition-colors disabled:opacity-50"
+                          title="Descargar informe oficial en formato Microsoft Word (.docx)"
+                        >
+                          {exportingWordId === report.informeNro ? (
+                            <>
+                              <RefreshCw size={13} className="animate-spin text-blue-600" />
+                              <span>Generando Word...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download size={13} className="text-blue-600" />
+                              <span>Word (.docx)</span>
+                            </>
+                          )}
+                        </button>
 
                         {/* 3. Botón Radicar (Solo para borradores iniciales) */}
                         {report.estado === 'Borrador' && (
@@ -2207,6 +2378,18 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
         </div>
       )}
 
+      {/* VISTA DEL MÓDULO 7: INFORME FINAL DE EJECUCIÓN CONTRACTUAL (IA) */}
+      {activeModuleTab === 'informe_final' && (
+        <div className="animate-in fade-in duration-200">
+          <InformeFinalDoc
+            data={informeFinalData || createDefaultInformeFinalData(user, reportsList)}
+            user={user}
+            reports={reportsList}
+            onSave={handleSaveInformeFinal}
+          />
+        </div>
+      )}
+
       {/* Modal para Crear Nuevo Informe */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
@@ -2243,7 +2426,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 </div>
               ) : (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                  <p className="font-bold text-emerald-950">Generación con Base en Contrato #{user.contratoNro || reportsList[0]?.contratoNro || '015'}:</p>
+                  <p className="font-bold text-emerald-950">Generación con Base en Contrato #{user.contratoNro || reportsList[0]?.contratoNro || ''}:</p>
                   <p className="text-emerald-800 text-[11px] mt-0.5">
                     El nuevo informe heredará automáticamente los datos contractuales de tu último informe guardado en Supabase.
                   </p>

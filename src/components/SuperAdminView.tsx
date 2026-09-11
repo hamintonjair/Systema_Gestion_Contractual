@@ -25,29 +25,77 @@ import {
   X, 
   RefreshCw, 
   LayoutDashboard,
-  Filter
+  Filter,
+  Sparkles,
+  Key,
+  Eye,
+  EyeOff,
+  Copy,
+  Cpu,
+  Globe,
+  Save,
+  CheckCircle,
+  HelpCircle,
+  Zap,
+  Database,
+  Code,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
+import { 
+  getStoredGeminiKey, 
+  saveStoredGeminiKey, 
+  getStoredGeminiModel, 
+  saveStoredGeminiModel, 
+  testGeminiConnection, 
+  TestGeminiResponse
+} from '../services/geminiService';
 
 interface Props {
   user: AuthUser;
 }
 
 export default function SuperAdminView({ user }: Props) {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'secretarias' | 'usuarios'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'secretarias' | 'usuarios' | 'ia_config'>('dashboard');
   
   const [secretarias, setSecretarias] = useState<Secretaria[]>([]);
   const [allUsers, setAllUsers] = useState<AuthUser[]>([]);
   const [allReports, setAllReports] = useState<InformeSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Gemini AI Config States
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => getStoredGeminiKey());
+  const [geminiModel, setGeminiModel] = useState<string>(() => getStoredGeminiModel());
+  const [showApiKey, setShowApiKey] = useState<boolean>(false);
+  const [isTestingGemini, setIsTestingGemini] = useState<boolean>(false);
+  const [geminiTestResult, setGeminiTestResult] = useState<TestGeminiResponse | null>(null);
+  const [showRawError, setShowRawError] = useState<boolean>(false);
+  const [copiedKey, setCopiedKey] = useState<boolean>(false);
+  const [isSavingAIConfig, setIsSavingAIConfig] = useState<boolean>(false);
+  const [showPromptDetails, setShowPromptDetails] = useState<boolean>(false);
+  const [copiedPrompt, setCopiedPrompt] = useState<boolean>(false);
+
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'todos' | 'secretaria_admin' | 'secretaria_supervisor' | 'contratista'>('todos');
   const [secFilter, setSecFilter] = useState<'todas' | string>('todas');
 
+  // Paginación para Usuarios
+  const [usersPage, setUsersPage] = useState<number>(1);
+  const [usersPerPage, setUsersPerPage] = useState<number>(10);
+
+  // Reset a página 1 cuando cambian filtros de usuarios
+  useEffect(() => {
+    setUsersPage(1);
+  }, [searchTerm, roleFilter, secFilter, usersPerPage]);
+
   // Modals & Alerts
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showSqlModal, setShowSqlModal] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
   const [editingSec, setEditingSec] = useState<Secretaria | null>(null);
   const [editingAdmin, setEditingAdmin] = useState<AuthUser | null>(null);
 
@@ -79,14 +127,21 @@ export default function SuperAdminView({ user }: Props) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [secs, users, reports] = await Promise.all([
+      const [secs, users, reports, aiConf] = await Promise.all([
         supabaseService.getSecretarias(),
         supabaseService.getAllUsers(),
-        supabaseService.getInformes()
+        supabaseService.getInformes(),
+        supabaseService.getAIConfig()
       ]);
       setSecretarias(secs || []);
       setAllUsers(users || []);
       setAllReports(reports || []);
+      if (aiConf && aiConf.apiKey) {
+        setGeminiApiKey(aiConf.apiKey);
+        setGeminiModel(aiConf.modelo);
+        saveStoredGeminiKey(aiConf.apiKey);
+        saveStoredGeminiModel(aiConf.modelo);
+      }
     } catch (e) {
       console.error('Error loading data:', e);
     } finally {
@@ -352,6 +407,10 @@ export default function SuperAdminView({ user }: Props) {
     return matchesSearch && matchesRole && matchesSec;
   });
 
+  const totalUserPages = Math.ceil(filteredUsers.length / usersPerPage) || 1;
+  const safeUsersPage = Math.min(Math.max(1, usersPage), totalUserPages);
+  const paginatedUsers = filteredUsers.slice((safeUsersPage - 1) * usersPerPage, safeUsersPage * usersPerPage);
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       
@@ -445,6 +504,21 @@ export default function SuperAdminView({ user }: Props) {
         >
           <Users size={18} />
           <span>👥 Directorio General de Usuarios ({allUsers.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('ia_config')}
+          className={`py-3 px-4 font-bold text-xs sm:text-sm border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+            activeTab === 'ia_config'
+              ? 'border-purple-600 text-purple-900 bg-purple-50/70'
+              : 'border-transparent text-purple-700/80 hover:text-purple-900 hover:bg-purple-50/30'
+          }`}
+        >
+          <Sparkles size={18} className="text-purple-600 animate-pulse" />
+          <span>✨ Configuración de IA (Google Gemini)</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-black border border-purple-200">
+            Nuevo
+          </span>
         </button>
       </div>
 
@@ -940,7 +1014,7 @@ export default function SuperAdminView({ user }: Props) {
                       </td>
                     </tr>
                   ) : (
-                    filteredUsers.map((u) => (
+                    paginatedUsers.map((u) => (
                       <tr key={u.id} className="hover:bg-gray-50/80 transition-colors">
                         <td className="px-4 py-3 font-bold text-gray-900">{u.nombreCompleto}</td>
                         <td className="px-4 py-3 font-mono text-gray-800 font-semibold">{u.documentoIdentidad}</td>
@@ -970,6 +1044,570 @@ export default function SuperAdminView({ user }: Props) {
                 </tbody>
               </table>
             </div>
+
+            {/* Controles de Paginación de Usuarios */}
+            {filteredUsers.length > 0 && (
+              <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600">
+                <div className="flex items-center gap-2">
+                  <span>Mostrando <strong>{(safeUsersPage - 1) * usersPerPage + 1}</strong> a <strong>{Math.min(safeUsersPage * usersPerPage, filteredUsers.length)}</strong> de <strong>{filteredUsers.length}</strong> usuarios</span>
+                  <span className="text-gray-300">|</span>
+                  <div className="flex items-center gap-1.5">
+                    <span>Por página:</span>
+                    <select
+                      value={usersPerPage}
+                      onChange={(e) => setUsersPerPage(Number(e.target.value))}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs font-medium bg-white focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setUsersPage(1)}
+                    disabled={safeUsersPage === 1}
+                    className="p-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Primera página"
+                  >
+                    <ChevronsLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                    disabled={safeUsersPage === 1}
+                    className="p-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Página anterior"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  <span className="px-3 py-1 bg-white border border-gray-300 rounded-lg text-xs font-bold text-gray-800 font-mono">
+                    Página {safeUsersPage} de {totalUserPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setUsersPage(p => Math.min(totalUserPages, p + 1))}
+                    disabled={safeUsersPage === totalUserPages}
+                    className="p-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Página siguiente"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUsersPage(totalUserPages)}
+                    disabled={safeUsersPage === totalUserPages}
+                    className="p-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Última página"
+                  >
+                    <ChevronsRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* PESTAÑA 4: CONFIGURACIÓN GLOBAL DE IA (GOOGLE GEMINI) */}
+      {/* ========================================================================= */}
+      {activeTab === 'ia_config' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* BANNER PRINCIPAL DE CONFIGURACIÓN */}
+          <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl border border-purple-800/60 relative overflow-hidden">
+            <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
+              <Sparkles size={160} />
+            </div>
+
+            <div className="relative z-10 max-w-3xl space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-200 text-xs font-bold tracking-wide uppercase">
+                <Sparkles size={14} className="text-purple-300 animate-spin" />
+                <span>Motor de Inteligencia Artificial • Google Gemini</span>
+              </div>
+
+              <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                Configuración y Llaves del Motor de IA Municipal
+              </h3>
+
+              <p className="text-xs sm:text-sm text-purple-100/90 leading-relaxed">
+                Administra de forma centralizada la API Key y el modelo de Google Gemini que utilizará el sistema para generar, consolidar y redactar con alta precisión el <strong>Informe Final de Ejecución Contractual</strong> alineado a las metas del Plan de Desarrollo Municipal de Quibdó.
+              </p>
+
+              <div className="pt-2 flex flex-wrap gap-2 text-xs">
+                <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-lg border border-white/20 text-purple-100 font-mono">
+                  Modelo activo: <strong>{geminiModel}</strong>
+                </span>
+                <span className="bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 px-3 py-1 rounded-lg font-bold flex items-center gap-1.5">
+                  <CheckCircle size={14} />
+                  <span>Estado: {geminiApiKey ? 'API Key Configurada' : 'Sin Clave'}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* PANEL PRINCIPAL DE GESTIÓN DE API KEY */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Columna Izquierda: Formulario de Configuración (2 cols) */}
+            <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+              
+              <div className="border-b border-slate-100 pb-4">
+                <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Key size={18} className="text-purple-600" />
+                  <span>Credenciales de Acceso a Google Gemini</span>
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  La clave ingresada se utiliza de forma segura en las consultas de generación y análisis de informes.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Campo API Key */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Google Gemini API Key *
+                    </label>
+                    <div className="flex items-center gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const aiConf = await supabaseService.getAIConfig();
+                          if (aiConf && aiConf.apiKey) {
+                            setGeminiApiKey(aiConf.apiKey);
+                            setGeminiModel(aiConf.modelo);
+                            showNotification('success', 'Clave institucional recargada.');
+                          } else {
+                            showNotification('error', 'No hay una clave institucional guardada. Registrala y guardala en este panel.');
+                          }
+                        }}
+                        className="text-purple-700 hover:text-purple-900 font-semibold underline text-[11px]"
+                      >
+                        Recargar clave guardada
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="relative flex items-center">
+                    <input
+                      type={showApiKey ? 'text' : 'password'}
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                      placeholder="Pega aqui la API Key de Google Gemini"
+                      className="w-full pl-3.5 pr-24 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none transition-all"
+                    />
+
+                    <div className="absolute right-2 flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                        title={showApiKey ? 'Ocultar clave' : 'Ver clave'}
+                      >
+                        {showApiKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(geminiApiKey);
+                          setCopiedKey(true);
+                          setTimeout(() => setCopiedKey(false), 2000);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                        title="Copiar API Key al portapapeles"
+                      >
+                        {copiedKey ? <Check size={15} className="text-emerald-600" /> : <Copy size={15} />}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Puedes obtener una API Key gratuita o empresarial en <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" className="text-purple-700 font-semibold hover:underline">Google AI Studio</a>.
+                  </p>
+                </div>
+
+                {/* Selector de Modelo Gemini */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                      <Cpu size={14} className="text-purple-600" />
+                      <span>Modelo de Lenguaje IA</span>
+                    </label>
+                    <select
+                      value={geminiModel}
+                      onChange={(e) => setGeminiModel(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    >
+                      <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (⭐ Máxima Estabilidad • 100% Gratuito y Libre de Errores 503)</option>
+                      <option value="gemini-3.8-flash">gemini-3.8-flash (100% Gratuito • Capacidad Avanzada)</option>
+                      <option value="gemini-flash-latest">gemini-flash-latest (100% Gratuito • Versión Flash Estable)</option>
+                      <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Pro Razonamiento • Requiere Cuenta con Facturación / Google Cloud)</option>
+                    </select>
+                    <p className="text-[10.5px] text-slate-600 mt-1.5 leading-relaxed">
+                      💡 <strong>gemini-3.1-flash-lite</strong> es el modelo recomendado para producción ya que responde al instante y no se satura con picos de demanda. El modelo <em>Pro</em> solo está habilitado en cuentas con facturación activa.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                      <Globe size={14} className="text-purple-600" />
+                      <span>Ámbito de Aplicación</span>
+                    </label>
+                    <div className="px-3 py-2.5 bg-slate-100 rounded-xl border border-slate-200 text-xs text-slate-700 font-medium">
+                      Módulo: Informe Final Contractual
+                    </div>
+                  </div>
+                </div>
+
+                {/* Diagnóstico y Prueba de Conexión */}
+                {geminiTestResult && (
+                  <div className={`p-4 rounded-xl border text-xs space-y-2.5 animate-in fade-in ${
+                    geminiTestResult.success 
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-950' 
+                      : 'bg-rose-50 border-rose-300 text-rose-950'
+                  }`}>
+                    <div className="flex items-center gap-2 font-bold">
+                      {geminiTestResult.success ? (
+                        <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                      ) : (
+                        <AlertTriangle size={16} className="text-rose-600 shrink-0" />
+                      )}
+                      <span className="text-sm">
+                        {geminiTestResult.success 
+                          ? '¡Conexión Exitosa con Google Gemini!' 
+                          : (geminiTestResult.errorInfo?.title || 'Fallo de Conexión')}
+                      </span>
+                    </div>
+
+                    <p className="text-[11.5px] leading-relaxed pl-6">
+                      {geminiTestResult.errorInfo?.explanation || geminiTestResult.message}
+                    </p>
+
+                    {/* Sugerencia clara y botón de corrección en 1 clic */}
+                    {!geminiTestResult.success && geminiTestResult.errorInfo?.suggestion && (
+                      <div className="pl-6 pt-1 space-y-2">
+                        <div className="p-2.5 bg-white/80 rounded-lg border border-rose-200 text-[11px] text-slate-700">
+                          <strong className="text-rose-700">Recomendación: </strong>
+                          {geminiTestResult.errorInfo.suggestion}
+                        </div>
+
+                        {geminiTestResult.errorInfo.suggestedModel && geminiModel !== geminiTestResult.errorInfo.suggestedModel && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const recommended = geminiTestResult.errorInfo!.suggestedModel!;
+                              setGeminiModel(recommended);
+                              setIsTestingGemini(true);
+                              setGeminiTestResult(null);
+                              try {
+                                const res = await testGeminiConnection(geminiApiKey, recommended);
+                                setGeminiTestResult(res);
+                                if (res.success) {
+                                  showNotification('success', `Cambiado a ${recommended} y conectado exitosamente.`);
+                                }
+                              } catch (err: any) {
+                                setGeminiTestResult({
+                                  success: false,
+                                  message: err?.message || 'Error al conectar.',
+                                  modelUsed: recommended
+                                });
+                              } finally {
+                                setIsTestingGemini(false);
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                          >
+                            <RefreshCw size={13} className={isTestingGemini ? 'animate-spin' : ''} />
+                            <span>Cambiar a {geminiTestResult.errorInfo.suggestedModel} y Probar Ahora</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Toggle para ver error técnico original */}
+                    {!geminiTestResult.success && geminiTestResult.errorInfo?.rawError && (
+                      <div className="pl-6 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowRawError(!showRawError)}
+                          className="text-[10px] text-slate-500 hover:text-slate-800 underline font-medium"
+                        >
+                          {showRawError ? 'Ocultar detalle técnico' : 'Ver respuesta técnica del servidor de Google'}
+                        </button>
+                        {showRawError && (
+                          <pre className="mt-1.5 p-2 bg-slate-900 text-slate-100 rounded-lg text-[10px] font-mono whitespace-pre-wrap break-all overflow-x-auto max-h-32">
+                            {geminiTestResult.errorInfo.rawError}
+                          </pre>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Botones de Acción */}
+                <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsTestingGemini(true);
+                      setGeminiTestResult(null);
+                      try {
+                        const res = await testGeminiConnection(geminiApiKey, geminiModel);
+                        setGeminiTestResult(res);
+                        if (res.success) {
+                          showNotification('success', 'Prueba de conexión con Gemini completada exitosamente.');
+                        } else {
+                          showNotification('error', 'Fallo al conectar con Gemini.');
+                        }
+                      } catch (err: any) {
+                        setGeminiTestResult({
+                          success: false,
+                          message: err?.message || 'Error inesperado al validar la API Key.',
+                          modelUsed: geminiModel
+                        });
+                        showNotification('error', 'Error al ejecutar prueba.');
+                      } finally {
+                        setIsTestingGemini(false);
+                      }
+                    }}
+                    disabled={isTestingGemini || !geminiApiKey.trim()}
+                    className="px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw size={14} className={isTestingGemini ? 'animate-spin text-purple-700' : 'text-purple-700'} />
+                    <span>{isTestingGemini ? 'Probando Conexión...' : '⚡ Probar Conexión en Vivo'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsSavingAIConfig(true);
+                      try {
+                        saveStoredGeminiKey(geminiApiKey);
+                        saveStoredGeminiModel(geminiModel);
+                        await supabaseService.saveAIConfig(geminiApiKey, geminiModel, user.email);
+                        showNotification('success', 'Configuración de IA guardada permanentemente en el sistema y sincronizada con Supabase.');
+                      } catch (e) {
+                        showNotification('error', 'Error al guardar la configuración.');
+                      } finally {
+                        setTimeout(() => setIsSavingAIConfig(false), 500);
+                      }
+                    }}
+                    disabled={isSavingAIConfig}
+                    className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md transition-all disabled:opacity-50 ml-auto"
+                  >
+                    <Save size={15} />
+                    <span>{isSavingAIConfig ? 'Guardando...' : '💾 Guardar Configuración de IA'}</span>
+                  </button>
+                </div>
+
+              </div>
+
+              {/* SECCIÓN INTERACTIVA: PROMPT E INSTRUCCIONES DE SISTEMA PARA LA IA */}
+              <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-purple-100 text-purple-800 rounded-lg">
+                      <Sparkles size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        Prompt de Sistema e Instrucciones de Redacción (Informe Final)
+                      </h4>
+                      <p className="text-xs text-slate-500">
+                        Visualiza el prompt institucional exacto y la estructura JSON que utiliza el motor de IA para la consolidación.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPromptDetails(!showPromptDetails)}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5"
+                  >
+                    <span>{showPromptDetails ? 'Ocultar Prompt' : 'Ver Prompt Completo'}</span>
+                  </button>
+                </div>
+
+                {showPromptDetails && (
+                  <div className="space-y-4 pt-3 border-t border-slate-100 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between bg-slate-900 text-slate-200 px-4 py-2 rounded-t-xl text-xs font-mono font-semibold">
+                      <span>INSTITUTIONAL_PROMPT_TEMPLATE.txt</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const fullPromptText = `ROL Y CONTEXTO INSTITUCIONAL:
+Eres un consultor experto en contratación estatal, auditoría de gestión y administración pública de la Alcaldía Municipal de Quibdó (Chocó, Colombia).
+
+Tu tarea es redactar el "INFORME FINAL DE EJECUCIÓN CONTRACTUAL" con el más alto rigor técnico, administrativo, gramatical y jurídico institucional, consolidando TODOS los informes mensuales ejecutados por el contratista y alineándolos estrictamente con las Metas del Plan de Desarrollo Municipal ("Quibdó Territorio de Vida 2024-2027") y los Indicadores de gestión.
+
+DATOS DEL CONTRATO Y CONTRATISTA:
+- Número de Contrato: CPS {contratoNro} de 2026
+- Nombre del Contratista: {contratistaNombre} (C.C. {contratistaDocumento})
+- Dependencia Responsable: {secretariaNombre}
+- Supervisor del Contrato: {supervisorNombre}, {supervisorCargo}
+- Objeto Contractual: {objetoContrato}
+- Meta(s) del Plan de Desarrollo: {metaPlanDesarrollo}
+- Indicador de Producto / Gestión: {indicador}
+- Zonas de Intervención: {metodologiaZonas}
+
+HISTÓRICO CONSOLIDADO DE INFORMES MENSUALES EJECUTADOS:
+[Se concatenan las actividades, periodos, ciudades y anexos fotográficos de todos los informes mensuales registrados]
+
+ESTRUCTURA DE RESPUESTA JSON REQUERIDA:
+{
+  "introduccion": "Texto formal de 2 a 3 párrafos explicando el marco del Plan de Desarrollo...",
+  "metodologiaEnfoque": "Enfoque técnico, operativo, diferencial e interinstitucional...",
+  "metodologiaEstrategias": "Estrategias implementadas...",
+  "metodologiaZonas": "Zonas de intervención y cobertura en Quibdó...",
+  "metodologiaHerramientas": "Herramientas técnicas y sistemas...",
+  "cuadroActividades": [{ "nro": 1, "actividad": "...", "periodo": "...", "lugar": "...", "poblacion": "...", "resultados": "...", "evidencias": "..." }],
+  "productosEntregados": ["Informe 1...", "Bases de datos..."],
+  "resultadosAlcanzados": ["Logro 1...", "Logro 2..."],
+  "cumplimientoMeta": "Análisis de aporte a la Meta del Plan de Desarrollo...",
+  "analisisTecnico": "Análisis técnico de efectividad...",
+  "impactoEjecucion": "Impacto institucional y recomendaciones...",
+  "conclusiones": "Certificación de cumplimiento...",
+  "recomendaciones": ["Recomendación 1...", "Recomendación 2..."]
+}`;
+                          navigator.clipboard.writeText(fullPromptText);
+                          setCopiedPrompt(true);
+                          setTimeout(() => setCopiedPrompt(false), 2000);
+                        }}
+                        className="text-purple-300 hover:text-white flex items-center gap-1 font-sans text-[11px]"
+                      >
+                        {copiedPrompt ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                        <span>{copiedPrompt ? '¡Copiado!' : 'Copiar Prompt'}</span>
+                      </button>
+                    </div>
+
+                    <pre className="bg-slate-950 text-slate-200 p-4 rounded-b-xl text-[11px] font-mono leading-relaxed whitespace-pre-wrap max-h-80 overflow-y-auto border border-slate-800">
+{`ROL Y CONTEXTO INSTITUCIONAL:
+Eres un consultor experto en contratación estatal, auditoría de gestión y administración pública de la Alcaldía Municipal de Quibdó (Chocó, Colombia).
+
+Tu tarea es redactar el "INFORME FINAL DE EJECUCIÓN CONTRACTUAL" con el más alto rigor técnico, administrativo, gramatical y jurídico institucional, consolidando TODOS los informes mensuales ejecutados por el contratista y alineándolos estrictamente con las Metas del Plan de Desarrollo Municipal ("Quibdó Territorio de Vida 2024-2027") y los Indicadores de gestión.
+
+DATOS DEL CONTRATO Y CONTRATISTA (Variables Inyectadas):
+- Número de Contrato: CPS {contratoNro} de 2026
+- Nombre del Contratista: {contratistaNombre} (C.C. {contratistaDocumento})
+- Dependencia Responsable: {secretariaNombre}
+- Supervisor del Contrato: {supervisorNombre}, {supervisorCargo}
+- Objeto Contractual: {objetoContrato}
+- Meta(s) del Plan de Desarrollo: {metaPlanDesarrollo}
+- Indicador de Producto / Gestión: {indicador}
+- Zonas de Intervención: {metodologiaZonas}
+
+HISTÓRICO CONSOLIDADO DE INFORMES MENSUALES EJECUTADOS:
+[Se concatenan automáticamente las actividades, obligaciones, periodos, ciudades y anexos fotográficos de todos los informes mensuales registrados en Supabase]
+
+ESQUEMA JSON DE RESPUESTA:
+{
+  "introduccion": "Texto formal de 2 a 3 párrafos explicando el marco del Plan de Desarrollo...",
+  "metodologiaEnfoque": "Enfoque técnico, operativo, diferencial e interinstitucional...",
+  "metodologiaEstrategias": "Estrategias implementadas...",
+  "metodologiaZonas": "Zonas de intervención y cobertura en Quibdó...",
+  "metodologiaHerramientas": "Herramientas técnicas, sistemas de información, software, equipos...",
+  "cuadroActividades": [
+    {
+      "nro": 1,
+      "actividad": "Resumen técnico de actividades del periodo",
+      "periodo": "Enero",
+      "lugar": "Lugar específico (ej. Sede Secretaría, Megacolegio, etc.)",
+      "poblacion": "Población beneficiaria",
+      "resultados": "Logro cuantitativo/cualitativo",
+      "evidencias": "Listados de asistencia, actas, fotos e informe No. X"
+    }
+  ],
+  "productosEntregados": ["Informe mensual 1...", "Bases de datos..."],
+  "resultadosAlcanzados": ["Logro 1...", "Logro 2..."],
+  "cumplimientoMeta": "Análisis de aporte a la Meta e Indicador del Plan de Desarrollo",
+  "analisisTecnico": "Análisis sobre efectividad en sistemas e impacto misional",
+  "impactoEjecucion": "Impacto generado y recomendaciones de continuidad",
+  "conclusiones": "Conclusión certificando el cumplimiento a cabalidad",
+  "recomendaciones": ["Recomendación 1...", "Recomendación 2..."]
+}`}
+                    </pre>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Columna Derecha: Guía y Flujo de Automatización */}
+            <div className="space-y-4">
+              
+              <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-sm space-y-3">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                  <Zap size={15} />
+                  <span>Flujo del Informe Final con IA</span>
+                </div>
+                
+                <h5 className="font-bold text-sm text-slate-100">
+                  ¿Cómo procesa la IA los datos del contratista?
+                </h5>
+
+                <ul className="space-y-2.5 text-xs text-slate-300">
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-purple-500/30 text-purple-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">1</span>
+                    <span><strong>Consolidación:</strong> Lee y agrupa todos los informes mensuales y obligaciones del contratista desde Supabase.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-purple-500/30 text-purple-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">2</span>
+                    <span><strong>Alineación de Metas:</strong> Cruza las actividades ejecutadas con la Meta e Indicador del Plan de Desarrollo Municipal de Quibdó.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-purple-500/30 text-purple-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">3</span>
+                    <span><strong>Redacción Técnica:</strong> Redacta la introducción, metodología, cuadro resumen de actividades, impacto y recomendaciones.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-purple-500/30 text-purple-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">4</span>
+                    <span><strong>Exportación a Word:</strong> Genera el archivo final en Microsoft Word (.docx) respetando exactamente la plantilla oficial.</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Tarjeta de Tablas SQL en Supabase */}
+              <div className="bg-slate-900 text-white rounded-2xl p-5 space-y-3 border border-slate-700 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold text-xs text-emerald-400 uppercase tracking-wider">
+                    <Database size={15} />
+                    <span>Tablas en Supabase (SQL)</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded-md font-semibold">PostgreSQL</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Para habilitar la persistencia multi-dispositivo de la configuración de IA y los Informes Finales de los contratistas en Supabase, puedes ejecutar el script SQL oficial.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowSqlModal(true)}
+                  className="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-xs font-bold text-emerald-300 hover:text-white flex items-center justify-center gap-2 transition-all"
+                >
+                  <Code size={14} />
+                  <span>Ver y Copiar Script SQL de Tablas</span>
+                </button>
+              </div>
+
+              <div className="bg-purple-50 border border-purple-200/80 rounded-2xl p-5 space-y-2 text-xs text-purple-950">
+                <div className="flex items-center gap-2 font-bold text-purple-900">
+                  <HelpCircle size={16} className="text-purple-700" />
+                  <span>Disponibilidad en el Dashboard</span>
+                </div>
+                <p className="text-purple-900 leading-relaxed text-[11.5px]">
+                  Una vez configurada la API Key en este panel, todos los contratistas de la Alcaldía de Quibdó tendrán habilitada la pestaña <strong>«7. Informe Final de Ejecución (IA)»</strong> en su menú principal para generar su informe con un solo clic.
+                </p>
+              </div>
+
+            </div>
+
           </div>
 
         </div>
@@ -1366,6 +2004,189 @@ export default function SuperAdminView({ user }: Props) {
                   </button>
                 </>
               )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 4: SCRIPT SQL PARA SUPABASE (TABLAS DE IA E INFORME FINAL) */}
+      {/* ========================================================================= */}
+      {showSqlModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 text-slate-100 rounded-2xl shadow-2xl max-w-3xl w-full p-6 border border-slate-700 max-h-[90vh] flex flex-col">
+            
+            <div className="flex items-start justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-2.5 text-emerald-400">
+                <Database size={22} />
+                <div>
+                  <h3 className="text-base font-bold text-white">Script SQL para Tablas de IA e Informe Final en Supabase</h3>
+                  <p className="text-xs text-slate-400">Copia y pega este script en el <strong>SQL Editor</strong> de tu proyecto Supabase</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowSqlModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="my-4 overflow-y-auto flex-1 bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-[11px] leading-relaxed text-emerald-300 select-all">
+              <pre>{`-- 1. TABLA: CONFIGURACIÓN GLOBAL DE IA
+CREATE TABLE IF NOT EXISTS configuracion_ia (
+  id TEXT PRIMARY KEY DEFAULT 'global_config',
+  api_key TEXT NOT NULL,
+  modelo TEXT NOT NULL DEFAULT 'gemini-3.8-flash',
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  updated_by TEXT
+);
+ALTER TABLE configuracion_ia ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Lectura publica configuracion_ia" ON configuracion_ia;
+CREATE POLICY "Lectura publica configuracion_ia" ON configuracion_ia FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Actualizacion configuracion_ia" ON configuracion_ia;
+CREATE POLICY "Actualizacion configuracion_ia" ON configuracion_ia FOR ALL USING (true) WITH CHECK (true);
+
+-- 2. TABLA: INFORMES FINALES DE EJECUCIÓN CONTRACTUAL
+CREATE TABLE IF NOT EXISTS informes_finales (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT,
+  documento_identidad TEXT NOT NULL,
+  contrato_nro TEXT NOT NULL,
+  contratista_nombre TEXT,
+  contratista_lugar_doc TEXT,
+  dependencia TEXT,
+  supervisor_nombre TEXT,
+  supervisor_cargo TEXT,
+  objeto_contractual TEXT,
+  periodo_ejecucion TEXT,
+  fecha_presentacion TEXT,
+  meta_plan_desarrollo TEXT,
+  indicador TEXT,
+  introduccion TEXT,
+  metodologia_enfoque TEXT,
+  metodologia_estrategias TEXT,
+  metodologia_zonas TEXT,
+  metodologia_herramientas TEXT,
+  cuadro_actividades JSONB DEFAULT '[]'::jsonb,
+  productos_entregados JSONB DEFAULT '[]'::jsonb,
+  resultados_alcanzados JSONB DEFAULT '[]'::jsonb,
+  cumplimiento_meta TEXT,
+  analisis_tecnico TEXT,
+  impacto_ejecucion TEXT,
+  conclusiones TEXT,
+  recomendaciones JSONB DEFAULT '[]'::jsonb,
+  anexos_fotograficos JSONB DEFAULT '[]'::jsonb,
+  generado_con_ia BOOLEAN DEFAULT false,
+  fecha_generacion_ia TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT uq_informe_final_contrato UNIQUE (documento_identidad, contrato_nro)
+);
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS contratista_nombre TEXT;
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS contratista_lugar_doc TEXT;
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS dependencia TEXT;
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS supervisor_nombre TEXT;
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS supervisor_cargo TEXT;
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS objeto_contractual TEXT;
+CREATE INDEX IF NOT EXISTS idx_informes_finales_doc ON informes_finales(documento_identidad);
+CREATE INDEX IF NOT EXISTS idx_informes_finales_contrato ON informes_finales(contrato_nro);
+ALTER TABLE informes_finales ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Lectura informes_finales" ON informes_finales;
+CREATE POLICY "Lectura informes_finales" ON informes_finales FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Modificacion informes_finales" ON informes_finales;
+CREATE POLICY "Modificacion informes_finales" ON informes_finales FOR ALL USING (true) WITH CHECK (true);`}</pre>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+              <span className="text-xs text-slate-400">
+                💡 Nota: Si aún no has ejecutado el script, la aplicación seguirá funcionando normalmente utilizando almacenamiento local seguro.
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sqlText = `-- 1. TABLA: CONFIGURACIÓN GLOBAL DE IA
+CREATE TABLE IF NOT EXISTS configuracion_ia (
+  id TEXT PRIMARY KEY DEFAULT 'global_config',
+  api_key TEXT NOT NULL,
+  modelo TEXT NOT NULL DEFAULT 'gemini-3.8-flash',
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  updated_by TEXT
+);
+ALTER TABLE configuracion_ia ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Lectura publica configuracion_ia" ON configuracion_ia;
+CREATE POLICY "Lectura publica configuracion_ia" ON configuracion_ia FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Actualizacion configuracion_ia" ON configuracion_ia;
+CREATE POLICY "Actualizacion configuracion_ia" ON configuracion_ia FOR ALL USING (true) WITH CHECK (true);
+
+-- 2. TABLA: INFORMES FINALES DE EJECUCIÓN CONTRACTUAL
+CREATE TABLE IF NOT EXISTS informes_finales (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT,
+  documento_identidad TEXT NOT NULL,
+  contrato_nro TEXT NOT NULL,
+  contratista_nombre TEXT,
+  contratista_lugar_doc TEXT,
+  dependencia TEXT,
+  supervisor_nombre TEXT,
+  supervisor_cargo TEXT,
+  objeto_contractual TEXT,
+  periodo_ejecucion TEXT,
+  fecha_presentacion TEXT,
+  meta_plan_desarrollo TEXT,
+  indicador TEXT,
+  introduccion TEXT,
+  metodologia_enfoque TEXT,
+  metodologia_estrategias TEXT,
+  metodologia_zonas TEXT,
+  metodologia_herramientas TEXT,
+  cuadro_actividades JSONB DEFAULT '[]'::jsonb,
+  productos_entregados JSONB DEFAULT '[]'::jsonb,
+  resultados_alcanzados JSONB DEFAULT '[]'::jsonb,
+  cumplimiento_meta TEXT,
+  analisis_tecnico TEXT,
+  impacto_ejecucion TEXT,
+  conclusiones TEXT,
+  recomendaciones JSONB DEFAULT '[]'::jsonb,
+  anexos_fotograficos JSONB DEFAULT '[]'::jsonb,
+  generado_con_ia BOOLEAN DEFAULT false,
+  fecha_generacion_ia TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT uq_informe_final_contrato UNIQUE (documento_identidad, contrato_nro)
+);
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS contratista_nombre TEXT;
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS contratista_lugar_doc TEXT;
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS dependencia TEXT;
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS supervisor_nombre TEXT;
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS supervisor_cargo TEXT;
+ALTER TABLE informes_finales ADD COLUMN IF NOT EXISTS objeto_contractual TEXT;
+CREATE INDEX IF NOT EXISTS idx_informes_finales_doc ON informes_finales(documento_identidad);
+CREATE INDEX IF NOT EXISTS idx_informes_finales_contrato ON informes_finales(contrato_nro);
+ALTER TABLE informes_finales ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Lectura informes_finales" ON informes_finales;
+CREATE POLICY "Lectura informes_finales" ON informes_finales FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Modificacion informes_finales" ON informes_finales;
+CREATE POLICY "Modificacion informes_finales" ON informes_finales FOR ALL USING (true) WITH CHECK (true);`;
+                    navigator.clipboard.writeText(sqlText);
+                    setCopiedSql(true);
+                    setTimeout(() => setCopiedSql(false), 2500);
+                  }}
+                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md transition-all"
+                >
+                  {copiedSql ? <Check size={14} className="text-white" /> : <Copy size={14} />}
+                  <span>{copiedSql ? '¡Copiado al Portapapeles!' : 'Copiar Script SQL'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSqlModal(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold text-xs"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
 
           </div>

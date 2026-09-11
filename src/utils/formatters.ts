@@ -332,4 +332,59 @@ export const isOlderThanDays = (dateVal?: string, daysLimit: number = 5): boolea
   return getDaysDifference(dateVal) > daysLimit;
 };
 
+/**
+ * Formatea la fecha de la Declaración Bajo Juramento en formato textual completo:
+ * ej. "Quibdó, 14 de julio de 2026" o "Quibdó, 30 de septiembre de 2026"
+ */
+export const formatFechaDeclaracionRenta = (raw?: string, ciudadDefault: string = 'Quibdó'): string => {
+  if (!raw || !String(raw).trim()) {
+    return `${ciudadDefault}, 14 de julio de 2026`;
+  }
+  const meses = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+  let str = String(raw).trim();
+
+  // Si ya tiene el formato completo "Ciudad, DD de mes de AAAA"
+  if (/^[^,]+,\s*\d{1,2}\s+de\s+[a-zA-ZáéíóúÁÉÍÓÚñÑ]+\s+de\s+\d{4}$/i.test(str)) {
+    return str;
+  }
+  if (/^\d{1,2}\s+de\s+[a-zA-ZáéíóúÁÉÍÓÚñÑ]+\s+de\s+\d{4}$/i.test(str)) {
+    return `${ciudadDefault}, ${str}`;
+  }
+
+  let ciudad = ciudadDefault;
+  if (str.includes(',')) {
+    const parts = str.split(',');
+    ciudad = parts[0].trim() || ciudadDefault;
+    str = parts.slice(1).join(',').trim();
+  }
+
+  // YYYY-MM-DD
+  const ymdMatch = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if (ymdMatch) {
+    const yr = ymdMatch[1];
+    const mIdx = parseInt(ymdMatch[2], 10) - 1;
+    const day = parseInt(ymdMatch[3], 10);
+    if (mIdx >= 0 && mIdx < 12) {
+      return `${ciudad}, ${day} de ${meses[mIdx]} de ${yr}`;
+    }
+  }
+
+  // DD-MM-YYYY or DD/MM/YYYY
+  const dmyMatch = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const mIdx = parseInt(dmyMatch[2], 10) - 1;
+    const yr = dmyMatch[3];
+    if (mIdx >= 0 && mIdx < 12) {
+      return `${ciudad}, ${day} de ${meses[mIdx]} de ${yr}`;
+    }
+  }
+
+  return str.startsWith(ciudad) ? str : `${ciudad}, ${str}`;
+};
+
+
 

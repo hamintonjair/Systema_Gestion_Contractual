@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DeclaracionRentaData, ReportData, createDefaultDeclaracionRentaData, FieldComment } from '../types';
 import { supabaseService } from '../services/supabaseService';
 import FieldCommentModal from './FieldCommentModal';
-import { Printer, Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, CheckCircle2, FileText } from 'lucide-react';
+import { exportDeclaracionRentaToWord } from '../export/declaracionRentaWord';
+import { formatFechaDeclaracionRenta } from '../utils/formatters';
 
 interface DeclaracionRentaDocProps {
   key?: React.Key;
@@ -79,6 +81,25 @@ export default function DeclaracionRentaDoc({
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
+  const [isExportingWord, setIsExportingWord] = useState<boolean>(false);
+
+  const handleExportWord = async () => {
+    setIsExportingWord(true);
+    try {
+      const blob = await exportDeclaracionRentaToWord(formData, reportData);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const nombreClean = (formData.nombresApellidos || 'Contratista').replace(/\s+/g, '_');
+      link.download = `Certificado_bajo_juramento_Alcaldia_${nombreClean}.docx`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error: any) {
+      console.error('Error exportando Certificado bajo juramento a Word:', error);
+      alert(error?.message || 'Error desconocido exportando a Word');
+    } finally {
+      setIsExportingWord(false);
+    }
+  };
 
   useEffect(() => {
     const currentKey = getIdentityKey();
@@ -114,11 +135,14 @@ export default function DeclaracionRentaDoc({
       }
 
       if (loadedKeyRef.current === currentKey) {
+        const expLugar = baseData.expedicionCedula || reportData?.contratistaLugarDoc || 'Bogotá D.C';
         setFormData({
           ...baseData,
+          expedicionCedula: expLugar,
+          firmaExpedicion: expLugar,
           senores: normalizeSenores(baseData.senores),
           reportId: reportData?.id || baseData.reportId,
-          fecha: reportData ? createDefaultDeclaracionRentaData(reportData).fecha : baseData.fecha,
+          fecha: formatFechaDeclaracionRenta(baseData.fecha || (reportData ? createDefaultDeclaracionRentaData(reportData).fecha : '14 de julio de 2026')),
         });
       }
     };
@@ -126,7 +150,10 @@ export default function DeclaracionRentaDoc({
   }, [data, reportData?.id, reportData?.informeNro, reportData?.periodoHasta, reportData?.fechaPresentacion, storageKey]);
 
   const handleFieldChange = (field: keyof DeclaracionRentaData, value: string | boolean) => {
-    const updated = { ...formData, [field]: value };
+    let updated = { ...formData, [field]: value };
+    if (field === 'expedicionCedula' && typeof value === 'string') {
+      updated.firmaExpedicion = value;
+    }
     setFormData(updated);
     setHasChanges(true);
     if (onChange) {
@@ -190,8 +217,9 @@ export default function DeclaracionRentaDoc({
     await supabaseService.saveDeclaracionRenta(
       reportData?.id || '',
       formData,
-      formData.cedula,
-      reportData?.informeNro?.toString() || '1'
+      formData.cedula || reportData?.contratistaDocumento || '',
+      reportData?.informeNro?.toString() || '1',
+      reportData?.contratoId
     );
 
     if (jurComment && !jurComment.corregido) {
@@ -384,12 +412,14 @@ export default function DeclaracionRentaDoc({
           )}
 
           <button
-            onClick={handleDirectPrint}
-            className="p-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl transition-all font-bold flex items-center gap-1.5 text-xs shadow-xs"
-            title="Imprimir Copia Oficial"
+            type="button"
+            onClick={handleExportWord}
+            disabled={isExportingWord}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer border border-emerald-600/30"
+            title="Descargar Certificado bajo juramento en formato Word (.docx)"
           >
-            <Printer size={15} />
-            <span className="hidden sm:inline">Imprimir</span>
+            <FileText size={14} />
+            <span>{isExportingWord ? 'Exportando Word...' : 'Exportar a Word (.docx)'}</span>
           </button>
         </div>
       </div>
@@ -420,8 +450,8 @@ export default function DeclaracionRentaDoc({
                   Marque las casillas SI/NO de vinculación de trabajadores, deducción de dependientes o medicina prepagada.
                 </div>
                 <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
-                  <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar e Imprimir:</span>
-                  Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Datos»</strong> para guardar su selección y luego <strong className="text-slate-900 bg-slate-200 px-1 py-0.5 rounded">«Imprimir»</strong>.
+                  <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar Datos:</span>
+                  Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Datos»</strong> para guardar su selección.
                 </div>
               </div>
             </div>
@@ -606,25 +636,27 @@ export default function DeclaracionRentaDoc({
       <div className="w-full max-w-full overflow-x-auto pb-4 flex justify-start sm:justify-center">
         <div 
           id="declaracion-renta-document"
-          className="bg-white shadow-xl origin-top transition-transform duration-300 shrink-0"
+          className="bg-white shadow-xl origin-top transition-transform duration-300 shrink-0 text-[#000000]"
           style={{
             width: '21.59cm',
             minHeight: '27.94cm', // Letter size
             padding: '2.54cm', // 1 inch margins approx
             fontFamily: 'Arial, sans-serif',
+            fontSize: '11pt',
+            lineHeight: '1.25',
             color: '#000000',
             position: 'relative'
           }}
         >
-        <div className="text-[14px] leading-relaxed relative">
+        <div className="relative text-[11pt]">
           
-          <div className="mb-6">
+          <div className="mb-8 pt-1">
             {isEditing ? (
               <input
                 type="text"
                 value={formData.fecha}
                 onChange={(e) => handleFieldChange('fecha', e.target.value)}
-                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 w-2/3"
+                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 w-2/3 text-[11pt]"
                 placeholder="Quibdó, 14 de julio de 2026"
               />
             ) : (
@@ -637,7 +669,7 @@ export default function DeclaracionRentaDoc({
               <textarea
                 value={formData.senores}
                 onChange={(e) => handleFieldChange('senores', e.target.value)}
-                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 w-1/2 resize-none"
+                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 w-1/2 resize-none text-[11pt]"
                 rows={3}
                 placeholder="Señores&#10;ALCALDIA&#10;Ciudad."
               />
@@ -666,7 +698,7 @@ export default function DeclaracionRentaDoc({
                 type="text"
                 value={formData.nombresApellidos}
                 onChange={(e) => handleFieldChange('nombresApellidos', e.target.value)}
-                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold uppercase w-64 inline-block text-center"
+                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold uppercase w-64 inline-block text-center text-[11pt]"
               />
             ) : (
               <strong className="uppercase">{formData.nombresApellidos}</strong>
@@ -675,7 +707,7 @@ export default function DeclaracionRentaDoc({
                 type="text"
                 value={formData.cedula}
                 onChange={(e) => handleFieldChange('cedula', e.target.value)}
-                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold w-24 inline-block text-center"
+                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold w-24 inline-block text-center text-[11pt]"
               />
             ) : (
               <strong>{formData.cedula}</strong>
@@ -684,7 +716,7 @@ export default function DeclaracionRentaDoc({
                 type="text"
                 value={formData.expedicionCedula}
                 onChange={(e) => handleFieldChange('expedicionCedula', e.target.value)}
-                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold w-32 inline-block text-center"
+                className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold w-32 inline-block text-center text-[11pt]"
               />
             ) : (
               <strong>{formData.expedicionCedula}</strong>
@@ -717,21 +749,20 @@ export default function DeclaracionRentaDoc({
             mi actividad económica, me comprometo a informar.
           </div>
 
-          <div className="mb-6">
+          <div className="mb-8">
             Cordialmente,
           </div>
 
-          <div className="mt-12 print:break-inside-avoid">
+          <div className="mt-14 print:break-inside-avoid">
             {/* Firma */}
             <div className="w-[300px]">
-              <div className="border-b-[1px] border-black mb-1 w-full h-10"></div>
               {isEditing ? (
                 <>
                   <input
                     type="text"
                     value={formData.firmaNombre}
                     onChange={(e) => handleFieldChange('firmaNombre', e.target.value)}
-                    className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold uppercase w-full block mb-1"
+                    className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold uppercase w-full block mb-1 text-[11pt]"
                   />
                   <div className="flex flex-row items-center whitespace-nowrap">
                     <span>C.C. </span>
@@ -739,21 +770,21 @@ export default function DeclaracionRentaDoc({
                       type="text"
                       value={formData.firmaCedula}
                       onChange={(e) => handleFieldChange('firmaCedula', e.target.value)}
-                      className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold w-24 mx-1 text-center"
+                      className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 font-bold w-24 mx-1 text-center text-[11pt]"
                     />
                     <span> de </span>
                     <input
                       type="text"
                       value={formData.firmaExpedicion}
                       onChange={(e) => handleFieldChange('firmaExpedicion', e.target.value)}
-                      className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 w-32 ml-1"
+                      className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 w-32 ml-1 text-[11pt]"
                     />
                   </div>
                 </>
               ) : (
                 <>
                   <div className="font-bold uppercase mb-1">{formData.firmaNombre}</div>
-                  <div>C.C. {formData.firmaCedula} de {formData.firmaExpedicion}</div>
+                  <div>C.C. {formData.firmaCedula} de {formData.firmaExpedicion || formData.expedicionCedula || 'Bogotá D.C'}</div>
                 </>
               )}
             </div>

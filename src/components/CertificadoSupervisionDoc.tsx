@@ -5,10 +5,11 @@ import { getDatosLiquidacionPeriodo, limpiarNumeroMoneda } from '../utils/paymen
 import { formatDateSlash, quitarDecimales } from '../utils/formatters';
 import QuibdoLogo from './QuibdoLogo';
 import FieldCommentModal from './FieldCommentModal';
-import { Printer, Download, Edit3, Check, Save, RotateCcw, Sparkles, Image as ImageIcon, Calculator, MessageSquare, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Printer, Download, Edit3, Check, Save, RotateCcw, Sparkles, Image as ImageIcon, Calculator, MessageSquare, AlertTriangle, CheckCircle2, FileSpreadsheet } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { exportarCertificado } from '../export/certificadoExcel';
 
 interface Props {
   key?: React.Key;
@@ -125,6 +126,7 @@ export default function CertificadoSupervisionDoc({
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isExportingImage, setIsExportingImage] = useState<boolean>(false);
+  const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
@@ -780,6 +782,24 @@ export default function CertificadoSupervisionDoc({
     }
   };
 
+  const handleExportExcel = async () => {
+    setIsExportingExcel(true);
+    try {
+      const blob = await exportarCertificado(formData);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Certificado_Supervision_Pago_${formData.pagoNro}_${formData.contratistaNombre.replace(/\s+/g, '_')}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error: any) {
+      console.error('Error exportando a Excel:', error);
+      alert(error?.message || 'Error desconocido exportando a Excel');
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
+
   return (
     <div className="w-full flex flex-col items-center select-text">
       {/* Barra de Acciones Superior (Oculta al imprimir) */}
@@ -828,11 +848,13 @@ export default function CertificadoSupervisionDoc({
           )}
 
           <button
-            onClick={onPrint || handleDirectPrint}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+            onClick={handleExportExcel}
+            disabled={isExportingExcel}
+            className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            title="Exportar documento en formato Excel"
           >
-            <Printer size={14} />
-            <span>Imprimir</span>
+            <FileSpreadsheet size={14} />
+            <span>{isExportingExcel ? 'Exportando...' : 'Exportar a Excel'}</span>
           </button>
         </div>
       </div>
@@ -863,8 +885,8 @@ export default function CertificadoSupervisionDoc({
                   Modifique directamente los valores, rubros presupuestales, fechas o firmas que requiera para este desembolso.
                 </div>
                 <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
-                  <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar e Imprimir:</span>
-                  Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Cambios»</strong> para registrar los datos y luego <strong className="text-slate-900 bg-slate-200 px-1 py-0.5 rounded">«Imprimir»</strong> para obtener el PDF oficial.
+                  <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar y Exportar:</span>
+                  Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Cambios»</strong> para registrar los datos o <strong className="text-emerald-900 bg-emerald-100 px-1 py-0.5 rounded">«Exportar a Excel»</strong>.
                 </div>
               </div>
             </div>
@@ -1109,7 +1131,7 @@ export default function CertificadoSupervisionDoc({
         <div className="relative w-full pb-2 mb-3.5 print:pb-1 print:mb-3 min-h-[96px] print:min-h-[76px]">
           {/* Logo oficial: se mantiene en la posición superior izquierda */}
           <div className="absolute left-0 top-0 shrink-0 flex items-center">
-            <QuibdoLogo variant="full" size="lg" className="scale-100 print:scale-[0.80] origin-left" />
+            <QuibdoLogo variant="full" size="lg" className="scale-x-[1.20] scale-y-[1.0] print:scale-x-[0.96] print:scale-y-[0.80] origin-left" />
           </div>
           {/* Título: con mayor margen superior para que baje más */}
           <div className="text-center px-4 w-full max-w-[580px] print:max-w-[580px] mx-auto pt-7 sm:pt-9 print:pt-6">
@@ -2362,10 +2384,10 @@ export default function CertificadoSupervisionDoc({
           </div>
         </div>
 
-        {/* 8. LÍNEA DE FIRMA DEL SUPERVISOR (Exacto a la imagen) */}
-        <div className="w-full flex flex-col items-center justify-center pt-8 print:pt-4 pb-0">
-          <div className="w-56 print:w-44 border-t border-black text-center pt-0.5">
-            <p className="font-bold uppercase tracking-wider text-[10px] print:text-[8.5px]">SUPERVISOR</p>
+        {/* 8. LÍNEA DE FIRMA DEL SUPERVISOR (Exacto a la imagen con mayor espacio vertical y sólo SUPERVISOR) */}
+        <div className="w-full flex flex-col items-center justify-center pt-16 print:pt-14 pb-1">
+          <div className="w-80 print:w-64 border-t border-black text-center pt-1">
+            <p className="font-bold uppercase tracking-wider text-[10.5px] print:text-[9px] text-black">SUPERVISOR</p>
           </div>
         </div>
 

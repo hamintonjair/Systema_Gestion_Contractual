@@ -1,11 +1,95 @@
 import { extraerLetrasYNumeroDeValorPagar, formatearObjetoConPeriodo, formatFechaAnioMesDia, formatFechaFiduciaria, obtenerValoresMonetariosReporte } from './utils/numberToWords';
-import { parsePlazoComponents } from './utils/formatters';
+import { parsePlazoComponents, formatFechaDeclaracionRenta } from './utils/formatters';
 
 export const extractContratoNroOnly = (str?: string): string => {
   if (!str) return '';
   const clean = str.trim();
   const firstPart = clean.split(/[\s\-\/]+/)[0];
   return firstPart.replace(/\D/g, '');
+};
+
+export interface ContractNumberAndYear {
+  numero: string;
+  ano: string;
+  full: string;
+  labelContratoDe: string;
+}
+
+export const parseContractNumberAndYear = (
+  rawStr?: string,
+  user?: AuthUser,
+  reports?: ReportData[],
+  defaultYear = '2026'
+): ContractNumberAndYear => {
+  let numero = '';
+  let ano = defaultYear;
+
+  const rep = (reports && reports.length > 0)
+    ? (reports.find(r => r.contratoNro && r.contratoNro.trim() !== '' && !r.contratoNro.includes('590')) || reports[0])
+    : null;
+
+  const extractDigits = (str?: string) => {
+    if (!str) return '';
+    let s = str.trim();
+    // Eliminar duplicaciones anormales de años como 20262026 o 2026 2026
+    s = s.replace(/20\d{2}20\d{2}/g, '').replace(/20\d{2}\s+20\d{2}/g, '');
+
+    // Buscar "X de YYYY" o "CPS X de YYYY" o "Contrato Nº X DE YYYY"
+    const matchDe = s.match(/(?:CPS|CONTRATO|N[°º\.]*)?\s*([a-zA-Z0-9_-]+)\s+DE\s+(20\d{2})/i);
+    if (matchDe && matchDe[1] && !/^20\d{2}$/.test(matchDe[1])) {
+      const d = matchDe[1].replace(/\D/g, '');
+      if (d && !/^20\d{2}$/.test(d)) return d;
+    }
+
+    // Buscar "Nº X" o "N° X" o "CPS X"
+    const matchNro = s.match(/(?:CPS|CONTRATO|N[°º\.]*)\s*(\d+)/i);
+    if (matchNro && matchNro[1] && !/^20\d{2}$/.test(matchNro[1])) {
+      return matchNro[1];
+    }
+
+    // Limpiar el año de 4 dígitos al final si viene en formato "DE 2026"
+    const cleanWithoutYear = s.replace(/\s*(?:DE|de|\/|-)?\s*20\d{2}\b/gi, '').trim();
+
+    // Extraer solo dígitos de lo que queda
+    const digitsOnly = cleanWithoutYear.replace(/\D/g, '');
+    if (digitsOnly && !/^20\d{2}$/.test(digitsOnly) && digitsOnly !== '590' && !/^20\d{2}20\d{2}$/.test(digitsOnly)) {
+      return digitsOnly;
+    }
+    return '';
+  };
+
+  const rawNum = extractDigits(rawStr);
+  const userNum = extractDigits(user?.contratoNro);
+  const repNum = extractDigits(rep?.contratoNro);
+
+  // Prioridad: Usar el número extraído de mayor fiabilidad del contratista en la base de datos
+  if (user?.role === 'contratista' && userNum) {
+    numero = userNum;
+  } else if (rawNum) {
+    numero = rawNum;
+  } else if (userNum) {
+    numero = userNum;
+  } else if (repNum) {
+    numero = repNum;
+  } else {
+    numero = (rawStr && !/^20\d{2}$/.test(rawStr.trim()) ? rawStr.trim() : '') || user?.contratoNro || rep?.contratoNro || '';
+  }
+
+  const combinedSource = `${user?.contratoNro || ''} ${rawStr || ''} ${rep?.contratoNro || ''} ${rep?.fechaInicio || ''} ${rep?.periodoHasta || ''} ${rep?.fechaPresentacion || ''}`;
+  const yearMatch = combinedSource.match(/\b(20\d{2})\b/);
+  if (yearMatch) {
+    ano = yearMatch[1];
+  }
+
+  const full = numero ? `CPS ${numero} de ${ano}` : `CPS de ${ano}`;
+  const labelContratoDe = numero ? `Contrato Nº ${numero} DE ${ano}` : `Contrato DE ${ano}`;
+
+  return {
+    numero,
+    ano,
+    full,
+    labelContratoDe
+  };
 };
 
 export type UserRole = 'super_admin' | 'secretaria_admin' | 'secretaria_supervisor' | 'contratista';
@@ -66,7 +150,7 @@ export const DEMO_USERS: AuthUser[] = [
     secretariaCodigo: '170',
     cargo: 'Contratista de Prestación de Servicios de Apoyo a la Gestión',
     telefono: '3104567890',
-    contratoNro: '015',
+    contratoNro: '',
     objetoContrato: 'PRESTAR LOS SERVICIOS PROFESIONALES DE APOYO A LA GESTIÓN EN EL ÁREA DE SISTEMAS Y TECNOLOGÍAS DE LA INFORMACIÓN...',
     valorContrato: '$25.000.000',
     cdpNro: '2026-00125',
@@ -231,6 +315,7 @@ export interface ReportData {
   periodoHasta: string;
   contratistaNombre: string;
   contratistaDocumento: string;
+  contratistaLugarDoc?: string;
   contratistaCorreo: string;
   contratistaTelefono: string;
   supervisorNombre: string;
@@ -439,8 +524,8 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
     if (yearMatch) anoCalculado = yearMatch[1];
   }
 
-  let rawContrato = rep.contratoNro || '590';
-  let contratoNumOnly = extractContratoNroOnly(rawContrato) || '590';
+  let rawContrato = rep.contratoNro || '';
+  let contratoNumOnly = extractContratoNroOnly(rawContrato) || '';
   let contratoYear = '2026';
   if (rawContrato.includes('-')) {
     const parts = rawContrato.split('-');
@@ -580,7 +665,7 @@ export const initialMockData: ReportData = {
   valorContrato: '$ 20.029.800',
   valorMensual: '$ 3.338.300',
   valorAdicion: '$ N/A',
-  contratoNro: '015',
+  contratoNro: '',
   objeto: 'PRESTAR LOS SERVICIOS PROFESIONALES EN EL AREA DE SISTEMAS PARA ADELANTAR, ACOMPAÑAR Y DESARROLLAR LAS ACCIONES QUE SE LLEVAN ACABO EN LA SECRETARIA DE INCLUSIÓN Y COHESIÓN SOCIAL DEL MUNICIPIO DE QUIBDÓ PARA LA POBLACIÓN BENEFICIARIA.',
   cdpNro: '137',
   crpNro: '191',
@@ -713,19 +798,20 @@ export interface DeclaracionRentaData {
 
 export const createDefaultDeclaracionRentaData = (report?: ReportData): DeclaracionRentaData => {
   const rawDate = report?.periodoHasta || report?.fechaPresentacion || '2026-07-14';
-  const fechaFormatted = formatFechaAnioMesDia(rawDate);
+  const fechaFormatted = formatFechaDeclaracionRenta(rawDate);
+  const lugarDoc = report?.contratistaLugarDoc || 'Bogotá D.C';
 
   return {
     reportId: report?.id,
-    fecha: `Quibdó, ${fechaFormatted}`,
+    fecha: fechaFormatted,
     senores: 'Señores\nALCALDIA\nCiudad.',
     nombresApellidos: report?.contratistaNombre || 'HAMINTON MENA MENA',
     cedula: report?.contratistaDocumento || '80.772.379',
-    expedicionCedula: 'Bogotá D.C',
+    expedicionCedula: lugarDoc,
     aplicaRetencion: false,
     firmaNombre: report?.contratistaNombre || 'HAMINTON MENA MENA',
     firmaCedula: report?.contratistaDocumento || '80.772.379',
-    firmaExpedicion: 'Quibdó',
+    firmaExpedicion: lugarDoc,
   };
 };
 
@@ -796,8 +882,8 @@ export const createDefaultAutorizacionDesembolsoData = (report?: ReportData): Au
     direccion: (rep?.direccion || rep?.barrio || rep?.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
     telefono: rep?.contratistaTelefono || '3124943527',
     concepto: 'PRESTACION DE SERVICIOS',
-    contratoNro: rep?.contratoNro ? rep.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
-    conceptoNro: rep?.contratoNro ? rep.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
+    contratoNro: rep?.contratoNro ? rep.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
+    conceptoNro: rep?.contratoNro ? rep.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
     objeto: objetoConPeriodo,
     valorNumeros: valorNumeroFormateado,
     subtotal: valorNumeroFormateado,
@@ -820,3 +906,146 @@ export const createDefaultAutorizacionDesembolsoData = (report?: ReportData): Au
     endoso2Valor: '$ 0',
   };
 };
+
+export interface ActividadInformeFinal {
+  nro: number;
+  actividad: string;
+  periodo: string;
+  lugar: string;
+  poblacion: string;
+  resultados: string;
+  evidencias: string;
+}
+
+export interface AnexoFotograficoFinal {
+  id: string;
+  url: string;
+  descripcion?: string;
+  periodo?: string;
+  fecha?: string;
+}
+
+export interface InformeFinalData {
+  id?: string;
+  userId?: string;
+  contratoNro: string;
+  contratistaNombre: string;
+  contratistaDocumento: string;
+  contratistaLugarDoc?: string;
+  dependencia: string;
+  supervisorNombre: string;
+  supervisorCargo: string;
+  objetoContractual: string;
+  metaPlanDesarrollo: string;
+  indicador: string;
+  fechaPresentacion: string;
+  
+  // Secciones analizadas y redactadas
+  introduccion: string;
+  metodologiaEnfoque: string;
+  metodologiaEstrategias: string;
+  metodologiaZonas: string;
+  metodologiaHerramientas: string;
+  
+  cuadroActividades: ActividadInformeFinal[];
+  
+  productosEntregados: string[];
+  resultadosAlcanzados: string[];
+  cumplimientoMeta: string;
+  analisisTecnico: string;
+  impactoEjecucion: string;
+  conclusiones: string;
+  recomendaciones: string[];
+  
+  anexosFotograficos: AnexoFotograficoFinal[];
+  
+  estado?: 'Borrador' | 'Finalizado';
+  generadoConIA?: boolean;
+  fechaGeneracionIA?: string;
+  updatedAt?: string;
+}
+
+export const createDefaultInformeFinalData = (user?: AuthUser, reports?: ReportData[]): InformeFinalData => {
+  const latestReport = reports && reports.length > 0 ? reports[0] : null;
+  const nombre = (user?.nombreCompleto && user.nombreCompleto !== 'USUARIO REGISTRADO' && user.nombreCompleto !== 'CONTRATISTA')
+    ? user.nombreCompleto
+    : (latestReport?.contratistaNombre || user?.nombreCompleto || '');
+
+  const documento = user?.documentoIdentidad || latestReport?.contratistaDocumento || '';
+
+  const parsedContrato = parseContractNumberAndYear(user?.contratoNro || latestReport?.contratoNro, user, reports);
+  const contrato = parsedContrato.full;
+
+  const dependencia = user?.secretariaNombre || latestReport?.secretariaNombre || '';
+  const supervisor = user?.supervisorNombre || latestReport?.supervisorNombre || '';
+  const supervisorCargo = user?.supervisorCargo || latestReport?.supervisorCargo || '';
+  const objeto = user?.objetoContrato || latestReport?.objeto || '';
+
+  // Extraer anexos fotográficos existentes de los informes mensuales si los hay
+  const anexos: AnexoFotograficoFinal[] = [];
+  if (reports && reports.length > 0) {
+    reports.forEach((rep, rIdx) => {
+      if (rep.anexos && rep.anexos.length > 0) {
+        rep.anexos.forEach((ev, eIdx) => {
+          if (ev.imagenUrl) {
+            anexos.push({
+              id: `anexo-${rIdx}-${eIdx}-${Date.now()}`,
+              url: ev.imagenUrl,
+              descripcion: ev.titulo || `Evidencia fotográfica informe mes ${rep.informeNro || rIdx + 1}`,
+              periodo: rep.periodoDesde ? `${rep.periodoDesde} - ${rep.periodoHasta}` : `Mes ${rep.informeNro || rIdx + 1}`,
+              fecha: rep.fechaPresentacion || rep.periodoHasta
+            });
+          }
+        });
+      }
+    });
+  }
+
+  let lugarDoc = user?.ciudad || (latestReport as any)?.contratistaLugarDoc || '';
+  if (!lugarDoc && typeof localStorage !== 'undefined') {
+    const cleanDoc = documento.replace(/\D/g, '');
+    const decRentaStr = (cleanDoc ? localStorage.getItem(`dec_renta_${cleanDoc}_1`) : null) || 
+                        (documento ? localStorage.getItem(`dec_renta_${documento}_1`) : null);
+    if (decRentaStr) {
+      try {
+        const parsed = JSON.parse(decRentaStr);
+        if (parsed.expedicionCedula) lugarDoc = parsed.expedicionCedula;
+      } catch (e) {}
+    }
+  }
+  if (!lugarDoc) lugarDoc = 'Bogotá D.C';
+
+  return {
+    contratoNro: contrato,
+    contratistaNombre: nombre,
+    contratistaDocumento: documento,
+    contratistaLugarDoc: lugarDoc,
+    dependencia: dependencia,
+    supervisorNombre: supervisor,
+    supervisorCargo: supervisorCargo,
+    objetoContractual: objeto,
+    metaPlanDesarrollo: '',
+    indicador: '',
+    fechaPresentacion: '',
+    
+    introduccion: '',
+    metodologiaEnfoque: '',
+    metodologiaEstrategias: '',
+    metodologiaZonas: '',
+    metodologiaHerramientas: '',
+    
+    cuadroActividades: [],
+    productosEntregados: [],
+    resultadosAlcanzados: [],
+    cumplimientoMeta: '',
+    analisisTecnico: '',
+    impactoEjecucion: '',
+    conclusiones: '',
+    recomendaciones: [],
+    
+    anexosFotograficos: anexos,
+    estado: 'Borrador',
+    generadoConIA: false
+  };
+};
+

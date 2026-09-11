@@ -714,7 +714,7 @@ export default function ReportPreview({
                   
                   {/* 2. Párrafo de certificación con el MISMO fondo gris que el título */}
                   <div 
-                    className={`bg-gray-200 border-b border-black p-3 text-justify text-[11px] leading-relaxed italic text-black relative ${
+                    className={`bg-gray-200 border-b border-black p-3 text-justify text-[9pt] leading-relaxed italic text-black relative ${
                       data.comentariosCampos?.['valorPagar'] ? 'ring-2 ring-amber-400 bg-amber-100/90' : (isReviewMode ? 'hover:bg-gray-300/80 cursor-pointer group' : '')
                     }`}
                     onClick={isReviewMode ? () => openCommentModal('valorPagar', 'Texto de Certificación y Valor a Pagar', data.valorPagar) : undefined}
@@ -754,17 +754,17 @@ export default function ReportPreview({
                     <div className="p-3 pt-6 flex flex-col justify-between">
                       <div className="h-20 flex items-end justify-center pb-2">
                         {/* Espacio para firma visual */}
-                        <div className="text-[10px] text-gray-300 italic"></div>
+                        <div className="text-[8pt] text-gray-300 italic"></div>
                       </div>
                       <div>
                         <div className="w-[85%] mx-auto border-t border-black pt-1 mb-1">
-                          <p className="font-bold text-[11px] text-black">Firma del contratista</p>
+                          <p className="font-bold text-[8pt] text-black">Firma del contratista</p>
                         </div>
                         <div 
                           className="mt-3 px-1 relative group"
                           onClick={isReviewMode ? () => openCommentModal('contratistaNombre', 'Nombre del Contratista', data.contratistaNombre) : undefined}
                         >
-                          <div className="bg-gray-300 py-1 px-2 text-[11px] font-semibold italic uppercase text-black w-full text-center shadow-xs">
+                          <div className="bg-gray-300 py-1 px-2 text-[8pt] font-bold uppercase text-black w-full text-center shadow-xs">
                             {data.contratistaNombre}
                           </div>
                         </div>
@@ -775,17 +775,17 @@ export default function ReportPreview({
                     <div className="p-3 pt-6 flex flex-col justify-between">
                       <div className="h-20 flex items-end justify-center pb-2">
                         {/* Espacio para firma visual */}
-                        <div className="text-[10px] text-gray-300 italic"></div>
+                        <div className="text-[8pt] text-gray-300 italic"></div>
                       </div>
                       <div>
                         <div className="w-[85%] mx-auto border-t border-black pt-1 mb-1">
-                          <p className="font-bold text-[11px] text-black">Firma Supervisor</p>
+                          <p className="font-bold text-[8pt] text-black">Firma Supervisor</p>
                         </div>
                         <div 
                           className="mt-3 px-1 relative group"
                           onClick={isReviewMode ? () => openCommentModal('supervisorNombre', 'Nombre del Supervisor', data.supervisorNombre) : undefined}
                         >
-                          <div className="bg-gray-300 py-1 px-2 text-[11px] font-semibold italic uppercase text-black w-full text-center shadow-xs">
+                          <div className="bg-gray-300 py-1 px-2 text-[8pt] font-bold uppercase text-black w-full text-center shadow-xs">
                             {data.supervisorNombre}
                           </div>
                         </div>
@@ -814,23 +814,23 @@ export default function ReportPreview({
 
                         return (
                           <div key={obs.id} className="space-y-2.5">
-                            {/* ENCABEZADO: Si es la primera obligación con fotos, ANEXOS FOTOGRÁFICOS queda directamente unido a OBLIGACIÓN Nº 1 en el mismo bloque para que nunca quede solo */}
+                            {/* ENCABEZADO: Si es la primera obligación con fotos, ANEXOS queda directamente unido a Responsabilidad contractual 1 */}
                             {isFirstSection ? (
                               <div className="break-inside-avoid print:break-inside-avoid break-after-avoid print:break-after-avoid mb-2.5">
                                 <div className="text-center mb-2.5">
-                                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-900">ANEXOS FOTOGRÁFICOS</h3>
+                                  <h3 className="font-extrabold text-[11pt] uppercase tracking-wider text-gray-900">ANEXOS</h3>
                                   <div className="w-14 h-0.5 bg-[#2a7a38] mx-auto mt-0.5"></div>
                                 </div>
                                 <div className="bg-[#f0f7f2] border border-[#b8dec2] px-3 py-1 rounded text-center print:bg-[#f0f7f2]">
-                                  <span className="font-bold text-[11.5px] uppercase text-[#005226] tracking-wide block">
-                                    OBLIGACIÓN Nº {oIdx + 1}
+                                  <span className="font-bold text-[11pt] uppercase text-[#005226] tracking-wide block">
+                                    Responsabilidad contractual {oIdx + 1}
                                   </span>
                                 </div>
                               </div>
                             ) : (
                               <div className="bg-[#f0f7f2] border border-[#b8dec2] px-3 py-1 rounded text-center print:bg-[#f0f7f2] break-inside-avoid print:break-inside-avoid break-after-avoid print:break-after-avoid mb-2.5">
-                                <span className="font-bold text-[11.5px] uppercase text-[#005226] tracking-wide block">
-                                  OBLIGACIÓN Nº {oIdx + 1}
+                                <span className="font-bold text-[11pt] uppercase text-[#005226] tracking-wide block">
+                                  Responsabilidad contractual {oIdx + 1}
                                 </span>
                               </div>
                             )}

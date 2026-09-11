@@ -69,6 +69,12 @@ export default function LoginView({ onLoginSuccess }: Props) {
             return;
           }
 
+          const fullProfile = await supabaseService.getUserProfile(profile.documento_identidad || profile.id || profile.email || '');
+          if (fullProfile) {
+            onLoginSuccess(fullProfile);
+            return;
+          }
+
           onLoginSuccess({
             id: profile.id,
             email: profile.email || inputVal,

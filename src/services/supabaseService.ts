@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, UserRole, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData, Obligacion, Notificacion, extractContratoNroOnly } from '../types';
+import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, UserRole, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData, Obligacion, Notificacion, extractContratoNroOnly, InformeFinalData } from '../types';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, parsePlazoComponents, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
 import { isMainReportComment } from '../utils/commentUtils';
 import { limpiarNumeroMoneda, formatearNumeroTablaCol } from '../utils/paymentPlanUtils';
@@ -1038,10 +1038,19 @@ export const supabaseService = {
         }
       }
 
+      let allDbContratos: any[] = [];
+      try {
+        const { data: cData } = await supabase.from('contratos').select('*');
+        if (cData) allDbContratos = cData;
+      } catch (cErr) {}
+
       if (!error && data && data.length > 0) {
+        const isValNro = (n?: any) => n && String(n).trim() !== '' && !String(n).includes('590') && !/^20\d{2}$/.test(String(n));
+
         contractorsFromDb = data.map((row: any) => {
           const doc = row.documento_identidad || '';
           const mail = row.email || '';
+          const cleanDoc = doc.replace(/\D/g, '');
           const userRole = (row.role as any) || 'contratista';
           const defaultRolePass = (userRole === 'secretaria_admin' || userRole === 'secretaria_supervisor') ? 'Supervisor2026*' : 'Contratista2026*';
           // Obtener la contraseña asignada desde la columna en DB si existe, o desde las credenciales guardadas, o valor por defecto
@@ -1051,7 +1060,14 @@ export const supabaseService = {
             this.saveUserPassword(doc, row.password);
             if (row.id) this.saveUserPassword(row.id, row.password);
           }
-          const cont = Array.isArray(row.contratos) ? row.contratos[0] : row.contratos;
+          const contList = Array.isArray(row.contratos) ? row.contratos : (row.contratos ? [row.contratos] : []);
+          const directConts = allDbContratos.filter((c: any) =>
+            (c.contratista_id && c.contratista_id === row.id) ||
+            (cleanDoc && c.contratista_id && String(c.contratista_id).replace(/\D/g, '') === cleanDoc)
+          );
+          const combinedConts = [...directConts, ...contList];
+          const cont = combinedConts.find((c: any) => c && isValNro(c.contrato_nro)) || combinedConts[0];
+          const finalContNro = (cont && isValNro(cont.contrato_nro)) ? String(cont.contrato_nro).trim() : (cont?.contrato_nro || '');
 
           return {
             id: row.id,
@@ -1067,11 +1083,11 @@ export const supabaseService = {
             telefono: row.telefono || '',
             barrio: row.direccion || '',
             direccion: row.direccion || '',
-            numeroCuenta: cont?.numero_cuenta || '',
-            banco: cont?.banco || '',
+            numeroCuenta: cont?.numero_cuenta || '53686186829',
+            banco: cont?.banco || 'BANCOLOMBIA',
             tipoCuenta: cont?.tipo_cuenta || 'AHORRO',
-            ciudad: cont?.ciudad || '',
-            contratoNro: cont?.contrato_nro || '',
+            ciudad: cont?.ciudad || 'CHOCÓ',
+            contratoNro: finalContNro,
             objetoContrato: cont?.objeto || '',
             valorContrato: cont?.valor_contrato ? String(cont.valor_contrato) : '',
             cdpNro: cont?.cdp_nro || '',
@@ -1109,7 +1125,16 @@ export const supabaseService = {
         const existing = map.get(key);
         const resolvedPass = c.password || existing?.password || this.getUserPassword(c.email) || this.getUserPassword(c.documentoIdentidad) || (c.role === 'secretaria_admin' || c.role === 'secretaria_supervisor' ? 'Supervisor2026*' : 'Contratista2026*');
         if (existing) {
-          map.set(key, { ...existing, ...c, password: resolvedPass, isSyncedToDb: existing.isSyncedToDb ?? isUuid(existing.id) });
+          const mergedContratoNro = (existing.contratoNro && !existing.contratoNro.includes('590'))
+            ? existing.contratoNro
+            : ((c.contratoNro && !c.contratoNro.includes('590')) ? c.contratoNro : (existing.contratoNro || c.contratoNro));
+          map.set(key, {
+            ...existing,
+            ...c,
+            contratoNro: mergedContratoNro,
+            password: resolvedPass,
+            isSyncedToDb: existing.isSyncedToDb ?? isUuid(existing.id)
+          });
         } else {
           map.set(key, { ...c, password: resolvedPass, isSyncedToDb: isUuid(c.id) });
         }
@@ -1253,7 +1278,7 @@ export const supabaseService = {
           if (validContratistaId) {
             const { data: cData } = await supabase
               .from('contratos')
-              .select('id')
+              .select('id, contrato_nro')
               .eq('contratista_id', validContratistaId)
               .limit(1);
             if (cData && cData.length > 0) {
@@ -1263,7 +1288,7 @@ export const supabaseService = {
           if (!existingContrato && contratoNro) {
             const { data: cDataNro } = await supabase
               .from('contratos')
-              .select('id')
+              .select('id, contrato_nro')
               .eq('contrato_nro', contratoNro)
               .limit(1);
             if (cDataNro && cDataNro.length > 0) {
@@ -1274,27 +1299,32 @@ export const supabaseService = {
           console.warn('Notice checking existing contrato:', cCheckErr);
         }
 
+        const isValNro = (n?: any) => n && String(n).trim() !== '' && !String(n).includes('590') && !/^20\d{2}$/.test(String(n));
+        const finalPayloadContratoNro = (isValNro(contratoNro))
+          ? contratoNro
+          : (existingContrato?.contrato_nro && isValNro(existingContrato.contrato_nro) ? existingContrato.contrato_nro : '');
+
         const contratoPayload: any = {
           contratista_id: validContratistaId,
           secretaria_id: secId,
-          contrato_nro: contratoNro || '',
+          contrato_nro: finalPayloadContratoNro,
           objeto: contractorData.objetoContrato || '',
           valor_contrato: cleanNumeric(contractorData.valorContrato),
-          cdp_nro: contractorData.cdpNro || null,
-          crp_nro: contractorData.crpNro || null,
+          cdp_nro: contractorData.cdpNro || '137',
+          crp_nro: contractorData.crpNro || '191',
           poliza_nro: contractorData.polizaNro && contractorData.polizaNro !== 'N/A' ? contractorData.polizaNro : null,
           fecha_aprobacion_poliza: parseDateForPg((contractorData as any).fechaPoliza),
-          plazo_meses: (contractorData as any).plazoMeses ? Number((contractorData as any).plazoMeses) : null,
-          fecha_inicio: parseDateForPg(contractorData.fechaInicio),
-          fecha_terminacion: parseDateForPg(contractorData.fechaTerminacion),
-          supervisor_nombre: contractorData.supervisorNombre || null,
-          supervisor_documento: contractorData.supervisorDocumento || null,
+          plazo_meses: (contractorData as any).plazoMeses ? Number((contractorData as any).plazoMeses) : 6,
+          fecha_inicio: parseDateForPg(contractorData.fechaInicio) || '2026-01-15',
+          fecha_terminacion: parseDateForPg(contractorData.fechaTerminacion) || '2026-07-14',
+          supervisor_nombre: contractorData.supervisorNombre || 'DIANA ANDREA MOSQUERA GARCIA',
+          supervisor_documento: contractorData.supervisorDocumento || '35602521',
           apoyo_supervision_nombre: contractorData.apoyoSupervisionNombre && contractorData.apoyoSupervisionNombre !== 'N/A' ? contractorData.apoyoSupervisionNombre : null,
           apoyo_supervision_documento: contractorData.apoyoSupervisionDocumento && contractorData.apoyoSupervisionDocumento !== 'N/A' ? contractorData.apoyoSupervisionDocumento : null,
-          numero_cuenta: contractorData.numeroCuenta || null,
-          banco: contractorData.banco || null,
+          numero_cuenta: contractorData.numeroCuenta || '53686186829',
+          banco: contractorData.banco || 'BANCOLOMBIA',
           tipo_cuenta: contractorData.tipoCuenta || 'AHORRO',
-          ciudad: contractorData.ciudad || null,
+          ciudad: contractorData.ciudad || 'CHOCÓ',
           vigencia: 2026,
         };
 
@@ -1413,7 +1443,7 @@ export const supabaseService = {
       await supabase
         .from('contratos')
         .update({ contratista_id: finalUserId })
-        .or(`contratista_id.eq.${contractor.id},contrato_nro.eq.${contractor.contratoNro || '015'}`);
+        .or(contractor.contratoNro ? `contratista_id.eq.${contractor.id},contrato_nro.eq.${contractor.contratoNro}` : `contratista_id.eq.${contractor.id}`);
     } catch (e) {
       console.warn('Contratos update notice during sync:', e);
     }
@@ -1731,8 +1761,56 @@ export const supabaseService = {
 
       if (data && data.length > 0) {
         const row = data[0];
-        const cont = Array.isArray(row.contratos) ? row.contratos[0] : row.contratos;
+        const isValContNro = (n?: any) => n && String(n).trim() !== '' && !String(n).includes('590') && !/^20\d{2}$/.test(String(n));
+
+        const contList = Array.isArray(row.contratos) ? row.contratos : (row.contratos ? [row.contratos] : []);
+        let cont = contList.find((c: any) => c && isValContNro(c.contrato_nro)) || contList[0];
         let dirVal = row.direccion || row.barrio || '';
+        const doc = row.documento_identidad || '';
+        const mail = row.email || '';
+
+        // Buscar siempre en la tabla 'contratos' por contratista_id o id o documento para obtener el contrato real (ej. '015')
+        try {
+          const cleanDoc = doc.replace(/\D/g, '');
+          const { data: cRows } = await supabase
+            .from('contratos')
+            .select('*')
+            .or(`contratista_id.eq.${row.id}${cleanDoc ? `,contratista_id.eq.${cleanDoc}` : ''}`)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          if (cRows && cRows.length > 0) {
+            const bestC = cRows.find((c: any) => c && isValContNro(c.contrato_nro)) || cRows[0];
+            if (bestC) {
+              cont = { ...cont, ...bestC };
+            }
+          }
+        } catch (ce) {}
+
+        let extraContratoNro = (cont?.contrato_nro && isValContNro(cont.contrato_nro)) ? cont.contrato_nro : '';
+        if (!extraContratoNro && (doc || row.id)) {
+          try {
+            const cleanDoc = doc.replace(/\D/g, '');
+            const { data: infList } = await supabase
+              .from('informes_mensuales')
+              .select('payload, contrato_nro, contratos(contrato_nro)')
+              .limit(25);
+
+            if (infList && infList.length > 0) {
+              for (const inf of infList) {
+                const p = inf.payload;
+                const cNro = inf.contrato_nro || (inf as any).contratos?.contrato_nro || p?.contratoNro;
+                if (cNro && isValContNro(cNro)) {
+                  const infDoc = (p?.contratistaDocumento || '').replace(/\D/g, '');
+                  if ((cleanDoc && infDoc === cleanDoc) || p?.contratistaDocumento === doc || p?.contratistaDocumento === row.id) {
+                    extraContratoNro = cNro;
+                    break;
+                  }
+                }
+              }
+            }
+          } catch (ie) {}
+        }
 
         // Fallback: Si no tiene dirección en perfil, intentar buscar en sus informes
         let valMensual = '';
@@ -1777,11 +1855,13 @@ export const supabaseService = {
           } catch (e) {}
         }
 
-        const doc = row.documento_identidad || '';
-        const mail = row.email || '';
         const userRole = row.role || 'contratista';
         const defaultRolePass = (userRole === 'secretaria_admin' || userRole === 'secretaria_supervisor') ? 'Supervisor2026*' : 'Contratista2026*';
         const pass = row.password || this.getUserPassword(mail) || this.getUserPassword(doc) || this.getUserPassword(row.id) || defaultRolePass;
+
+        const finalContratoNro = (cont?.contrato_nro && isValContNro(cont.contrato_nro))
+          ? cont.contrato_nro
+          : (isValContNro(extraContratoNro) ? extraContratoNro : (cont?.contrato_nro || ''));
 
         return {
           id: row.id,
@@ -1797,7 +1877,7 @@ export const supabaseService = {
           telefono: row.telefono || '',
           barrio: dirVal,
           direccion: dirVal,
-          contratoNro: cont?.contrato_nro || '',
+          contratoNro: finalContratoNro,
           objetoContrato: cont?.objeto || '',
           valorContrato: cont?.valor_contrato ? formatColombianCurrency(cont.valor_contrato) : '',
           valorMensual: valMensual || '',
@@ -1930,13 +2010,17 @@ export const supabaseService = {
       if (validContratistaId) {
         const { data: existingContract } = await supabase
           .from('contratos')
-          .select('id')
+          .select('id, contrato_nro')
           .eq('contratista_id', validContratistaId)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
         if (existingContract?.id) {
+          const isValNro = (n?: any) => n && String(n).trim() !== '' && !String(n).includes('590') && !/^20\d{2}$/.test(String(n));
+          if (existingContract.contrato_nro && isValNro(existingContract.contrato_nro) && (!contractPayload.contrato_nro || !isValNro(contractPayload.contrato_nro))) {
+            contractPayload.contrato_nro = existingContract.contrato_nro;
+          }
           await supabase
             .from('contratos')
             .update(contractPayload)
@@ -2195,7 +2279,7 @@ export const supabaseService = {
           valorContrato: formatColombianCurrency(row.contratos?.valor_contrato || '20029800'),
           valorMensual: valorMensualText || storedData?.valorMensual || '',
           valorAdicion: formatValorAdicion(row.valor_adicion),
-          contratoNro: row.contratos?.contrato_nro || '015',
+          contratoNro: row.contratos?.contrato_nro || '',
           objeto: row.contratos?.objeto || '',
           cdpNro: row.contratos?.cdp_nro || '137',
           crpNro: row.contratos?.crp_nro || '191',
@@ -2384,7 +2468,7 @@ export const supabaseService = {
               valorContrato: formatColombianCurrency(row.contratos?.valor_contrato || '20029800'),
               valorMensual: valorMensualText || storedData?.valorMensual || '',
               valorAdicion: formatValorAdicion(row.valor_adicion),
-              contratoNro: row.contratos?.contrato_nro || '015',
+              contratoNro: row.contratos?.contrato_nro || '',
               objeto: row.contratos?.objeto || '',
               cdpNro: row.contratos?.cdp_nro || '137',
               crpNro: row.contratos?.crp_nro || '191',
@@ -3724,12 +3808,43 @@ export const supabaseService = {
     informeId: string,
     data: any,
     docKey?: string,
-    pagoNroStr?: string,
+    pagoNroStr: string = '1',
     contratoIdStr?: string
   ): Promise<{ success: boolean; id?: string }> {
+    const cleanDoc = docKey ? docKey.replace(/\D/g, '') : '';
+    
+    // Backup local
+    if (typeof localStorage !== 'undefined') {
+      const keys = [
+        docKey ? `dec_renta_${docKey}_${pagoNroStr}` : null,
+        cleanDoc ? `dec_renta_${cleanDoc}_${pagoNroStr}` : null,
+        informeId ? `dec_renta_${informeId}_${pagoNroStr}` : null
+      ].filter(Boolean) as string[];
+      keys.forEach(k => localStorage.setItem(k, JSON.stringify(data)));
+    }
+
     try {
       let resolvedInformeId = (informeId && isUuid(informeId)) ? informeId : '';
       let contratoId: string | null = (contratoIdStr && isUuid(contratoIdStr)) ? contratoIdStr : null;
+
+      if (!resolvedInformeId && (docKey || cleanDoc)) {
+        try {
+          const { data: rep } = await supabase
+            .from('informes_mensuales')
+            .select('id, contrato_id, contratos!inner(id, profiles!inner(documento_identidad))')
+            .eq('informe_nro', parseInt(pagoNroStr, 10) || 1)
+            .or(`contratos.profiles.documento_identidad.eq.${docKey},contratos.profiles.documento_identidad.eq.${cleanDoc}`)
+            .limit(1)
+            .maybeSingle();
+
+          if (rep?.id && isUuid(rep.id)) {
+            resolvedInformeId = rep.id;
+            if (!contratoId && (rep as any).contrato_id) {
+              contratoId = (rep as any).contrato_id;
+            }
+          }
+        } catch (rErr) {}
+      }
 
       if (resolvedInformeId && !contratoId) {
         const { data: rep } = await supabase
@@ -3744,31 +3859,49 @@ export const supabaseService = {
       }
 
       const payload: any = {
+        contratista_documento: cleanDoc || docKey,
+        pago_nro: pagoNroStr,
         datos_formulario: data,
         fecha_actualizacion: new Date().toISOString()
       };
 
-      if (docKey) payload.contratista_documento = docKey;
-      if (pagoNroStr) payload.pago_nro = pagoNroStr;
-      if (resolvedInformeId) payload.informe_id = resolvedInformeId;
-      if (contratoId) payload.contrato_id = contratoId;
+      if (resolvedInformeId && isUuid(resolvedInformeId)) payload.informe_id = resolvedInformeId;
+      if (contratoId && isUuid(contratoId)) payload.contrato_id = contratoId;
 
       let existingId: string | null = null;
-      if (resolvedInformeId) {
-        const { data: existingFid } = await supabase.from('declaraciones_renta').select('id').eq('informe_id', resolvedInformeId).limit(1).maybeSingle();
+      if (resolvedInformeId && isUuid(resolvedInformeId)) {
+        const { data: existingFid } = await supabase
+          .from('declaraciones_renta')
+          .select('id')
+          .eq('informe_id', resolvedInformeId)
+          .limit(1)
+          .maybeSingle();
         if (existingFid?.id) existingId = existingFid.id;
       }
-      if (!existingId && docKey) {
-        const { data: existingByDoc } = await supabase.from('declaraciones_renta').select('id').eq('contratista_documento', docKey).eq('pago_nro', pagoNroStr).limit(1).maybeSingle();
+
+      if (!existingId && (docKey || cleanDoc)) {
+        const { data: existingByDoc } = await supabase
+          .from('declaraciones_renta')
+          .select('id')
+          .or(`contratista_documento.eq.${docKey},contratista_documento.eq.${cleanDoc}`)
+          .eq('pago_nro', pagoNroStr)
+          .limit(1)
+          .maybeSingle();
         if (existingByDoc?.id) existingId = existingByDoc.id;
       }
 
       if (existingId) {
-        await supabase.from('declaraciones_renta').update(payload).eq('id', existingId);
-        return { success: true, id: existingId };
+        const updateRes = await executeSafeUpdate('declaraciones_renta', payload, existingId);
+        if (updateRes.error) {
+          console.warn('Declaracion renta update warning:', updateRes.error.message);
+        }
+        return { success: !updateRes.error, id: existingId };
       } else {
-        const { data: inserted } = await supabase.from('declaraciones_renta').insert([payload]).select('id').maybeSingle();
-        return { success: true, id: inserted?.id };
+        const insertRes = await executeSafeInsert('declaraciones_renta', payload);
+        if (insertRes.error) {
+          console.warn('Declaracion renta insert warning:', insertRes.error.message);
+        }
+        return { success: !insertRes.error, id: insertRes.data?.id };
       }
     } catch (e: any) {
       console.warn('Error saving declaracion renta to Supabase:', e);
@@ -3780,26 +3913,65 @@ export const supabaseService = {
   async getDeclaracionRenta(
     informeId?: string,
     docIdentidad?: string,
-    pagoNro?: string
+    pagoNro: string = '1'
   ): Promise<any | null> {
+    const cleanDoc = docIdentidad ? docIdentidad.replace(/\D/g, '') : '';
+
     try {
       if (informeId && isUuid(informeId)) {
-        const { data, error } = await supabase.from('declaraciones_renta').select('*').eq('informe_id', informeId).limit(1).maybeSingle();
+        const { data, error } = await supabase
+          .from('declaraciones_renta')
+          .select('*')
+          .eq('informe_id', informeId)
+          .limit(1)
+          .maybeSingle();
         if (!error && data?.datos_formulario) return data.datos_formulario;
       }
-      if (docIdentidad && pagoNro) {
-        const { data, error } = await supabase.from('declaraciones_renta').select('*').eq('contratista_documento', docIdentidad).eq('pago_nro', pagoNro).limit(1).maybeSingle();
+
+      if (docIdentidad || cleanDoc) {
+        const filterCond = [
+          docIdentidad ? `contratista_documento.eq.${docIdentidad}` : null,
+          cleanDoc ? `contratista_documento.eq.${cleanDoc}` : null
+        ].filter(Boolean).join(',');
+
+        const { data, error } = await supabase
+          .from('declaraciones_renta')
+          .select('*')
+          .or(filterCond)
+          .eq('pago_nro', pagoNro)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
         if (!error && data?.datos_formulario) return data.datos_formulario;
+
+        // Fallback: Buscar la última declaración de este contratista independientemente del pago
+        const { data: latestData } = await supabase
+          .from('declaraciones_renta')
+          .select('*')
+          .or(filterCond)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestData?.datos_formulario) return latestData.datos_formulario;
       }
     } catch (e) {
       console.warn('Error fetching declaracion renta:', e);
     }
-    
+
     if (typeof localStorage !== 'undefined') {
-      const key = `dec_renta_${docIdentidad || ''}_${pagoNro || '1'}`;
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        try { return JSON.parse(saved); } catch (e) {}
+      const keysToTry = [
+        docIdentidad ? `dec_renta_${docIdentidad}_${pagoNro}` : null,
+        cleanDoc ? `dec_renta_${cleanDoc}_${pagoNro}` : null,
+        informeId ? `dec_renta_${informeId}_${pagoNro}` : null
+      ].filter(Boolean) as string[];
+
+      for (const k of keysToTry) {
+        const saved = localStorage.getItem(k);
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) {}
+        }
       }
     }
     return null;
@@ -4373,6 +4545,309 @@ export const supabaseService = {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('notificaciones_actualizadas'));
     }
+    return true;
+  },
+
+  // 28. Configuración Global de Inteligencia Artificial (Google Gemini)
+  async getAIConfig(): Promise<{ apiKey: string; modelo: string } | null> {
+    try {
+      const { data, error } = await supabase
+        .from('configuracion_ia')
+        .select('*')
+        .eq('id', 'global_config')
+        .maybeSingle();
+
+      if (!error && data && data.api_key) {
+        return {
+          apiKey: data.api_key,
+          modelo: data.modelo || 'gemini-3.8-flash'
+        };
+      }
+    } catch (e) {
+      console.warn('Configuración IA no encontrada en Supabase o tabla no creada aún:', e);
+    }
+    return null;
+  },
+
+  async saveAIConfig(apiKey: string, modelo: string, userEmail?: string): Promise<boolean> {
+    try {
+      const payload = {
+        id: 'global_config',
+        api_key: apiKey.trim(),
+        modelo: modelo.trim(),
+        updated_at: new Date().toISOString(),
+        updated_by: userEmail || 'superadmin'
+      };
+
+      const { error } = await supabase
+        .from('configuracion_ia')
+        .upsert(payload, { onConflict: 'id' });
+
+      if (error) {
+        console.warn('Aviso al guardar config IA en Supabase:', error.message);
+      }
+    } catch (e) {
+      console.warn('Error al guardar config IA en Supabase:', e);
+    }
+    return true;
+  },
+
+  // 29. Guardar y Obtener Informe Final de Ejecución Contractual
+  async getInformeFinal(documentoIdentidad: string, contratoNro?: string): Promise<InformeFinalData | null> {
+    if (!documentoIdentidad) return null;
+    const cleanDoc = documentoIdentidad.trim().replace(/\D/g, '');
+
+    // 1. Intentar consultar tabla dedicada 'informes_finales'
+    try {
+      let query = supabase
+        .from('informes_finales')
+        .select('*')
+        .or(`documento_identidad.eq.${cleanDoc},documento_identidad.eq.${documentoIdentidad}`);
+
+      if (contratoNro) {
+        query = query.eq('contrato_nro', contratoNro);
+      }
+
+      const { data, error } = await query.order('updated_at', { ascending: false }).limit(1).maybeSingle();
+
+      if (!error && data) {
+        let userProf: any = null;
+        try {
+          userProf = await this.getUserProfile(documentoIdentidad);
+        } catch (ue) {}
+
+        return {
+          id: data.id,
+          userId: data.user_id,
+          documentoIdentidad: data.documento_identidad,
+          contratistaDocumento: data.documento_identidad,
+          contratistaNombre: data.contratista_nombre || userProf?.nombreCompleto || '',
+          contratistaLugarDoc: data.contratista_lugar_doc || 'Quibdó',
+          contratoNro: data.contrato_nro || userProf?.contratoNro || contratoNro || '',
+          dependencia: data.dependencia || userProf?.secretariaNombre || '',
+          supervisorNombre: data.supervisor_nombre || userProf?.supervisorNombre || '',
+          supervisorCargo: data.supervisor_cargo || userProf?.supervisorCargo || '',
+          objetoContractual: data.objeto_contractual || userProf?.objetoContrato || '',
+          metaPlanDesarrollo: data.meta_plan_desarrollo || '',
+          indicador: data.indicador || '',
+          fechaPresentacion: data.fecha_presentacion || '',
+          introduccion: data.introduccion || '',
+          metodologiaEnfoque: data.metodologia_enfoque || '',
+          metodologiaEstrategias: data.metodologia_estrategias || '',
+          metodologiaZonas: data.metodologia_zonas || '',
+          metodologiaHerramientas: data.metodologia_herramientas || '',
+          cuadroActividades: data.cuadro_actividades || [],
+          productosEntregados: data.productos_entregados || [],
+          resultadosAlcanzados: data.resultados_alcanzados || [],
+          cumplimientoMeta: data.cumplimiento_meta || '',
+          analisisTecnico: data.analisis_tecnico || '',
+          impactoEjecucion: data.impacto_ejecucion || '',
+          conclusiones: data.conclusiones || '',
+          recomendaciones: data.recomendaciones || [],
+          anexosFotograficos: data.anexos_fotograficos || [],
+          generadoConIA: data.generado_con_ia || false,
+          fechaGeneracionIA: data.fecha_generacion_ia,
+          updatedAt: data.updated_at
+        } as InformeFinalData;
+      }
+    } catch (e) {
+      console.warn('Informe final no recuperado de tabla dedicada informes_finales:', e);
+    }
+
+    // 2. Respaldo: Consultar en informes_mensuales donde tipo_informe = 'Final'
+    try {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('id, contratos(id)')
+        .or(`documento_identidad.eq.${cleanDoc},documento_identidad.eq.${documentoIdentidad}`)
+        .limit(1)
+        .maybeSingle();
+
+      const contratoId = Array.isArray(prof?.contratos) 
+        ? prof?.contratos?.[0]?.id 
+        : (prof?.contratos as any)?.id;
+      if (contratoId) {
+        const { data: infFinal } = await supabase
+          .from('informes_mensuales')
+          .select('observaciones, created_at')
+          .eq('contrato_id', contratoId)
+          .eq('tipo_informe', 'Final')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (infFinal?.observaciones && infFinal.observaciones.startsWith('[INFORME_FINAL_JSON]:')) {
+          const raw = infFinal.observaciones.replace('[INFORME_FINAL_JSON]:', '');
+          const parsed = JSON.parse(raw);
+          return {
+            contratistaDocumento: parsed.documento_identidad || documentoIdentidad,
+            contratoNro: parsed.contrato_nro || '',
+            contratistaNombre: parsed.contratista_nombre || '',
+            contratistaLugarDoc: parsed.contratista_lugar_doc || 'Quibdó',
+            dependencia: parsed.dependencia || '',
+            supervisorNombre: parsed.supervisor_nombre || '',
+            supervisorCargo: parsed.supervisor_cargo || '',
+            objetoContractual: parsed.objeto_contractual || '',
+            metaPlanDesarrollo: parsed.meta_plan_desarrollo || '',
+            indicador: parsed.indicador || '',
+            fechaPresentacion: parsed.fecha_presentacion || '',
+            introduccion: parsed.introduccion || '',
+            metodologiaEnfoque: parsed.metodologia_enfoque || '',
+            metodologiaEstrategias: parsed.metodologia_estrategias || '',
+            metodologiaZonas: parsed.metodologia_zonas || '',
+            metodologiaHerramientas: parsed.metodologia_herramientas || '',
+            cuadroActividades: parsed.cuadro_actividades || [],
+            productosEntregados: parsed.productos_entregados || [],
+            resultadosAlcanzados: parsed.resultados_alcanzados || [],
+            cumplimientoMeta: parsed.cumplimiento_meta || '',
+            analisisTecnico: parsed.analisis_tecnico || '',
+            impactoEjecucion: parsed.impacto_ejecucion || '',
+            conclusiones: parsed.conclusiones || '',
+            recomendaciones: parsed.recomendaciones || [],
+            anexosFotograficos: parsed.anexos_fotograficos || [],
+            generadoConIA: parsed.generado_con_ia || false,
+            fechaGeneracionIA: parsed.fecha_generacion_ia,
+            updatedAt: parsed.updated_at
+          } as InformeFinalData;
+        }
+      }
+    } catch (e) {
+      console.warn('Informe final no recuperado de informes_mensuales:', e);
+    }
+
+    return null;
+  },
+
+  async deleteInformeFinal(documentoIdentidad: string, contratoNro?: string): Promise<boolean> {
+    if (!documentoIdentidad) return false;
+    const cleanDoc = documentoIdentidad.trim().replace(/\D/g, '');
+    try {
+      await supabase.from('informes_finales').delete().or(`documento_identidad.eq.${cleanDoc},documento_identidad.eq.${documentoIdentidad}`);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async saveInformeFinal(data: InformeFinalData, user?: AuthUser): Promise<boolean> {
+    const docId = data?.contratistaDocumento || user?.documentoIdentidad || '';
+    if (!data || !docId) return false;
+    const cleanDoc = docId.trim().replace(/\D/g, '');
+
+    const payload: any = {
+      documento_identidad: cleanDoc || docId,
+      contrato_nro: data.contratoNro || user?.contratoNro || '',
+      user_id: data.userId || user?.id || null,
+      contratista_nombre: data.contratistaNombre || user?.nombreCompleto || '',
+      contratista_lugar_doc: data.contratistaLugarDoc || 'Quibdó',
+      dependencia: data.dependencia || user?.secretariaNombre || '',
+      supervisor_nombre: data.supervisorNombre || user?.supervisorNombre || '',
+      supervisor_cargo: data.supervisorCargo || user?.supervisorCargo || '',
+      objeto_contractual: data.objetoContractual || user?.objetoContrato || '',
+      fecha_presentacion: data.fechaPresentacion || '',
+      meta_plan_desarrollo: data.metaPlanDesarrollo || '',
+      indicador: data.indicador || '',
+      introduccion: data.introduccion || '',
+      metodologia_enfoque: data.metodologiaEnfoque || '',
+      metodologia_estrategias: data.metodologiaEstrategias || '',
+      metodologia_zonas: data.metodologiaZonas || '',
+      metodologia_herramientas: data.metodologiaHerramientas || '',
+      cuadro_actividades: data.cuadroActividades || [],
+      productos_entregados: data.productosEntregados || [],
+      resultados_alcanzados: data.resultadosAlcanzados || [],
+      cumplimiento_meta: data.cumplimientoMeta || '',
+      analisis_tecnico: data.analisisTecnico || '',
+      impacto_ejecucion: data.impactoEjecucion || '',
+      conclusiones: data.conclusiones || '',
+      recomendaciones: data.recomendaciones || [],
+      anexos_fotograficos: data.anexosFotograficos || [],
+      generado_con_ia: data.generadoConIA || false,
+      fecha_generacion_ia: data.fechaGeneracionIA || null,
+      updated_at: new Date().toISOString()
+    };
+
+    let dedicatedSaved = false;
+
+    // 1. Intentar guardar en tabla dedicada 'informes_finales'
+    try {
+      let { error } = await supabase
+        .from('informes_finales')
+        .upsert(payload, { onConflict: 'documento_identidad,contrato_nro' });
+
+      if (error && error.message && error.message.toLowerCase().includes('column')) {
+        // Si una columna no existe en la tabla de Supabase, eliminar campos opcionales no existentes y reintentar
+        const payloadRetry = { ...payload };
+        const match = error.message.match(/Could not find the '([^']+)' column/i);
+        if (match && match[1]) {
+          delete payloadRetry[match[1]];
+        } else {
+          delete payloadRetry.contratista_lugar_doc;
+          delete payloadRetry.contratista_nombre;
+          delete payloadRetry.dependencia;
+          delete payloadRetry.supervisor_nombre;
+          delete payloadRetry.supervisor_cargo;
+          delete payloadRetry.objeto_contractual;
+        }
+
+        const retryRes = await supabase
+          .from('informes_finales')
+          .upsert(payloadRetry, { onConflict: 'documento_identidad,contrato_nro' });
+        
+        error = retryRes.error;
+        if (error && error.message && error.message.toLowerCase().includes('column')) {
+          // Segundo intento más conservador
+          delete payloadRetry.contratista_lugar_doc;
+          delete payloadRetry.contratista_nombre;
+          delete payloadRetry.dependencia;
+          delete payloadRetry.supervisor_nombre;
+          delete payloadRetry.supervisor_cargo;
+          delete payloadRetry.objeto_contractual;
+          const retryRes2 = await supabase
+            .from('informes_finales')
+            .upsert(payloadRetry, { onConflict: 'documento_identidad,contrato_nro' });
+          error = retryRes2.error;
+        }
+      }
+
+      if (!error) {
+        dedicatedSaved = true;
+      }
+    } catch (e) {
+      // Ignorar excepciones secundarias de la tabla dedicada
+    }
+
+    // 2. Guardar también como respaldo persistente en 'informes_mensuales' con tipo_informe='Final'
+    try {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('id, contratos(id)')
+        .or(`documento_identidad.eq.${cleanDoc},documento_identidad.eq.${docId}`)
+        .limit(1)
+        .maybeSingle();
+
+      const contratoId = Array.isArray(prof?.contratos) 
+        ? prof?.contratos?.[0]?.id 
+        : (prof?.contratos as any)?.id;
+      if (contratoId) {
+        const backupRow = {
+          contrato_id: contratoId,
+          informe_nro: 99,
+          tipo_informe: 'Final',
+          fecha_presentacion: data.fechaPresentacion || new Date().toLocaleDateString('es-CO'),
+          periodo_desde: '01/01/2026',
+          periodo_hasta: data.fechaPresentacion || '31/12/2026',
+          observaciones: `[INFORME_FINAL_JSON]:${JSON.stringify(payload)}`,
+          estado: 'Borrador'
+        };
+
+        await supabase
+          .from('informes_mensuales')
+          .upsert(backupRow, { onConflict: 'contrato_id,informe_nro' });
+      }
+    } catch (bkErr) {
+      console.warn('Aviso guardando respaldo en informes_mensuales:', bkErr);
+    }
+
     return true;
   }
 };

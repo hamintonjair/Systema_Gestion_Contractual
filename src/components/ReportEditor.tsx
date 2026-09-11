@@ -35,6 +35,7 @@ import imageCompression from 'browser-image-compression';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
 import { calcularLiquidacionEstatal, generarPlanDePagos, calcularDiasComerciales, formatearMonedaCol, formatearNumeroTablaCol, limpiarNumeroMoneda, LiquidacionDetalladaResult } from '../utils/paymentPlanUtils';
 import { convertirNumeroALetras } from '../utils/numberToWords';
+import { descargarInformeWord } from '../export/informeWord';
 import CalculadoraLiquidacion from './CalculadoraLiquidacion';
 import DatePickerInput from './DatePickerInput';
 
@@ -73,6 +74,19 @@ export default function ReportEditor({
   const [hasGlobalMembrete, setHasGlobalMembrete] = useState(false);
   const [isFetchingGlobalMembrete, setIsFetchingGlobalMembrete] = useState(true);
   const [lastUploadedCount, setLastUploadedCount] = useState(0);
+  const [isExportingWord, setIsExportingWord] = useState(false);
+
+  const handleWordDownload = async () => {
+    try {
+      setIsExportingWord(true);
+      await descargarInformeWord(data);
+    } catch (error) {
+      console.error('Error al exportar Word:', error);
+      alert('Ocurrió un error al generar el archivo Word: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setIsExportingWord(false);
+    }
+  };
   const [limitModal, setLimitModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -776,8 +790,27 @@ export default function ReportEditor({
           </p>
         </div>
 
-        {/* Indicador de Estado de Guardado en Supabase */}
+        {/* Indicador de Estado de Guardado en Supabase y Exportación Word */}
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleWordDownload}
+            disabled={isExportingWord}
+            className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs transition-colors disabled:opacity-50"
+            title="Descargar informe completo en formato Microsoft Word (.docx)"
+          >
+            {isExportingWord ? (
+              <>
+                <RotateCcw size={13} className="animate-spin text-blue-600" />
+                <span className="hidden sm:inline">Generando...</span>
+              </>
+            ) : (
+              <>
+                <Download size={13} className="text-blue-600" />
+                <span>Word (.docx)</span>
+              </>
+            )}
+          </button>
+
           {onSave && hasUnsavedChanges && (
             <button
               onClick={onSave}
@@ -2263,12 +2296,46 @@ export default function ReportEditor({
               </div>
             </div>
             
+            {/* Exportar a Microsoft Word (.docx) */}
+            <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-xs space-y-3">
+              <h3 className="font-bold text-xs text-blue-900 uppercase tracking-wider flex items-center justify-between pb-2 border-b border-blue-100">
+                <span className="flex items-center gap-1.5">
+                  <FileText size={14} className="text-blue-700" />
+                  Exportar a Microsoft Word (.docx)
+                </span>
+                <span className="bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                  Formato Oficial
+                </span>
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Genera el documento oficial en formato <strong>Word (.docx)</strong> basado en la plantilla institucional de la Alcaldía de Quibdó, expandiendo automáticamente las filas y páginas según la extensión de tus obligaciones y actividades.
+              </p>
+              <button
+                type="button"
+                onClick={handleWordDownload}
+                disabled={isExportingWord}
+                className="w-full py-2.5 px-4 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors disabled:opacity-50"
+              >
+                {isExportingWord ? (
+                  <>
+                    <RotateCcw size={14} className="animate-spin" />
+                    <span>Generando Documento Word...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download size={14} />
+                    <span>Descargar Informe de Cumplimiento en Word (.docx)</span>
+                  </>
+                )}
+              </button>
+            </div>
+
             <div className="lg:hidden bg-white p-4 rounded-lg border border-gray-200 shadow-xs space-y-3">
                <h3 className="font-bold text-xs text-gray-800 uppercase tracking-wider flex items-center justify-between pb-2 border-b border-gray-100">
                   <span className="flex items-center gap-1.5"><Printer size={14} className="text-emerald-700" /> Vista Previa (Móvil)</span>
                </h3>
                <p className="text-[10px] text-gray-500">
-                  Usa el botón "Imprimir / Descargar PDF" de la barra superior. Si tu navegador móvil no soporta la descarga directa, usa esta vista para revisar.
+                  Descarga el informe en formato Word (.docx) o usa esta vista para revisar los datos.
                </p>
                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-100 py-4 relative h-[450px] overflow-y-auto overflow-x-hidden flex justify-center">
                   <div className="w-[75mm] min-[400px]:w-[86mm] sm:w-[107.5mm] shrink-0 origin-top-left">

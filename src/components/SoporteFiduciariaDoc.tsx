@@ -4,9 +4,10 @@ import { obtenerValoresMonetariosReporte, convertirNumeroALetras, formatFechaFid
 import { limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
 import { supabaseService } from '../services/supabaseService';
 import FieldCommentModal from './FieldCommentModal';
-import { Printer, Download, Edit3, Check, Save, RotateCcw, Image as ImageIcon, Sparkles, MessageSquare, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Printer, Download, Edit3, Check, Save, RotateCcw, Image as ImageIcon, Sparkles, MessageSquare, AlertTriangle, CheckCircle2, FileSpreadsheet } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { exportarFiduciaria } from '../export/fiduciariaExcel';
 
 interface Props {
   key?: React.Key;
@@ -77,20 +78,29 @@ export default function SoporteFiduciariaDoc({
     if (reportData) {
       const { valorNumeroFormateado, sumaTotalConCentavos, valorLetras } = obtenerValoresMonetariosReporte(reportData);
 
-      return {
-        ...baseData,
-        reportId: reportData.id || baseData.reportId,
-        nombresApellidos: reportData.contratistaNombre || baseData.nombresApellidos,
-        cedula: reportData.contratistaDocumento || baseData.cedula,
-        telefono: reportData.contratistaTelefono || baseData.telefono,
+      const defaults = {
+        reportId: reportData.id,
+        nombresApellidos: reportData.contratistaNombre,
+        cedula: reportData.contratistaDocumento,
+        telefono: reportData.contratistaTelefono,
+        direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
+        ciudad: (reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
         sumaTotal: sumaTotalConCentavos,
         valorLetras: valorLetras,
         subTotal: valorNumeroFormateado,
         total: valorNumeroFormateado,
         totalGeneral: valorNumeroFormateado,
-        descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
+        descripcionBienServicio: reportData.objeto || '',
         docSoporteNro: '',
         fecha: formatFechaFiduciaria(reportData),
+        cantidad: '1',
+        nota: 'RUT adjunto',
+      };
+
+      return {
+        ...defaults,
+        ...baseData,
+        reportId: reportData.id, // always keep current report id
       };
     }
     return baseData;
@@ -107,6 +117,7 @@ export default function SoporteFiduciariaDoc({
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isExportingImage, setIsExportingImage] = useState<boolean>(false);
+  const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
@@ -147,22 +158,29 @@ export default function SoporteFiduciariaDoc({
         if (reportData) {
           const { valorNumeroFormateado, sumaTotalConCentavos, valorLetras } = obtenerValoresMonetariosReporte(reportData);
 
-          setFormData({
-            ...baseData,
-            reportId: reportData.id || baseData.reportId,
-            nombresApellidos: reportData.contratistaNombre || baseData.nombresApellidos,
-            cedula: reportData.contratistaDocumento || baseData.cedula,
-            telefono: reportData.contratistaTelefono || baseData.telefono,
-            direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || baseData.direccion || 'BARRIO BUENOS AIRES').toUpperCase(),
-            ciudad: (reportData.ciudad || reportData.ciudadCuenta || baseData.ciudad || 'CHOCÓ').toUpperCase(),
+          const defaults = {
+            reportId: reportData.id,
+            nombresApellidos: reportData.contratistaNombre,
+            cedula: reportData.contratistaDocumento,
+            telefono: reportData.contratistaTelefono,
+            direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
+            ciudad: (reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
             sumaTotal: sumaTotalConCentavos,
             valorLetras: valorLetras,
             subTotal: valorNumeroFormateado,
             total: valorNumeroFormateado,
             totalGeneral: valorNumeroFormateado,
-            descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
+            descripcionBienServicio: reportData.objeto || '',
             docSoporteNro: '',
             fecha: formatFechaFiduciaria(reportData),
+            cantidad: '1',
+            nota: 'RUT adjunto',
+          };
+
+          setFormData({
+            ...defaults,
+            ...baseData,
+            reportId: reportData.id, // always keep current report id
           });
         } else if (baseData) {
           setFormData(baseData);
@@ -565,6 +583,23 @@ export default function SoporteFiduciariaDoc({
     }
   };
 
+  const handleExportExcel = async () => {
+    setIsExportingExcel(true);
+    try {
+      const blob = await exportarFiduciaria(formData);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Documento_Soporte_Fiduciaria_${formData.nombresApellidos.replace(/\s+/g, '_')}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error: any) {
+      console.error('Error exportando fiduciaria a Excel:', error);
+      alert(error?.message || 'Error desconocido exportando a Excel');
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-[21.59cm] flex flex-col gap-3 text-xs font-sans text-black">
       {/* PANEL DE ACCIONES */}
@@ -613,12 +648,13 @@ export default function SoporteFiduciariaDoc({
           )}
 
           <button
-            onClick={handleDirectPrint}
-            className="p-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl transition-all font-bold flex items-center gap-1.5 text-xs shadow-xs"
-            title="Imprimir Copia Oficial"
+            onClick={handleExportExcel}
+            disabled={isExportingExcel}
+            className="p-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-500 text-white rounded-xl transition-all font-bold flex items-center gap-1.5 text-xs shadow-xs cursor-pointer"
+            title="Exportar documento en formato Excel"
           >
-            <Printer size={15} />
-            <span className="hidden sm:inline">Imprimir</span>
+            <FileSpreadsheet size={15} />
+            <span>{isExportingExcel ? 'Exportando...' : 'Exportar a Excel'}</span>
           </button>
         </div>
       </div>
@@ -649,8 +685,8 @@ export default function SoporteFiduciariaDoc({
                   Edite la información de beneficiario, cuenta bancaria, retenciones, aportes PILA y fechas directamente sobre el formulario.
                 </div>
                 <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
-                  <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar e Imprimir:</span>
-                  Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Datos»</strong> para registrar los cambios y <strong className="text-slate-900 bg-slate-200 px-1 py-0.5 rounded">«Imprimir»</strong> para generar el documento.
+                  <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar y Exportar:</span>
+                  Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Datos»</strong> para registrar los cambios o <strong className="text-emerald-900 bg-emerald-100 px-1 py-0.5 rounded">«Exportar a Excel»</strong>.
                 </div>
               </div>
             </div>

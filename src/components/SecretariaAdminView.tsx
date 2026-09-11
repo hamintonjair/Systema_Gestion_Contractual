@@ -4,6 +4,7 @@ import { supabaseService } from '../services/supabaseService';
 import { supabase } from '../lib/supabase';
 import { formatFechaAplicacion, formatDateSlash, formatColombianCurrency, isOlderThanDays, getDaysDifference } from '../utils/formatters';
 import { isMainReportComment } from '../utils/commentUtils';
+import { descargarInformeWord } from '../export/informeWord';
 import CertificadoSupervisionDoc from './CertificadoSupervisionDoc';
 import SoporteFiduciariaDoc from './SoporteFiduciariaDoc';
 import DeclaracionRentaDoc from './DeclaracionRentaDoc';
@@ -2479,6 +2480,23 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!inspectingInforme) return;
+                    try {
+                      await descargarInformeWord(inspectingInforme);
+                    } catch (err) {
+                      alert('Error al exportar Word: ' + (err instanceof Error ? err.message : String(err)));
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer border border-blue-400/30"
+                  title="Descargar informe oficial en formato Word (.docx)"
+                >
+                  <Download size={14} />
+                  <span className="hidden sm:inline">Descargar Word (.docx)</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => handleOpenWhatsAppModal(inspectingInforme)}

@@ -4,7 +4,8 @@ import { obtenerValoresMonetariosReporte, convertirNumeroALetras, formatearObjet
 import { limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
 import { supabaseService } from '../services/supabaseService';
 import FieldCommentModal from './FieldCommentModal';
-import { Printer, Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Printer, Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { exportarAutorizacion } from '../export/autorizacionExcel';
 import QuibdoLogo from './QuibdoLogo';
 
 interface Props {
@@ -73,22 +74,20 @@ export default function AutorizacionDesembolsoDoc({
     }
   };
   const getInitialData = (): AutorizacionDesembolsoData => {
-    let baseData: AutorizacionDesembolsoData;
+    let baseData: AutorizacionDesembolsoData | null = null;
     const key = storageKey || (reportData ? `desembolso_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}` : 'desembolso_global');
     
-    if (typeof localStorage !== 'undefined') {
+    if (data) {
+      baseData = data;
+    } else if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem(key);
       if (saved) {
         try {
           baseData = JSON.parse(saved);
         } catch (e) {
-          baseData = data || createDefaultAutorizacionDesembolsoData(reportData);
+          baseData = null;
         }
-      } else {
-        baseData = data || createDefaultAutorizacionDesembolsoData(reportData);
       }
-    } else {
-      baseData = data || createDefaultAutorizacionDesembolsoData(reportData);
     }
     
     if (reportData) {
@@ -106,30 +105,64 @@ export default function AutorizacionDesembolsoDoc({
       const rawExp = reportData.periodoHasta || reportData.fechaPresentacion || '2026-07-14';
       const defaultFechaExp = formatFechaAnioMesDia(rawExp);
 
-      return {
-        ...baseData,
-        reportId: reportData.id || baseData.reportId,
+      const defaults: AutorizacionDesembolsoData = {
+        reportId: reportData.id,
         fechaExpedicion: defaultFechaExp,
-        consecutivoNro: reportData.informeNro || baseData.consecutivoNro || '1',
-        nombre: reportData.contratistaNombre || baseData.nombre,
-        nitCc: reportData.contratistaDocumento || baseData.nitCc,
-        telefono: reportData.contratistaTelefono || baseData.telefono,
-        direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || baseData.direccion || 'BARRIO BUENOS AIRES').toUpperCase(),
-        nroCuenta: reportData.numeroCuenta || baseData.nroCuenta || '53686186829',
-        banco: (reportData.banco || baseData.banco || 'BANCOLOMBIA').toUpperCase(),
-        tipoCuenta: (reportData.tipoCuenta || baseData.tipoCuenta || 'AHORRO').toUpperCase(),
-        ciudad: (reportData.ciudad || reportData.ciudadCuenta || baseData.ciudad || 'CHOCÓ').toUpperCase(),
-        contratoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.contratoNro || '590'),
-        conceptoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.conceptoNro || '590'),
+        consecutivoNro: reportData.informeNro || '1',
+        nombre: reportData.contratistaNombre || 'HAMINTON MENA MENA',
+        nitCc: reportData.contratistaDocumento || '80772379',
+        telefono: reportData.contratistaTelefono || '3124943527',
+        direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
+        nroCuenta: reportData.numeroCuenta || '53686186829',
+        banco: (reportData.banco || 'BANCOLOMBIA').toUpperCase(),
+        tipoCuenta: (reportData.tipoCuenta || 'AHORRO').toUpperCase(),
+        ciudad: (reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
+        contratoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
+        conceptoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
+        concepto: 'PRESTACION DE SERVICIOS',
         objeto: defaultObjeto,
         valorNumeros: valorNumeroFormateado,
         subtotal: valorNumeroFormateado,
+        ivaAsumido: '',
         total: valorNumeroFormateado,
         valorLetras: valorLetras,
+        endoso1Beneficiario: '',
+        endoso1NitCc: '',
+        endoso1Cuenta: '',
+        endoso1Banco: '',
+        endoso1Tipo: '',
+        endoso1Concepto: '',
+        endoso1Valor: '$ 0',
+        endoso2Beneficiario: '',
+        endoso2NitCc: '',
+        endoso2Cuenta: '',
+        endoso2Banco: '',
+        endoso2Tipo: '',
+        endoso2Concepto: '',
+        endoso2Valor: '$ 0',
+      };
+
+      if (!baseData) {
+        return defaults;
+      }
+
+      return {
+        ...defaults,
+        ...baseData,
+        reportId: reportData.id || baseData.reportId,
+        valorNumeros: (baseData.valorNumeros && baseData.valorNumeros.trim()) ? baseData.valorNumeros : valorNumeroFormateado,
+        subtotal: (baseData.subtotal && baseData.subtotal.trim()) ? baseData.subtotal : valorNumeroFormateado,
+        total: (baseData.total && baseData.total.trim()) ? baseData.total : valorNumeroFormateado,
+        valorLetras: (baseData.valorLetras && baseData.valorLetras.trim()) ? baseData.valorLetras : valorLetras,
+        objeto: (baseData.objeto && baseData.objeto.trim()) ? baseData.objeto : defaultObjeto,
+        fechaExpedicion: (baseData.fechaExpedicion && baseData.fechaExpedicion.trim()) ? baseData.fechaExpedicion : defaultFechaExp,
+        consecutivoNro: (baseData.consecutivoNro && baseData.consecutivoNro.trim()) ? baseData.consecutivoNro : (reportData.informeNro || '1'),
+        nombre: (baseData.nombre && baseData.nombre.trim()) ? baseData.nombre : (reportData.contratistaNombre || 'HAMINTON MENA MENA'),
+        nitCc: (baseData.nitCc && baseData.nitCc.trim()) ? baseData.nitCc : (reportData.contratistaDocumento || '80772379'),
       };
     }
 
-    return baseData;
+    return baseData || createDefaultAutorizacionDesembolsoData();
   };
 
   const getIdentityKey = () => {
@@ -143,6 +176,7 @@ export default function AutorizacionDesembolsoDoc({
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
+  const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
 
   useEffect(() => {
     const currentKey = getIdentityKey();
@@ -169,9 +203,7 @@ export default function AutorizacionDesembolsoDoc({
           const key = storageKey || `desembolso_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}`;
           const saved = localStorage.getItem(key);
           if (saved) {
-            try { baseData = JSON.parse(saved); } catch (e) { baseData = createDefaultAutorizacionDesembolsoData(reportData); }
-          } else {
-            baseData = createDefaultAutorizacionDesembolsoData(reportData);
+            try { baseData = JSON.parse(saved); } catch (e) { baseData = null; }
           }
         }
       } else {
@@ -194,27 +226,67 @@ export default function AutorizacionDesembolsoDoc({
           const rawExp = reportData.periodoHasta || reportData.fechaPresentacion || '2026-07-14';
           const defaultFechaExp = formatFechaAnioMesDia(rawExp);
 
-          setFormData({
-            ...baseData,
-            reportId: reportData.id || baseData.reportId,
+          const defaults: AutorizacionDesembolsoData = {
+            reportId: reportData.id,
             fechaExpedicion: defaultFechaExp,
-            consecutivoNro: reportData.informeNro || baseData.consecutivoNro || '1',
-            nombre: reportData.contratistaNombre || baseData.nombre,
-            nitCc: reportData.contratistaDocumento || baseData.nitCc,
-            telefono: reportData.contratistaTelefono || baseData.telefono,
-            direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || baseData.direccion || 'BARRIO BUENOS AIRES').toUpperCase(),
-            nroCuenta: reportData.numeroCuenta || baseData.nroCuenta || '53686186829',
-            banco: (reportData.banco || baseData.banco || 'BANCOLOMBIA').toUpperCase(),
-            tipoCuenta: (reportData.tipoCuenta || baseData.tipoCuenta || 'AHORRO').toUpperCase(),
-            ciudad: (reportData.ciudad || reportData.ciudadCuenta || baseData.ciudad || 'CHOCÓ').toUpperCase(),
-            contratoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.contratoNro || '590'),
-            conceptoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : (baseData.conceptoNro || '590'),
+            consecutivoNro: reportData.informeNro || '1',
+            nombre: reportData.contratistaNombre || 'HAMINTON MENA MENA',
+            nitCc: reportData.contratistaDocumento || '80772379',
+            telefono: reportData.contratistaTelefono || '3124943527',
+            direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
+            nroCuenta: reportData.numeroCuenta || '53686186829',
+            banco: (reportData.banco || 'BANCOLOMBIA').toUpperCase(),
+            tipoCuenta: (reportData.tipoCuenta || 'AHORRO').toUpperCase(),
+            ciudad: (reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
+            contratoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
+            conceptoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
+            concepto: 'PRESTACION DE SERVICIOS',
             objeto: defaultObjeto,
             valorNumeros: valorNumeroFormateado,
             subtotal: valorNumeroFormateado,
+            ivaAsumido: '',
             total: valorNumeroFormateado,
             valorLetras: valorLetras,
-          });
+            endoso1Beneficiario: '',
+            endoso1NitCc: '',
+            endoso1Cuenta: '',
+            endoso1Banco: '',
+            endoso1Tipo: '',
+            endoso1Concepto: '',
+            endoso1Valor: '$ 0',
+            endoso2Beneficiario: '',
+            endoso2NitCc: '',
+            endoso2Cuenta: '',
+            endoso2Banco: '',
+            endoso2Tipo: '',
+            endoso2Concepto: '',
+            endoso2Valor: '$ 0',
+          };
+
+          if (!baseData) {
+            setFormData(defaults);
+          } else {
+            setFormData({
+              ...defaults,
+              ...baseData,
+              reportId: reportData.id || baseData.reportId,
+              valorNumeros: (baseData.valorNumeros && baseData.valorNumeros.trim()) ? baseData.valorNumeros : valorNumeroFormateado,
+              subtotal: (baseData.subtotal && baseData.subtotal.trim()) ? baseData.subtotal : valorNumeroFormateado,
+              total: (baseData.total && baseData.total.trim()) ? baseData.total : valorNumeroFormateado,
+              valorLetras: (baseData.valorLetras && baseData.valorLetras.trim()) ? baseData.valorLetras : valorLetras,
+              objeto: (baseData.objeto && baseData.objeto.trim()) ? baseData.objeto : defaultObjeto,
+              fechaExpedicion: (baseData.fechaExpedicion && baseData.fechaExpedicion.trim()) ? baseData.fechaExpedicion : defaultFechaExp,
+              consecutivoNro: (baseData.consecutivoNro && baseData.consecutivoNro.trim()) ? baseData.consecutivoNro : (reportData.informeNro || '1'),
+              nombre: (baseData.nombre && baseData.nombre.trim()) ? baseData.nombre : (reportData.contratistaNombre || 'HAMINTON MENA MENA'),
+              nitCc: (baseData.nitCc && baseData.nitCc.trim()) ? baseData.nitCc : (reportData.contratistaDocumento || '80772379'),
+              direccion: (baseData.direccion && baseData.direccion.trim()) ? baseData.direccion : (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
+              telefono: (baseData.telefono && baseData.telefono.trim()) ? baseData.telefono : (reportData.contratistaTelefono || '3124943527'),
+              nroCuenta: (baseData.nroCuenta && baseData.nroCuenta.trim()) ? baseData.nroCuenta : (reportData.numeroCuenta || '53686186829'),
+              banco: (baseData.banco && baseData.banco.trim()) ? baseData.banco : (reportData.banco || 'BANCOLOMBIA').toUpperCase(),
+              tipoCuenta: (baseData.tipoCuenta && baseData.tipoCuenta.trim()) ? baseData.tipoCuenta : (reportData.tipoCuenta || 'AHORRO').toUpperCase(),
+              ciudad: (baseData.ciudad && baseData.ciudad.trim()) ? baseData.ciudad : (reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
+            });
+          }
         } else if (baseData) {
           setFormData(baseData);
         }
@@ -338,6 +410,23 @@ export default function AutorizacionDesembolsoDoc({
     
     if (onSave) {
       onSave(formData);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setIsExportingExcel(true);
+    try {
+      const blob = await exportarAutorizacion(formData);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Autorizacion_de_Desembolso_${formData.nombre.replace(/\s+/g, '_')}_Nro_${formData.consecutivoNro}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error: any) {
+      console.error('Error exportando autorizacion a Excel:', error);
+      alert(error?.message || 'Error desconocido exportando a Excel');
+    } finally {
+      setIsExportingExcel(false);
     }
   };
 
@@ -530,12 +619,13 @@ export default function AutorizacionDesembolsoDoc({
           )}
 
           <button
-            onClick={handleDirectPrint}
-            className="p-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl transition-all font-bold flex items-center gap-1.5 text-xs shadow-xs"
-            title="Imprimir Copia Oficial"
+            onClick={handleExportExcel}
+            disabled={isExportingExcel}
+            className="p-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-500 text-white rounded-xl transition-all font-bold flex items-center gap-1.5 text-xs shadow-xs cursor-pointer"
+            title="Exportar documento en formato Excel"
           >
-            <Printer size={15} />
-            <span className="hidden sm:inline">Imprimir</span>
+            <FileSpreadsheet size={15} />
+            <span>{isExportingExcel ? 'Exportando...' : 'Exportar a Excel'}</span>
           </button>
         </div>
       </div>
@@ -566,8 +656,8 @@ export default function AutorizacionDesembolsoDoc({
                       Ajuste los valores del período, concepto de cobro, retenciones aplicables y firmas correspondientes.
                     </div>
                     <div className="bg-white/90 border border-emerald-100 p-2 rounded-lg">
-                      <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar e Imprimir:</span>
-                      Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Datos»</strong> para guardar los cambios y luego <strong className="text-slate-900 bg-slate-200 px-1 py-0.5 rounded">«Imprimir»</strong>.
+                      <span className="font-bold text-emerald-900 block mb-0.5">3. Guardar y Exportar:</span>
+                      Presione <strong className="text-emerald-900 bg-emerald-200 px-1 py-0.5 rounded">«Guardar Datos»</strong> para guardar los cambios o <strong className="text-emerald-900 bg-emerald-100 px-1 py-0.5 rounded">«Exportar a Excel»</strong>.
                     </div>
                   </div>
                 </div>
