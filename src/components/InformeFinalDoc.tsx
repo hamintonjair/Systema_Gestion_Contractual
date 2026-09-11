@@ -601,7 +601,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
               )}
             </div>
             <p className="text-xs text-slate-500">
-              CPS {data.contratoNro} • {data.contratistaNombre}
+              {data.contratoNro} • {data.contratistaNombre}
             </p>
           </div>
         </div>
