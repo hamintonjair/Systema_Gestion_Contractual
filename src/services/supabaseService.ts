@@ -1769,15 +1769,17 @@ export const supabaseService = {
         const doc = row.documento_identidad || '';
         const mail = row.email || '';
 
-        // Buscar siempre en la tabla 'contratos' por contratista_id o id o documento para obtener el contrato real (ej. '015')
+        // Buscar siempre en la tabla 'contratos' por contratista_id para obtener el contrato real (ej. '015').
+        // contratista_id es uuid: incluir el documento en el filtro provoca 400 (22P02) y anula la consulta.
         try {
-          const cleanDoc = doc.replace(/\D/g, '');
-          const { data: cRows } = await supabase
+          const { data: cRows, error: cErr } = await supabase
             .from('contratos')
             .select('*')
-            .or(`contratista_id.eq.${row.id}${cleanDoc ? `,contratista_id.eq.${cleanDoc}` : ''}`)
+            .eq('contratista_id', row.id)
             .order('created_at', { ascending: false })
             .limit(5);
+
+          if (cErr) console.warn('Error consultando contratos del perfil:', cErr.message);
 
           if (cRows && cRows.length > 0) {
             const bestC = cRows.find((c: any) => c && isValContNro(c.contrato_nro)) || cRows[0];
@@ -4590,6 +4592,84 @@ export const supabaseService = {
       console.warn('Error al guardar config IA en Supabase:', e);
     }
     return true;
+  },
+
+  // 28.b Numero de contrato real del contratista (tabla 'contratos')
+  // Fuente de verdad para el Informe Final: devuelve contrato_nro tal como esta en
+  // la base de datos (ej. '015', conservando ceros a la izquierda) y su vigencia,
+  // sin formatear ni anteponer 'CPS'.
+  // IMPORTANTE: contratos.contratista_id es uuid. Nunca se debe comparar contra el
+  // documento de identidad: PostgREST responde 400 (22P02) y anula la consulta.
+  async getContratoNro(
+    contratistaId?: string,
+    documentoIdentidad?: string
+  ): Promise<{ contratoNro: string; vigencia: string; contratoId?: string } | null> {
+    const esUuid = (v?: string) =>
+      !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.trim());
+    const cleanDoc = (documentoIdentidad || '').trim().replace(/[^0-9]/g, '');
+
+    const esNroValido = (n?: any) =>
+      n !== null &&
+      n !== undefined &&
+      String(n).trim() !== '' &&
+      !String(n).includes('590') &&
+      !/^20[0-9]{2}$/.test(String(n).trim());
+
+    const COLUMNAS = 'id, contrato_nro, vigencia, fecha_inicio, created_at';
+
+    const consultarPorId = async (id: string) => {
+      const { data, error } = await supabase
+        .from('contratos')
+        .select(COLUMNAS)
+        .eq('contratista_id', id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (error) {
+        console.warn('Error consultando contratos por contratista_id:', error.message);
+        return [];
+      }
+      return data || [];
+    };
+
+    try {
+      let filas: any[] = [];
+
+      if (esUuid(contratistaId)) {
+        filas = await consultarPorId(contratistaId as string);
+      }
+
+      // Respaldo: resolver el id del perfil a partir del documento de identidad
+      if (filas.length === 0 && cleanDoc) {
+        const { data: perfil } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('documento_identidad', cleanDoc)
+          .maybeSingle();
+
+        if (perfil && esUuid(perfil.id)) {
+          filas = await consultarPorId(perfil.id);
+        }
+      }
+
+      if (filas.length === 0) return null;
+
+      const fila = filas.find((f: any) => esNroValido(f.contrato_nro)) || filas[0];
+      if (!fila || !esNroValido(fila.contrato_nro)) return null;
+
+      const anioFecha = fila.fecha_inicio ? String(fila.fecha_inicio).slice(0, 4) : '';
+      const vigencia = fila.vigencia
+        ? String(fila.vigencia).trim()
+        : (/^20[0-9]{2}$/.test(anioFecha) ? anioFecha : '');
+
+      return {
+        contratoNro: String(fila.contrato_nro).trim(),
+        vigencia,
+        contratoId: fila.id
+      };
+    } catch (e) {
+      console.warn('No se pudo obtener el numero de contrato desde la tabla contratos:', e);
+      return null;
+    }
   },
 
   // 29. Guardar y Obtener Informe Final de Ejecución Contractual

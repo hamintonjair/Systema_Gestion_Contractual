@@ -72,7 +72,18 @@ export const parseContractNumberAndYear = (
   } else if (repNum) {
     numero = repNum;
   } else {
-    numero = (rawStr && !/^20\d{2}$/.test(rawStr.trim()) ? rawStr.trim() : '') || user?.contratoNro || rep?.contratoNro || '';
+    // Ultimo recurso: nunca aceptar una etiqueta ya formateada ("CPS 015 de 2026",
+    // "Contrato N 015 DE 2026"). Si se aceptara, al volver a formatearla se
+    // duplicarian los prefijos y el anio ("CPS CPS 2026 de 2026 de 2026").
+    const esEtiquetaFormateada = (v: string) => {
+      const t = ' ' + v.toUpperCase() + ' ';
+      return t.includes('CPS') || t.includes('CONTRATO') ||
+        t.includes(' DE ') || t.includes('N°') || t.includes('Nº');
+    };
+    const candidato = [rawStr, user?.contratoNro, rep?.contratoNro]
+      .map(v => (v || '').trim())
+      .find(v => v !== '' && !/^20\d{2}$/.test(v) && v !== '590' && !esEtiquetaFormateada(v));
+    numero = candidato ? candidato.replace(/[^0-9A-Za-z_-]/g, '') : '';
   }
 
   const combinedSource = `${user?.contratoNro || ''} ${rawStr || ''} ${rep?.contratoNro || ''} ${rep?.fechaInicio || ''} ${rep?.periodoHasta || ''} ${rep?.fechaPresentacion || ''}`;

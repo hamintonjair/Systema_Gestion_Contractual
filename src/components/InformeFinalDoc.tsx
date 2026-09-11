@@ -113,6 +113,10 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
     return parseContractNumberAndYear(rawC, user, reports);
   }, [data.contratoNro, initialData?.contratoNro, user, reports]);
 
+  // Numero de contrato tomado de la tabla 'contratos': es la fuente de verdad y
+  // tiene prioridad sobre el borrador local, sobre initialData y sobre el perfil.
+  const contratoDbRef = React.useRef<{ numero: string; ano: string } | null>(null);
+
   const [contratoNumero, setContratoNumero] = useState<string>(initialParsedContrato.numero);
   const [contratoAno, setContratoAno] = useState<string>(initialParsedContrato.ano);
   const [contratoInput, setContratoInput] = useState<string>(data.contratoNro || initialParsedContrato.full);
@@ -129,6 +133,21 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
     const full = cleanNum ? `CPS ${cleanNum} de ${cleanAno || '2026'}` : `CPS de ${cleanAno || '2026'}`;
     setContratoInput(full);
     setData(prev => ({ ...prev, contratoNro: full }));
+  };
+
+  // Resuelve el contrato a mostrar: si ya se leyo de la tabla 'contratos' se usa
+  // ese valor tal cual; si no, se infiere del borrador/perfil como respaldo.
+  const resolverContrato = (rawC?: string) => {
+    const db = contratoDbRef.current;
+    if (db && db.numero) {
+      return {
+        numero: db.numero,
+        ano: db.ano,
+        full: 'CPS ' + db.numero + ' de ' + db.ano,
+        labelContratoDe: 'Contrato Nº ' + db.numero + ' DE ' + db.ano
+      };
+    }
+    return parseContractNumberAndYear(rawC, user, reports);
   };
 
   const getCleanDoc = () => (user?.documentoIdentidad || data?.contratistaDocumento || initialData?.contratistaDocumento || '').trim().replace(/\D/g, '');
@@ -153,7 +172,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
           );
           if (hasLocalWork) {
             const rawC = (parsed.contratoNro && !parsed.contratoNro.includes('590')) ? parsed.contratoNro : (user?.contratoNro || initialData.contratoNro);
-            const parsedC = parseContractNumberAndYear(rawC, user, reports);
+            const parsedC = resolverContrato(rawC);
             if (parsedC.numero) {
               parsed.contratoNro = parsedC.full;
             }
@@ -171,7 +190,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
       }
 
       const rawC = (initialData.contratoNro && !initialData.contratoNro.includes('590')) ? initialData.contratoNro : user?.contratoNro;
-      const parsedC = parseContractNumberAndYear(rawC, user, reports);
+      const parsedC = resolverContrato(rawC);
       if (parsedC.numero) {
         initialData.contratoNro = parsedC.full;
       }
@@ -185,6 +204,29 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
       setZonasInput(initialData.metodologiaZonas || '');
     }
   }, [initialData, user]);
+
+  // Cargar el numero de contrato real del contratista desde la tabla 'contratos'
+  React.useEffect(() => {
+    let vigente = true;
+    const cargarContratoDeBd = async () => {
+      const doc = user?.documentoIdentidad || data?.contratistaDocumento || initialData?.contratistaDocumento || '';
+      if (!user?.id && !doc) return;
+      try {
+        const info = await supabaseService.getContratoNro(user?.id, doc);
+        if (!vigente || !info || !info.contratoNro) return;
+
+        const numero = info.contratoNro;
+        const ano = info.vigencia || contratoAno || '2026';
+        contratoDbRef.current = { numero, ano };
+        updateContratoParts(numero, ano);
+      } catch (e) {
+        console.warn('No se pudo cargar el numero de contrato desde la BD:', e);
+      }
+    };
+    cargarContratoDeBd();
+    return () => { vigente = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.documentoIdentidad]);
 
   // Respaldo en segundo plano en localStorage cada vez que el usuario modifica campos
   React.useEffect(() => {
@@ -289,7 +331,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
         model: getStoredGeminiModel()
       });
 
-      const parsedC = parseContractNumberAndYear(generated.contratoNro || cleanContrato, user, reports);
+      const parsedC = resolverContrato(generated.contratoNro || cleanContrato);
       setContratoNumero(parsedC.numero);
       setContratoAno(parsedC.ano);
       setContratoInput(parsedC.full);
