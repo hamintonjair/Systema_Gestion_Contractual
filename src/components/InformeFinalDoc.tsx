@@ -23,7 +23,7 @@ import {
   Lock
 } from 'lucide-react';
 import { InformeFinalData, ReportData, AuthUser, ActividadInformeFinal, AnexoFotograficoFinal, parseContractNumberAndYear } from '../types';
-import { generateInformeFinalWithAI, getStoredGeminiKey, getStoredGeminiModel } from '../services/geminiService';
+import { generateInformeFinalWithAI, resolveGeminiConfig } from '../services/geminiService';
 import { supabaseService } from '../services/supabaseService';
 import { exportInformeFinalToWord, validateInformeFinalForExport } from '../export/informeFinalWord';
 
@@ -319,6 +319,16 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
 
     setIsGeneratingAI(true);
     try {
+      // La API Key institucional la administra el SuperAdmin y vive en la tabla
+      // 'configuracion_ia'; un contratista no pasa por ese panel, asi que hay que
+      // resolverla contra la BD y no solo contra el cache de localStorage.
+      const claveIa = await resolveGeminiConfig();
+      if (!claveIa.apiKey) {
+        setAiError('No hay una API Key de Google Gemini configurada. Pide al administrador que la registre en Panel SuperAdmin > Inteligencia Artificial.');
+        setIsGeneratingAI(false);
+        return;
+      }
+
       const generated = await generateInformeFinalWithAI({
         user,
         reports,
@@ -327,8 +337,8 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
         indicador: indicadorInput.trim(),
         fechaPresentacion: fechaInput.trim() || undefined,
         zonasIntervencion: zonasInput.trim() || undefined,
-        apiKey: getStoredGeminiKey(),
-        model: getStoredGeminiModel()
+        apiKey: claveIa.apiKey,
+        model: claveIa.model
       });
 
       const parsedC = resolverContrato(generated.contratoNro || cleanContrato);

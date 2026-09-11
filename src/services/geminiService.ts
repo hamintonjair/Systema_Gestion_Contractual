@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { InformeFinalData, ReportData, AuthUser, createDefaultInformeFinalData } from '../types';
+import { supabaseService } from './supabaseService';
 
 // La API Key institucional se administra desde el panel de SuperAdmin y se
 // persiste en la tabla `configuracion_ia` de Supabase. Nunca debe quedar
@@ -127,6 +128,28 @@ export function getStoredGeminiModel(): string {
   return 'gemini-3.1-flash-lite';
 }
 
+// Resuelve la API Key institucional en orden: cache de localStorage, tabla
+// 'configuracion_ia' de Supabase (donde la guarda el SuperAdmin) y, por ultimo,
+// la variable de entorno de desarrollo. La clave nunca vive en el codigo fuente.
+export async function resolveGeminiConfig(): Promise<{ apiKey: string; model: string }> {
+  const claveLocal = getStoredGeminiKey();
+  const modeloLocal = getStoredGeminiModel();
+  if (claveLocal) return { apiKey: claveLocal, model: modeloLocal };
+
+  try {
+    const conf = await supabaseService.getAIConfig();
+    if (conf && conf.apiKey) {
+      saveStoredGeminiKey(conf.apiKey);
+      if (conf.modelo) saveStoredGeminiModel(conf.modelo);
+      return { apiKey: conf.apiKey.trim(), model: normalizeGeminiModel(conf.modelo || modeloLocal) };
+    }
+  } catch (e) {
+    console.warn('No se pudo leer la configuracion de IA desde Supabase:', e);
+  }
+
+  return { apiKey: '', model: modeloLocal };
+}
+
 export function saveStoredGeminiModel(model: string): void {
   if (typeof window !== 'undefined') {
     const normalized = normalizeGeminiModel(model);
@@ -145,8 +168,9 @@ export interface TestGeminiResponse {
  * Tests the Gemini API Key connection with automatic retry on 503
  */
 export async function testGeminiConnection(apiKey?: string, modelName?: string): Promise<TestGeminiResponse> {
-  const keyToUse = (apiKey && apiKey.trim()) || getStoredGeminiKey();
-  const rawModel = modelName || getStoredGeminiModel();
+  const resuelto = (apiKey && apiKey.trim()) ? null : await resolveGeminiConfig();
+  const keyToUse = (apiKey && apiKey.trim()) || (resuelto ? resuelto.apiKey : '');
+  const rawModel = modelName || (resuelto ? resuelto.model : getStoredGeminiModel());
   const modelToUse = normalizeGeminiModel(rawModel);
 
   if (!keyToUse) {
@@ -259,8 +283,13 @@ export async function generateInformeFinalWithAI(params: {
     throw new Error('Las metas del Plan de Desarrollo / Acción son obligatorias para generar el Informe Final.');
   }
 
-  const keyToUse = (apiKey && apiKey.trim()) || getStoredGeminiKey();
-  const modelToUse = normalizeGeminiModel(model || getStoredGeminiModel());
+  const resueltoGen = (apiKey && apiKey.trim() && model) ? null : await resolveGeminiConfig();
+  const keyToUse = (apiKey && apiKey.trim()) || (resueltoGen ? resueltoGen.apiKey : '');
+  const modelToUse = normalizeGeminiModel(model || (resueltoGen ? resueltoGen.model : getStoredGeminiModel()));
+
+  if (!keyToUse) {
+    throw new Error('No hay una API Key de Google Gemini configurada. Registrala en Panel SuperAdmin > Inteligencia Artificial.');
+  }
 
   // Base fallback data in case AI is unreachable
   const defaultData = createDefaultInformeFinalData(user, reports);
