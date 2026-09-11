@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, UserRole, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData, Obligacion, Notificacion, extractContratoNroOnly, InformeFinalData } from '../types';
+import { Secretaria, ReportData, InformeSummary, EstadoInforme, AuthUser, UserRole, Anexo, FieldComment, CertificadoSupervisionData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData, Obligacion, Notificacion, extractContratoNroOnly, InformeFinalData, ContratoContratista } from '../types';
 import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, parsePlazoComponents, formatDateSlash, formatFechaAplicacion } from '../utils/formatters';
 import { isMainReportComment } from '../utils/commentUtils';
 import { limpiarNumeroMoneda, formatearNumeroTablaCol } from '../utils/paymentPlanUtils';
@@ -4594,16 +4594,15 @@ export const supabaseService = {
     return true;
   },
 
-  // 28.b Numero de contrato real del contratista (tabla 'contratos')
-  // Fuente de verdad para el Informe Final: devuelve contrato_nro tal como esta en
-  // la base de datos (ej. '015', conservando ceros a la izquierda) y su vigencia,
-  // sin formatear ni anteponer 'CPS'.
+  // 28.b Datos contractuales reales del contratista (tabla 'contratos')
+  // Fuente de verdad para el Informe Final: numero de contrato, objeto, supervisor,
+  // plazo, fechas y dependencia salen de la BD, no de inferencias del perfil.
   // IMPORTANTE: contratos.contratista_id es uuid. Nunca se debe comparar contra el
   // documento de identidad: PostgREST responde 400 (22P02) y anula la consulta.
-  async getContratoNro(
+  async getContratoDeContratista(
     contratistaId?: string,
     documentoIdentidad?: string
-  ): Promise<{ contratoNro: string; vigencia: string; contratoId?: string } | null> {
+  ): Promise<ContratoContratista | null> {
     const esUuid = (v?: string) =>
       !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.trim());
     const cleanDoc = (documentoIdentidad || '').trim().replace(/[^0-9]/g, '');
@@ -4615,7 +4614,7 @@ export const supabaseService = {
       !String(n).includes('590') &&
       !/^20[0-9]{2}$/.test(String(n).trim());
 
-    const COLUMNAS = 'id, contrato_nro, vigencia, fecha_inicio, created_at';
+    const COLUMNAS = '*, sec_secretarias(nombre, codigo)';
 
     const consultarPorId = async (id: string) => {
       const { data, error } = await supabase
@@ -4653,21 +4652,55 @@ export const supabaseService = {
 
       if (filas.length === 0) return null;
 
+      // Preferir la fila con un numero de contrato real sobre el placeholder '590'
       const fila = filas.find((f: any) => esNroValido(f.contrato_nro)) || filas[0];
-      if (!fila || !esNroValido(fila.contrato_nro)) return null;
+      if (!fila) return null;
 
       const anioFecha = fila.fecha_inicio ? String(fila.fecha_inicio).slice(0, 4) : '';
       const vigencia = fila.vigencia
         ? String(fila.vigencia).trim()
         : (/^20[0-9]{2}$/.test(anioFecha) ? anioFecha : '');
 
+      // El cargo del supervisor no esta en 'contratos'; se toma de su perfil
+      let supervisorCargo = '';
+      const docSupervisor = String(fila.supervisor_documento || '').replace(/[^0-9]/g, '');
+      if (docSupervisor) {
+        try {
+          const { data: sup } = await supabase
+            .from('profiles')
+            .select('cargo')
+            .eq('documento_identidad', docSupervisor)
+            .maybeSingle();
+          supervisorCargo = sup?.cargo || '';
+        } catch (se) {}
+      }
+
       return {
-        contratoNro: String(fila.contrato_nro).trim(),
+        contratoId: fila.id,
+        contratoNro: esNroValido(fila.contrato_nro) ? String(fila.contrato_nro).trim() : '',
         vigencia,
-        contratoId: fila.id
+        objeto: (fila.objeto || '').trim(),
+        valorContrato: fila.valor_contrato ? formatColombianCurrency(fila.valor_contrato) : '',
+        plazoMeses: fila.plazo_meses ? String(fila.plazo_meses) : '',
+        fechaInicio: fila.fecha_inicio || '',
+        fechaTerminacion: fila.fecha_terminacion || '',
+        supervisorNombre: (fila.supervisor_nombre || '').trim(),
+        supervisorDocumento: (fila.supervisor_documento || '').trim(),
+        supervisorCargo,
+        apoyoSupervisionNombre: (fila.apoyo_supervision_nombre || '').trim(),
+        cdpNro: (fila.cdp_nro || '').trim(),
+        crpNro: (fila.crp_nro || '').trim(),
+        polizaNro: (fila.poliza_nro || '').trim(),
+        dependencia: (fila.sec_secretarias?.nombre || '').trim(),
+        secretariaCodigo: (fila.sec_secretarias?.codigo || '').trim(),
+        secretariaId: fila.secretaria_id || '',
+        numeroCuenta: (fila.numero_cuenta || '').trim(),
+        banco: (fila.banco || '').trim(),
+        tipoCuenta: (fila.tipo_cuenta || '').trim(),
+        ciudad: (fila.ciudad || '').trim()
       };
     } catch (e) {
-      console.warn('No se pudo obtener el numero de contrato desde la tabla contratos:', e);
+      console.warn('No se pudieron obtener los datos del contrato:', e);
       return null;
     }
   },

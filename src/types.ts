@@ -936,6 +936,33 @@ export interface AnexoFotograficoFinal {
   fecha?: string;
 }
 
+// Datos contractuales tal como estan en la tabla 'contratos' de la base de datos.
+// Es la fuente de verdad del Informe Final: no se infieren del perfil ni del borrador.
+export interface ContratoContratista {
+  contratoId: string;
+  contratoNro: string;
+  vigencia: string;
+  objeto: string;
+  valorContrato: string;
+  plazoMeses: string;
+  fechaInicio: string;
+  fechaTerminacion: string;
+  supervisorNombre: string;
+  supervisorDocumento: string;
+  supervisorCargo: string;
+  apoyoSupervisionNombre: string;
+  cdpNro: string;
+  crpNro: string;
+  polizaNro: string;
+  dependencia: string;
+  secretariaCodigo: string;
+  secretariaId: string;
+  numeroCuenta: string;
+  banco: string;
+  tipoCuenta: string;
+  ciudad: string;
+}
+
 export interface InformeFinalData {
   id?: string;
   userId?: string;

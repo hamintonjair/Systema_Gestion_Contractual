@@ -205,22 +205,37 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
     }
   }, [initialData, user]);
 
-  // Cargar el numero de contrato real del contratista desde la tabla 'contratos'
+  // Cargar los datos contractuales reales desde la tabla 'contratos'.
+  // Estos valores mandan sobre el borrador local, initialData y el perfil.
   React.useEffect(() => {
     let vigente = true;
     const cargarContratoDeBd = async () => {
       const doc = user?.documentoIdentidad || data?.contratistaDocumento || initialData?.contratistaDocumento || '';
       if (!user?.id && !doc) return;
       try {
-        const info = await supabaseService.getContratoNro(user?.id, doc);
-        if (!vigente || !info || !info.contratoNro) return;
+        const contrato = await supabaseService.getContratoDeContratista(user?.id, doc);
+        if (!vigente || !contrato) return;
 
-        const numero = info.contratoNro;
-        const ano = info.vigencia || contratoAno || '2026';
-        contratoDbRef.current = { numero, ano };
-        updateContratoParts(numero, ano);
+        // Campos institucionales: solo se sobrescriben si la BD tiene valor,
+        // para no borrar lo que el contratista ya haya escrito a mano.
+        setData(prev => ({
+          ...prev,
+          dependencia: contrato.dependencia || prev.dependencia,
+          supervisorNombre: contrato.supervisorNombre || prev.supervisorNombre,
+          supervisorCargo: contrato.supervisorCargo || prev.supervisorCargo,
+          objetoContractual: contrato.objeto || prev.objetoContractual,
+          contratistaLugarDoc: contrato.ciudad || prev.contratistaLugarDoc
+        }));
+
+        if (contrato.contratoNro) {
+          const ano = contrato.vigencia || contratoAno || '2026';
+          contratoDbRef.current = { numero: contrato.contratoNro, ano };
+          updateContratoParts(contrato.contratoNro, ano);
+        } else if (contrato.vigencia) {
+          setContratoAno(contrato.vigencia);
+        }
       } catch (e) {
-        console.warn('No se pudo cargar el numero de contrato desde la BD:', e);
+        console.warn('No se pudieron cargar los datos del contrato desde la BD:', e);
       }
     };
     cargarContratoDeBd();
