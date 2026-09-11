@@ -1,0 +1,103 @@
+--- src/components/SoporteFiduciariaDoc.tsx
++++ src/components/SoporteFiduciariaDoc.tsx
+@@ -75,20 +75,25 @@
+   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+ 
+   useEffect(() => {
+-    let baseData: SoporteFiduciariaData;
+-    if (data) {
+-      baseData = data;
+-    } else if (reportData) {
+-      const key = storageKey || `fid_data_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}`;
+-      const saved = localStorage.getItem(key);
+-      if (saved) {
+-        try {
+-          baseData = JSON.parse(saved);
+-        } catch (e) {
+-          baseData = createDefaultFiduciariaData(reportData);
+-        }
+-      } else {
+-        baseData = createDefaultFiduciariaData(reportData);
+-      }
+-    } else {
+-      return;
+-    }
+-
+-    if (reportData) {
+-      const rawValor = reportData.valorPagar || '$ 1.557.873';
+-      const cleanDigits = rawValor.replace(/[^0-9]/g, '');
+-      const finalNumStr = cleanDigits || '1557873';
+-      let numericVal = parseInt(finalNumStr, 10);
+-      if (isNaN(numericVal)) numericVal = 1557873;
+-      const formattedVal = new Intl.NumberFormat('es-CO').format(numericVal);
+-
+-      setFormData({
+-        ...baseData,
+-        reportId: reportData.id || baseData.reportId,
+-        nombresApellidos: reportData.contratistaNombre || baseData.nombresApellidos,
+-        cedula: reportData.contratistaDocumento || baseData.cedula,
+-        telefono: reportData.contratistaTelefono || baseData.telefono,
+-        sumaTotal: `${formattedVal},00`,
+-        subTotal: formattedVal,
+-        total: formattedVal,
+-        totalGeneral: formattedVal,
+-        descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
+-        docSoporteNro: reportData.informeNro ? `SP-${reportData.informeNro}` : baseData.docSoporteNro,
+-        fecha: reportData.fechaPresentacion || baseData.fecha,
+-      });
+-    } else {
+-      setFormData(baseData);
+-    }
++    const loadData = async () => {
++      let baseData: SoporteFiduciariaData | null = null;
++      if (data) {
++        baseData = data;
++      } else if (reportData) {
++        const savedDB = await supabaseService.getSoporteFiduciaria(
++          reportData.id,
++          reportData.contratistaDocumento,
++          reportData.informeNro?.toString()
++        );
++        if (savedDB) {
++          baseData = savedDB as SoporteFiduciariaData;
++        } else {
++          const key = storageKey || `fid_data_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}`;
++          const saved = localStorage.getItem(key);
++          if (saved) {
++            try { baseData = JSON.parse(saved); } catch (e) { baseData = createDefaultFiduciariaData(reportData); }
++          } else {
++            baseData = createDefaultFiduciariaData(reportData);
++          }
++        }
++      } else {
++        return;
++      }
++
++      if (reportData && !baseData?.total) {
++        const rawValor = reportData.valorPagar || '$ 1.557.873';
++        const cleanDigits = rawValor.replace(/[^0-9]/g, '');
++        const finalNumStr = cleanDigits || '1557873';
++        let numericVal = parseInt(finalNumStr, 10);
++        if (isNaN(numericVal)) numericVal = 1557873;
++        const formattedVal = new Intl.NumberFormat('es-CO').format(numericVal);
++
++        setFormData({
++          ...baseData,
++          reportId: reportData.id || baseData.reportId,
++          nombresApellidos: reportData.contratistaNombre || baseData.nombresApellidos,
++          cedula: reportData.contratistaDocumento || baseData.cedula,
++          telefono: reportData.contratistaTelefono || baseData.telefono,
++          sumaTotal: baseData.sumaTotal || `${formattedVal},00`,
++          subTotal: baseData.subTotal || formattedVal,
++          total: baseData.total || formattedVal,
++          totalGeneral: baseData.totalGeneral || formattedVal,
++          descripcionBienServicio: reportData.objeto || baseData.descripcionBienServicio,
++          docSoporteNro: reportData.informeNro ? `SP-${reportData.informeNro}` : baseData.docSoporteNro,
++          fecha: reportData.fechaPresentacion || baseData.fecha,
++        });
++      } else if (baseData) {
++        setFormData(baseData);
++      }
++    };
++    loadData();
+   }, [data, reportData, storageKey]);

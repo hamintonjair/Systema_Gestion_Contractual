@@ -1,0 +1,31 @@
+--- src/services/supabaseService.ts
++++ src/services/supabaseService.ts
+@@ -216,6 +216,28 @@
+       return null;
+     }
+   },
++
++  async getGlobalMembreteUrl(): Promise<string | null> {
++    try {
++      const { data, error } = await supabase.storage
++        .from('anexos')
++        .list('membretes', {
++          limit: 1,
++          sortBy: { column: 'created_at', order: 'desc' }
++        });
++        
++      if (error || !data || data.length === 0) {
++        return null;
++      }
++      
++      const { data: publicUrlData } = supabase.storage
++        .from('anexos')
++        .getPublicUrl(`membretes/${data[0].name}`);
++        
++      return publicUrlData.publicUrl;
++    } catch (e) {
++      return null;
++    }
++  },
+ 
+   async deleteImageFromStorage(imageUrl: string): Promise<boolean> {

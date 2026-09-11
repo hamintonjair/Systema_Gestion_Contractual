@@ -1,0 +1,88 @@
+--- src/services/supabaseService.ts
++++ src/services/supabaseService.ts
+@@ -1949,6 +1949,63 @@
+     }
+     // Fallback a LocalStorage
+     const key = docIdentidad && pagoNro ? `cert_data_${docIdentidad}_${pagoNro}` : 'cert_data_global';
+     const saved = localStorage.getItem(key);
+     if (saved) {
+       try {
+         return JSON.parse(saved) as CertificadoSupervisionData;
+       } catch (e) {
+         return null;
+       }
+     }
+     return null;
+   },
++
++  // 15. Guardar Soporte Fiduciaria
++  async saveSoporteFiduciaria(
++    informeId: string,
++    data: any,
++    docKey?: string,
++    pagoNroStr?: string
++  ): Promise<{ success: boolean; id?: string }> {
++    try {
++      let resolvedInformeId = informeId;
++      if (!isUuid(informeId)) {
++        resolvedInformeId = ''; // local mode
++      }
++
++      const payload: any = {
++        datos_formulario: data,
++        fecha_actualizacion: new Date().toISOString()
++      };
++
++      if (docKey) payload.contratista_documento = docKey;
++      if (pagoNroStr) payload.pago_nro = pagoNroStr;
++      if (resolvedInformeId) payload.informe_id = resolvedInformeId;
++
++      let existingId: string | null = null;
++      if (resolvedInformeId) {
++        const { data: existingFid } = await supabase.from('soportes_fiduciaria').select('id').eq('informe_id', resolvedInformeId).limit(1).maybeSingle();
++        if (existingFid?.id) existingId = existingFid.id;
++      }
++      if (!existingId && docKey) {
++        const { data: existingByDoc } = await supabase.from('soportes_fiduciaria').select('id').eq('contratista_documento', docKey).eq('pago_nro', pagoNroStr).limit(1).maybeSingle();
++        if (existingByDoc?.id) existingId = existingByDoc.id;
++      }
++
++      if (existingId) {
++        await supabase.from('soportes_fiduciaria').update(payload).eq('id', existingId);
++        return { success: true, id: existingId };
++      } else {
++        const { data: inserted } = await supabase.from('soportes_fiduciaria').insert([payload]).select('id').maybeSingle();
++        return { success: true, id: inserted?.id };
++      }
++    } catch (e: any) {
++      console.warn('Error saving soporte fiduciaria to Supabase:', e);
++      return { success: true, id: `local-${Date.now()}` };
++    }
++  },
++
++  // 16. Obtener Soporte Fiduciaria
++  async getSoporteFiduciaria(
++    informeId?: string,
++    docIdentidad?: string,
++    pagoNro?: string
++  ): Promise<any | null> {
++    try {
++      if (informeId && isUuid(informeId)) {
++        const { data, error } = await supabase.from('soportes_fiduciaria').select('*').eq('informe_id', informeId).limit(1).maybeSingle();
++        if (!error && data?.datos_formulario) return data.datos_formulario;
++      }
++      if (docIdentidad && pagoNro) {
++        const { data, error } = await supabase.from('soportes_fiduciaria').select('*').eq('contratista_documento', docIdentidad).eq('pago_nro', pagoNro).limit(1).maybeSingle();
++        if (!error && data?.datos_formulario) return data.datos_formulario;
++      }
++    } catch (e) {
++      console.warn('Error fetching soporte fiduciaria:', e);
++    }
++    const key = docIdentidad && pagoNro ? `fid_data_${docIdentidad}_${pagoNro}` : 'fid_data_global';
++    const saved = localStorage.getItem(key);
++    if (saved) {
++      try { return JSON.parse(saved); } catch (e) { return null; }
++    }
++    return null;
++  }
+ };
