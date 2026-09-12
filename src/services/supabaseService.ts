@@ -4708,15 +4708,18 @@ export const supabaseService = {
     const cleanDoc = documentoIdentidad.trim().replace(/\D/g, '');
 
     // 1. Intentar consultar tabla dedicada 'informes_finales'
+    // El Informe Final es único por contratista (ver uq_informe_final_documento),
+    // no por contrato: contrato_nro se guarda con formatos distintos según el
+    // momento del guardado (ej. "CPS 590 de 2026" vs "590"), así que filtrar
+    // por igualdad exacta de contrato_nro aquí hacía que la búsqueda fallara en
+    // silencio y nunca encontrara el informe ya guardado. El parámetro
+    // contratoNro ya no se usa como filtro, solo se conserva por compatibilidad
+    // con quienes lo invocan.
     try {
-      let query = supabase
+      const query = supabase
         .from('informes_finales')
         .select('*')
         .or(`documento_identidad.eq.${cleanDoc},documento_identidad.eq.${documentoIdentidad}`);
-
-      if (contratoNro) {
-        query = query.eq('contrato_nro', contratoNro);
-      }
 
       const { data, error } = await query.order('updated_at', { ascending: false }).limit(1).maybeSingle();
 
@@ -4882,7 +4885,7 @@ export const supabaseService = {
     try {
       let { error } = await supabase
         .from('informes_finales')
-        .upsert(payload, { onConflict: 'documento_identidad,contrato_nro' });
+        .upsert(payload, { onConflict: 'documento_identidad' });
 
       if (error && error.message && error.message.toLowerCase().includes('column')) {
         // Si una columna no existe en la tabla de Supabase, eliminar campos opcionales no existentes y reintentar
@@ -4901,7 +4904,7 @@ export const supabaseService = {
 
         const retryRes = await supabase
           .from('informes_finales')
-          .upsert(payloadRetry, { onConflict: 'documento_identidad,contrato_nro' });
+          .upsert(payloadRetry, { onConflict: 'documento_identidad' });
         
         error = retryRes.error;
         if (error && error.message && error.message.toLowerCase().includes('column')) {
@@ -4914,7 +4917,7 @@ export const supabaseService = {
           delete payloadRetry.objeto_contractual;
           const retryRes2 = await supabase
             .from('informes_finales')
-            .upsert(payloadRetry, { onConflict: 'documento_identidad,contrato_nro' });
+            .upsert(payloadRetry, { onConflict: 'documento_identidad' });
           error = retryRes2.error;
         }
       }

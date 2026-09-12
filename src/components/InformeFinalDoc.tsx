@@ -104,6 +104,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [exportValidationErrors, setExportValidationErrors] = useState<string[] | null>(null);
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
 
   // Form states for AI modal & initial configuration
   const initialParsedContrato = useMemo(() => {
@@ -453,11 +454,6 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
 
   // Restablecer campos para trabajar en el formato oficial limpio / vacío
   const handleResetToBlank = async () => {
-    const confirmed = window.confirm(
-      '¿Deseas vaciar todo el contenido del informe para comenzar desde cero con el formato en blanco?\n\nSe conservarán los datos institucionales de tu contrato y perfil obtenidos de la base de datos.'
-    );
-    if (!confirmed) return;
-
     const blankData: InformeFinalData = {
       ...data,
       metaPlanDesarrollo: '',
@@ -654,7 +650,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
           <button
             id="btn-reset-vacio-informe-final"
             type="button"
-            onClick={handleResetToBlank}
+            onClick={() => setShowResetConfirmModal(true)}
             title="Vaciar campos y comenzar con el formato oficial en blanco"
             className="inline-flex items-center px-3 py-2 text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-lg shadow-sm transition-colors"
           >
@@ -2105,6 +2101,48 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
             <Eye className="w-3.5 h-3.5 mr-1.5" />
             Vista Previa
           </button>
+        </div>
+      )}
+
+      {/* Modal de confirmación para vaciar el Informe Final (reemplaza window.confirm) */}
+      {showResetConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700 shrink-0">
+                <AlertCircle size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  ¿Vaciar el contenido del informe?
+                </h3>
+                <p className="text-xs text-slate-600 mt-1">
+                  Deseas vaciar todo el contenido del informe para comenzar desde cero con el formato en blanco.
+                  Se conservarán los datos institucionales de tu contrato y perfil obtenidos de la base de datos.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirmModal(false)}
+                className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetConfirmModal(false);
+                  handleResetToBlank();
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md transition-colors flex items-center gap-1.5"
+              >
+                <RotateCcw size={14} />
+                Sí, vaciar informe
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
