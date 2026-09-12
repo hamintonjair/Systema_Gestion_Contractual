@@ -76,9 +76,11 @@ El sistema opera sobre las siguientes tablas en Supabase:
 7. **`informes_finales`**: Consolidado técnico, cuadro de actividades y metas del Plan de Desarrollo.
 
 ### Scripts de Migración SQL
-Los scripts de creación de tablas y políticas de seguridad RLS se encuentran en:
-* `/src/db/informes_finales_y_configuracion_schema.sql` (Tablas de IA e Informes Finales)
-* `/src/db/notifications_schema.sql` (Tabla de Notificaciones)
+El esquema base está en `/supabase/schema.sql`. Las migraciones incrementales
+se encuentran en `/supabase/migrations/`:
+* `informes_finales_y_configuracion_schema.sql` (Tablas de IA e Informes Finales)
+* `notifications_schema.sql` (Tabla de Notificaciones)
+* `add_fiduciaria_table.sql` / `add_fiduciaria_rls.sql` (Tabla y políticas de Soporte Fiduciaria)
 
 ---
 
