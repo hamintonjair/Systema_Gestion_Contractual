@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AutorizacionDesembolsoData, ReportData, AuthUser, createDefaultAutorizacionDesembolsoData, FieldComment } from '../types';
 import { obtenerValoresMonetariosReporte, convertirNumeroALetras, formatearObjetoConPeriodo, formatFechaAnioMesDia } from '../utils/numberToWords';
 import { limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
+import { formatDateSlash } from '../utils/formatters';
 import { supabaseService } from '../services/supabaseService';
 import FieldCommentModal from './FieldCommentModal';
 import { Printer, Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, CheckCircle2, FileSpreadsheet } from 'lucide-react';
@@ -894,7 +895,7 @@ export default function AutorizacionDesembolsoDoc({
                     className="w-full text-center bg-amber-50 outline-none text-xs font-serif font-bold" 
                   />
                 ) : (
-                  <span className="text-xs">{formData.fechaExpedicion}</span>
+                  <span className="text-xs">{formatDateSlash(formData.fechaExpedicion)}</span>
                 )}
               </div>
             </div>

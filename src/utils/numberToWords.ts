@@ -376,6 +376,7 @@ export function formatFechaAnioMesDia(rawDate?: string): string {
   return str;
 }
 
+
 /**
  * Formatea la fecha para el Soporte Fiduciaria extrayendo día, mes y año
  * directamente del campo "Período Hasta" (o "Fecha Presentación" / "Período Desde")

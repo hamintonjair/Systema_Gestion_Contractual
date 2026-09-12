@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs';
 import { AutorizacionDesembolsoData } from '../types';
+import { formatDateSlash } from '../utils/formatters';
 
 /**
  * Parses a string or number into a clean number, removing currency symbols, spaces, and separators.
@@ -52,7 +53,7 @@ export async function exportarAutorizacion(data: AutorizacionDesembolsoData): Pr
 
   // Fecha de Expedición (Cell D8)
   if (data.fechaExpedicion) {
-    sheet.getCell('D8').value = data.fechaExpedicion;
+    sheet.getCell('D8').value = formatDateSlash(data.fechaExpedicion);
   }
 
   // Consecutivo Nro. (Cell J8)
