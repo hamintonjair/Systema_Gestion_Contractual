@@ -297,7 +297,7 @@ const INFORME_FINAL_RESPONSE_SCHEMA = {
         type: Type.OBJECT,
         properties: {
           nro: { type: Type.INTEGER },
-          actividad: { type: Type.STRING },
+          actividad: { type: Type.STRING, maxLength: '380' },
           periodo: { type: Type.STRING },
           lugar: { type: Type.STRING },
           poblacion: { type: Type.STRING },
@@ -402,6 +402,16 @@ ${actividadesPorObligacion || 'Desarrollo de las actividades de apoyo a la gesti
 Evidencias Fotográficas / Documentales: ${evidencias || 'Registros fotográficos, listados de asistencia y actas.'}`;
   }).join('\n\n');
 
+  // La profundidad de las secciones narrativas (introducción, resultados,
+  // análisis técnico, etc.) escala con la cantidad real de informes
+  // mensuales a consolidar: un contrato de 2 meses no debería leerse igual
+  // de extenso que uno de 10 meses.
+  const profundidadNarrativa = reports.length <= 2
+    ? '2 párrafos'
+    : reports.length <= 6
+      ? '3 a 4 párrafos, con mayor nivel de detalle sobre la evolución del trabajo'
+      : '4 a 6 párrafos, profundizando en la evolución del trabajo a lo largo de todo el período contractual';
+
   const prompt = `Eres un consultor experto en contratación estatal, auditoría de gestión y administración pública de la Alcaldía Municipal de Quibdó (Chocó, Colombia).
 
 Tu tarea es redactar el "INFORME FINAL DE EJECUCIÓN CONTRACTUAL" con el más alto rigor técnico, administrativo, gramatical y jurídico institucional, consolidando TODOS los informes mensuales ejecutados por el contratista y alineándolos estrictamente con las Metas del Plan de Desarrollo Municipal ("Quibdó Territorio de Vida 2024-2027") y los Indicadores de gestión.
@@ -428,9 +438,10 @@ ${reportsContext || 'Se ejecutaron todas las obligaciones mensuales con soporte 
 INSTRUCCIONES DE RESPUESTA:
 Responde con un objeto JSON que cumpla el schema entregado. Ten en cuenta lo siguiente para cada campo:
 - "cuadroActividades" debe tener EXACTAMENTE ${reports.length} elementos, uno por cada INFORME MENSUAL listado arriba, en el mismo orden, ni más ni menos.
-- Cada elemento de "cuadroActividades" resume UN mes: su campo "actividad" debe ser un párrafo narrativo fluido que combine de forma coherente las obligaciones que tuvieron avance ese mes (no enumeres "Obligación 1: ... Obligación 2: ..."). El campo "periodo" debe ser el nombre real del mes de ese informe (el que aparece como "Mes:" en sus datos). El campo "evidencias" debe terminar siempre con "e informe mensual No. X" (X = número real de ese informe).
+- Cada elemento de "cuadroActividades" resume UN mes: su campo "actividad" debe ser BREVE (máximo 2 a 3 oraciones), concreto sobre qué se hizo ese mes combinando de forma coherente las obligaciones que tuvieron avance (no enumeres "Obligación 1: ... Obligación 2: ..." y no te extiendas más de lo necesario). El campo "periodo" debe ser el nombre real del mes de ese informe (el que aparece como "Mes:" en sus datos). El campo "evidencias" debe terminar siempre con "e informe mensual No. X" (X = número real de ese informe).
 - "lugar" y "poblacion" deben tomarse de lo mencionado en los datos de ese mes; si no hay algo específico, usa un término general ("Sede de la dependencia", "Comunidad y beneficiarios del programa") en vez de inventar un lugar o población concretos.
-- "introduccion" debe tener 2 a 3 párrafos formales explicando el marco del Plan de Desarrollo, las metas, el objeto contractual y el rol desempeñado.
+- "introduccion" debe tener ${profundidadNarrativa} formales explicando el marco del Plan de Desarrollo, las metas, el objeto contractual y el rol desempeñado. Varía el estilo de apertura: no siempre comiences con la fórmula "La Secretaría de [X], en cumplimiento de la Meta [Y]..."; puedes iniciar describiendo el contexto o problemática social atendida, el rol del profesional, o el alcance del contrato, y mencionar la meta y el plan de desarrollo en cualquier punto de los primeros párrafos, no necesariamente en la primera frase.
+- "cumplimientoMeta", "analisisTecnico" e "impactoEjecucion" deben tener también ${profundidadNarrativa}, ajustando el nivel de detalle a la cantidad real de informes mensuales consolidados.
 - "productosEntregados", "resultadosAlcanzados" y "recomendaciones" son listas de texto (párrafos u oraciones), no deben estar vacías.`;
 
   try {

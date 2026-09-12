@@ -16,6 +16,20 @@ function escapeXml(unsafe: string | null | undefined): string {
 }
 
 /**
+ * Igual que escapeXml, pero convierte cada salto de línea del valor en un
+ * salto de línea real de Word (<w:br/>). Un <w:t> nunca renderiza un '\n'
+ * como salto de línea: el texto queda corrido en una sola línea aunque el
+ * dato original venga en varios renglones (ej. varias Metas del Plan de
+ * Desarrollo). Debe usarse solo dentro de un <w:t>...</w:t> ya existente,
+ * cerrando y reabriendo el run alrededor de cada <w:br/>.
+ */
+function escapeXmlWithLineBreaks(unsafe: string | null | undefined): string {
+  if (unsafe === null || unsafe === undefined) return '';
+  const lineas = String(unsafe).split(/\r\n|\r|\n/);
+  return lineas.map(l => escapeXml(l)).join('</w:t></w:r><w:r><w:br/></w:r><w:r><w:t xml:space="preserve">');
+}
+
+/**
  * Helper to fetch image binary data from URL or Base64 data URI
  */
 async function fetchImageBuffer(url: string): Promise<{ buffer: ArrayBuffer; ext: string } | null> {
@@ -287,7 +301,10 @@ export async function exportInformeFinalToWord(data: InformeFinalData): Promise<
     if (!val) return;
     const regex = new RegExp(`(<w:t[^>]*>${label}<\\/w:t>[\\s\\S]*?<w:t[^>]*>:<\\/w:t>[\\s\\S]*?<w:t[^>]*>)[\\s\\S]*?(<\\/w:t>)`);
     if (regex.test(docXml)) {
-      docXml = docXml.replace(regex, `$1 ${escapeXml(val)}$2`);
+      // $1 y $2 son literales de Word ('$$' escapa el '$' para que String.replace
+      // no interprete secuencias como $1/$2 dentro del valor reemplazado).
+      const valorSeguro = escapeXmlWithLineBreaks(val).replace(/\$/g, '$$$$');
+      docXml = docXml.replace(regex, `$1 ${valorSeguro}$2`);
     }
   };
 
