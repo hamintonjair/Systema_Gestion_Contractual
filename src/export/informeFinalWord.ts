@@ -305,6 +305,24 @@ export async function exportInformeFinalToWord(data: InformeFinalData): Promise<
 
   let docXml = zip.file('word/document.xml')?.asText() || '';
   let relsXml = zip.file('word/_rels/document.xml.rels')?.asText() || '';
+  let contentTypesXml = zip.file('[Content_Types].xml')?.asText() || '';
+
+  // La plantilla original solo declara Default Extension para "jpeg" (su único
+  // logo embebido). Las evidencias fotográficas de un informe mensual vienen en
+  // cualquier formato -- .png es muy común (capturas de pantalla) -- y si su
+  // extensión no tiene un Default (o un Override específico) en
+  // [Content_Types].xml, Word no sabe interpretar esa parte del paquete y
+  // marca el documento entero como "contenido no legible" al abrirlo.
+  const asegurarContentType = (ext: string, mime: string) => {
+    const extLower = ext.toLowerCase();
+    const yaDeclarado = new RegExp(`<Default\\s+Extension="${extLower}"`, 'i').test(contentTypesXml);
+    if (!yaDeclarado) {
+      contentTypesXml = contentTypesXml.replace(
+        '</Types>',
+        `<Default Extension="${extLower}" ContentType="${mime}"/></Types>`
+      );
+    }
+  };
 
   // 1. Reemplazar Fecha de Presentación
   if (data.fechaPresentacion) {
@@ -448,7 +466,8 @@ export async function exportInformeFinalToWord(data: InformeFinalData): Promise<
         if (imgData) {
           const rId = `rIdPhoto${rIdCounter++}`;
           const filename = `media/custom_evidence_${i}.${imgData.ext}`;
-          
+          asegurarContentType(imgData.ext, imgData.ext === 'png' ? 'image/png' : 'image/jpeg');
+
           zip.file(`word/${filename}`, imgData.buffer);
 
           const relEntry = `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${filename}"/>`;
@@ -518,6 +537,7 @@ export async function exportInformeFinalToWord(data: InformeFinalData): Promise<
   // Guardar XMLs modificados
   zip.file('word/document.xml', docXml);
   zip.file('word/_rels/document.xml.rels', relsXml);
+  zip.file('[Content_Types].xml', contentTypesXml);
 
   const outBlob = zip.generate({
     type: 'blob',
