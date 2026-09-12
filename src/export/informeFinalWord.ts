@@ -189,8 +189,15 @@ function buildActivityTableXml(actividades: ActividadInformeFinal[]): string {
     </w:tr>
   `;
 
+  // w14:paraId/w14:textId deben ser únicos por fila: Word los usa como
+  // identificador estable de párrafo. Un valor fijo reutilizado en cada fila
+  // (como antes) produce IDs duplicados en cuanto hay 2+ actividades, y Word
+  // lo marca como "contenido no legible" al abrir el documento.
+  const idUnicaFila = (base: string, idx: number) =>
+    ((parseInt(base, 16) + idx) >>> 0).toString(16).toUpperCase().padStart(8, '0');
+
   const dataRows = actividades.map((a, idx) => `
-    <w:tr w:rsidR="00183C4C" w:rsidRPr="00904D80" w14:paraId="28BDD88A" w14:textId="77777777" w:rsidTr="007B01DE">
+    <w:tr w:rsidR="00183C4C" w:rsidRPr="00904D80" w14:paraId="${idUnicaFila('28BDD88A', idx)}" w14:textId="${idUnicaFila('11111111', idx)}" w:rsidTr="007B01DE">
       <w:tc><w:tcPr><w:tcW w:w="412" w:type="dxa"/></w:tcPr>
         <w:p><w:pPr><w:jc w:val="center"/><w:rPr><w:rFonts w:ascii="Century Gothic" w:hAnsi="Century Gothic"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:pPr>
         <w:r><w:rPr><w:rFonts w:ascii="Century Gothic" w:hAnsi="Century Gothic"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr><w:t>${a.nro || idx + 1}</w:t></w:r></w:p>
