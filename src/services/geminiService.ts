@@ -337,10 +337,19 @@ export async function generateInformeFinalWithAI(params: {
   apiKey?: string;
   model?: string;
 }): Promise<InformeFinalData> {
-  const { user, reports, metaPlanDesarrollo, indicador, contratoNro, contratoAno, fechaPresentacion, zonasIntervencion, apiKey, model } = params;
+  const { user, metaPlanDesarrollo, indicador, contratoNro, contratoAno, fechaPresentacion, zonasIntervencion, apiKey, model } = params;
 
-  if (!reports || reports.length === 0) {
+  if (!params.reports || params.reports.length === 0) {
     throw new Error('Para generar el Informe Final con IA es obligatorio contar con al menos un (1) informe mensual registrado en el sistema.');
+  }
+
+  // El Informe Final certifica cumplimiento contractual: solo los informes que
+  // el supervisor ya aprobó son fuente confiable. Un borrador puede tener
+  // obligaciones sin actividades registradas todavía (texto vacío), lo que
+  // obligaría a la IA a inventar contenido solo para llenar esa fila.
+  const reports = params.reports.filter(r => r.estado === 'Aprobado');
+  if (reports.length === 0) {
+    throw new Error('Ninguno de los informes mensuales registrados está en estado "Aprobado". El Informe Final solo puede generarse con informes ya aprobados por el supervisor.');
   }
 
   const effectiveContratoNro = (contratoNro && contratoNro.trim()) || user.contratoNro || '';

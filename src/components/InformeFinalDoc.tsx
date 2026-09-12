@@ -298,7 +298,12 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
     return () => { isMounted = false; };
   }, [user?.documentoIdentidad, user?.ciudad]);
 
-  const hasReports = reports && reports.length > 0;
+  // El Informe Final certifica cumplimiento contractual: solo los informes que
+  // el supervisor ya aprobó son fuente confiable. Un borrador puede tener
+  // obligaciones sin actividades registradas todavía (texto vacío), lo que
+  // obligaría a la IA a inventar contenido solo para llenar esa fila.
+  const approvedReports = (reports || []).filter(r => r.estado === 'Aprobado');
+  const hasReports = approvedReports.length > 0;
   const isReportEmpty = (
     !data.generadoConIA &&
     (!data.introduccion || data.introduccion.trim().length === 0) &&
@@ -309,9 +314,13 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
   const handleTriggerAIGeneration = async () => {
     setAiError(null);
 
-    // Validación 1: Debe haber al menos un informe mensual
+    // Validación 1: Debe haber al menos un informe mensual APROBADO
     if (!hasReports) {
-      setAiError('Para generar el Informe Final con IA es obligatorio contar con al menos un (1) informe mensual registrado en el sistema.');
+      setAiError(
+        reports && reports.length > 0
+          ? 'Ninguno de tus informes mensuales está en estado Aprobado todavía. La IA solo puede consolidar informes ya aprobados por el supervisor.'
+          : 'Para generar el Informe Final con IA es obligatorio contar con al menos un (1) informe mensual registrado en el sistema.'
+      );
       return;
     }
 
@@ -344,7 +353,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
 
       const generated = await generateInformeFinalWithAI({
         user,
-        reports,
+        reports: approvedReports,
         contratoNro: cleanContrato,
         contratoAno: contratoAno || undefined,
         metaPlanDesarrollo: metaInput.trim(),
@@ -752,11 +761,13 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
                 <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               )}
               <div>
-                <strong className="block font-bold">Requisito 1: Informes Mensuales Registrados</strong>
+                <strong className="block font-bold">Requisito 1: Informes Mensuales Aprobados</strong>
                 <p className="text-[11px] mt-0.5 text-slate-600">
-                  {hasReports 
-                    ? `Se detectaron ${reports.length} informe(s) mensual(es) registrados para consolidar en la ejecución.` 
-                    : `No tienes informes mensuales registrados. Para que la IA consolide la ejecución es obligatorio registrar al menos un (1) informe mensual.`}
+                  {hasReports
+                    ? `Se detectaron ${approvedReports.length} informe(s) mensual(es) en estado Aprobado para consolidar en la ejecución.`
+                    : (reports && reports.length > 0
+                        ? `Tienes ${reports.length} informe(s) mensual(es) registrados, pero ninguno está en estado Aprobado. La IA solo puede consolidar informes ya aprobados por el supervisor.`
+                        : `No tienes informes mensuales registrados. Para que la IA consolide la ejecución es obligatorio registrar al menos un (1) informe mensual y que esté aprobado.`)}
                 </p>
               </div>
             </div>
@@ -1775,7 +1786,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
               <div className="p-3 bg-purple-50/80 border border-purple-200 rounded-xl text-xs text-purple-950 flex items-center justify-between">
                 <span className="flex items-center font-medium">
                   <CheckCircle2 className="w-4 h-4 mr-1.5 text-purple-600 shrink-0" />
-                  Se consolidarán <strong>&nbsp;{reports.length} informe(s) mensual(es)&nbsp;</strong> registrados.
+                  Se consolidarán <strong>&nbsp;{approvedReports.length} informe(s) mensual(es)&nbsp;</strong> en estado Aprobado.
                 </span>
                 <span className="text-[10px] bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full font-bold">
                   Listo para procesar
