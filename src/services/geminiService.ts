@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import { InformeFinalData, ReportData, AuthUser, createDefaultInformeFinalData } from '../types';
 import { supabaseService } from './supabaseService';
 
@@ -253,6 +253,76 @@ export interface GenerateInformeFinalParams {
 }
 
 /**
+ * Extrae el nombre del mes en español a partir de una fecha en formato
+ * YYYY-MM-DD o DD/MM/YYYY. Devuelve null si el formato no es reconocible.
+ */
+function obtenerMesDeFecha(rawDate?: string): string | null {
+  if (!rawDate) return null;
+  const str = String(rawDate).trim();
+  const meses = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+
+  let mes: number | null = null;
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    mes = parseInt(isoMatch[2], 10);
+  } else {
+    const slashMatch = str.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/);
+    if (slashMatch) {
+      mes = parseInt(slashMatch[2], 10);
+    }
+  }
+  if (!mes || mes < 1 || mes > 12) return null;
+  const nombre = meses[mes - 1];
+  return nombre.charAt(0).toUpperCase() + nombre.slice(1);
+}
+
+// Schema estricto para forzar la forma exacta del JSON que debe devolver
+// Gemini. Usar responseSchema (en vez de solo describir el formato en el
+// texto del prompt) reduce fallos de parseo y respuestas con forma
+// inconsistente.
+const INFORME_FINAL_RESPONSE_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    introduccion: { type: Type.STRING },
+    metodologiaEnfoque: { type: Type.STRING },
+    metodologiaEstrategias: { type: Type.STRING },
+    metodologiaZonas: { type: Type.STRING },
+    metodologiaHerramientas: { type: Type.STRING },
+    cuadroActividades: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          nro: { type: Type.INTEGER },
+          actividad: { type: Type.STRING },
+          periodo: { type: Type.STRING },
+          lugar: { type: Type.STRING },
+          poblacion: { type: Type.STRING },
+          resultados: { type: Type.STRING },
+          evidencias: { type: Type.STRING }
+        },
+        required: ['nro', 'actividad', 'periodo', 'lugar', 'poblacion', 'resultados', 'evidencias']
+      }
+    },
+    productosEntregados: { type: Type.ARRAY, items: { type: Type.STRING } },
+    resultadosAlcanzados: { type: Type.ARRAY, items: { type: Type.STRING } },
+    cumplimientoMeta: { type: Type.STRING },
+    analisisTecnico: { type: Type.STRING },
+    impactoEjecucion: { type: Type.STRING },
+    conclusiones: { type: Type.STRING },
+    recomendaciones: { type: Type.ARRAY, items: { type: Type.STRING } }
+  },
+  required: [
+    'introduccion', 'metodologiaEnfoque', 'metodologiaEstrategias', 'metodologiaZonas',
+    'metodologiaHerramientas', 'cuadroActividades', 'productosEntregados', 'resultadosAlcanzados',
+    'cumplimientoMeta', 'analisisTecnico', 'impactoEjecucion', 'conclusiones', 'recomendaciones'
+  ]
+};
+
+/**
  * Generates the Informe Final de Ejecución Contractual using Gemini AI
  */
 export async function generateInformeFinalWithAI(params: {
@@ -261,12 +331,13 @@ export async function generateInformeFinalWithAI(params: {
   metaPlanDesarrollo: string;
   indicador: string;
   contratoNro?: string;
+  contratoAno?: string;
   fechaPresentacion?: string;
   zonasIntervencion?: string;
   apiKey?: string;
   model?: string;
 }): Promise<InformeFinalData> {
-  const { user, reports, metaPlanDesarrollo, indicador, contratoNro, fechaPresentacion, zonasIntervencion, apiKey, model } = params;
+  const { user, reports, metaPlanDesarrollo, indicador, contratoNro, contratoAno, fechaPresentacion, zonasIntervencion, apiKey, model } = params;
 
   if (!reports || reports.length === 0) {
     throw new Error('Para generar el Informe Final con IA es obligatorio contar con al menos un (1) informe mensual registrado en el sistema.');
@@ -283,6 +354,8 @@ export async function generateInformeFinalWithAI(params: {
     throw new Error('Las metas del Plan de Desarrollo / Acción son obligatorias para generar el Informe Final.');
   }
 
+  const effectiveContratoAno = (contratoAno && contratoAno.trim()) || String(new Date().getFullYear());
+
   const resueltoGen = (apiKey && apiKey.trim() && model) ? null : await resolveGeminiConfig();
   const keyToUse = (apiKey && apiKey.trim()) || (resueltoGen ? resueltoGen.apiKey : '');
   const modelToUse = normalizeGeminiModel(model || (resueltoGen ? resueltoGen.model : getStoredGeminiModel()));
@@ -291,7 +364,8 @@ export async function generateInformeFinalWithAI(params: {
     throw new Error('No hay una API Key de Google Gemini configurada. Registrala en Panel SuperAdmin > Inteligencia Artificial.');
   }
 
-  // Base fallback data in case AI is unreachable
+  // Base fallback data para prellenar el objeto final con lo que ya se sabe
+  // (contrato, meta, indicador...) antes de intentar la generación con IA.
   const defaultData = createDefaultInformeFinalData(user, reports);
   if (effectiveContratoNro) defaultData.contratoNro = effectiveContratoNro;
   if (metaPlanDesarrollo) defaultData.metaPlanDesarrollo = metaPlanDesarrollo;
@@ -299,21 +373,32 @@ export async function generateInformeFinalWithAI(params: {
   if (fechaPresentacion) defaultData.fechaPresentacion = fechaPresentacion;
   if (zonasIntervencion) defaultData.metodologiaZonas = zonasIntervencion;
 
-  // Build summary of all monthly reports for prompt
+  // Las obligaciones contractuales son fijas durante todo el contrato: cada
+  // informe mensual nuevo clona la misma lista (misma descripción) desde el
+  // anterior y solo limpia el texto de "actividades" para el nuevo período
+  // (ver ContratistaDashboard.tsx, clonado de obligaciones). Por eso se listan
+  // UNA sola vez aquí, en vez de repetirlas en cada bloque de informe mensual.
+  const reporteConObligaciones = reports.find(r => r.obligaciones && r.obligaciones.length > 0);
+  const obligacionesContractuales = (reporteConObligaciones?.obligaciones || [])
+    .map((ob, oi) => `  ${oi + 1}. ${ob.descripcion || 'Obligación contractual sin descripción registrada.'}`)
+    .join('\n');
+
+  // Resumen por informe mensual: solo lo que cambia mes a mes (las
+  // actividades ejecutadas de cada obligación ese período), identificado por
+  // el número de obligación para poder cruzarlo con la lista de arriba.
   const reportsContext = reports.map((r, i) => {
     const num = r.informeNro || (i + 1);
-    const periodo = (r.periodoDesde && r.periodoHasta) 
-      ? `Mes ${num} (${r.periodoDesde} a ${r.periodoHasta})` 
-      : `Mes ${num}`;
-    const actividades = (r.obligaciones || []).map((ob, oi) => {
-      return `  - Obligación ${oi + 1}: ${ob.descripcion || ''}\n    Actividades ejecutadas: ${ob.actividades || 'Actividades de soporte y ejecución contractual'}`;
+    const mesReal = obtenerMesDeFecha(r.periodoDesde) || obtenerMesDeFecha(r.fechaPresentacion) || `Mes ${num}`;
+    const rangoPeriodo = (r.periodoDesde && r.periodoHasta) ? `${r.periodoDesde} a ${r.periodoHasta}` : '';
+    const actividadesPorObligacion = (r.obligaciones || []).map((ob, oi) => {
+      const texto = (ob.actividades && ob.actividades.trim()) ? ob.actividades.trim() : 'Sin novedades reportadas para esta obligación en este período.';
+      return `  Obligación ${oi + 1}: ${texto}`;
     }).join('\n');
     const evidencias = (r.anexos || []).map(e => e.titulo).filter(Boolean).join(', ');
-    return `--- INFORME MENSUAL NRO ${num} (Periodo: ${periodo}) ---
+    return `--- INFORME MENSUAL NRO ${num} (Mes: ${mesReal}${rangoPeriodo ? `, Período: ${rangoPeriodo}` : ''}) ---
 Lugar/Ciudad: ${r.ciudad || 'Quibdó'}
-Fecha Presentación: ${r.fechaPresentacion || ''}
-Actividades y Obligaciones Desarrolladas:
-${actividades || 'Desarrollo de las actividades de apoyo a la gestión y cumplimiento del objeto contractual.'}
+Actividades ejecutadas por obligación ese mes:
+${actividadesPorObligacion || 'Desarrollo de las actividades de apoyo a la gestión y cumplimiento del objeto contractual.'}
 Evidencias Fotográficas / Documentales: ${evidencias || 'Registros fotográficos, listados de asistencia y actas.'}`;
   }).join('\n\n');
 
@@ -321,8 +406,10 @@ Evidencias Fotográficas / Documentales: ${evidencias || 'Registros fotográfico
 
 Tu tarea es redactar el "INFORME FINAL DE EJECUCIÓN CONTRACTUAL" con el más alto rigor técnico, administrativo, gramatical y jurídico institucional, consolidando TODOS los informes mensuales ejecutados por el contratista y alineándolos estrictamente con las Metas del Plan de Desarrollo Municipal ("Quibdó Territorio de Vida 2024-2027") y los Indicadores de gestión.
 
+REGLA MÁS IMPORTANTE: no inventes cifras, lugares, nombres de instituciones, poblaciones atendidas ni resultados numéricos que no estén explícitamente presentes en los datos suministrados abajo. Si la información de un mes es general y no trae detalles específicos, redacta en términos generales sin inventar precisión que no existe. Es preferible un texto genérico y honesto que uno específico pero inventado.
+
 DATOS DEL CONTRATO Y CONTRATISTA:
-- Número de Contrato: CPS ${effectiveContratoNro} de 2026
+- Número de Contrato: CPS ${effectiveContratoNro} de ${effectiveContratoAno}
 - Nombre del Contratista: ${user.nombreCompleto} (C.C. ${user.documentoIdentidad})
 - Dependencia Responsable: ${user.secretariaNombre || defaultData.dependencia || 'Alcaldía Municipal de Quibdó'}
 - Supervisor del Contrato: ${user.supervisorNombre || defaultData.supervisorNombre || 'Supervisor designado'}, ${user.supervisorCargo || defaultData.supervisorCargo || 'Supervisor(a) del Contrato'}
@@ -332,53 +419,23 @@ DATOS DEL CONTRATO Y CONTRATISTA:
 - Zonas de Intervención: ${zonasIntervencion || defaultData.metodologiaZonas}
 - Fecha de Presentación: ${fechaPresentacion || defaultData.fechaPresentacion}
 
-HISTÓRICO CONSOLIDADO DE INFORMES MENSUALES EJECUTADOS:
+OBLIGACIONES CONTRACTUALES (fijas durante todo el contrato, iguales en cada informe mensual):
+${obligacionesContractuales || 'No se registraron obligaciones contractuales específicas; redactar en términos generales de apoyo a la gestión.'}
+
+HISTÓRICO DE INFORMES MENSUALES EJECUTADOS (${reports.length} en total — lo que cambia mes a mes es el texto de "actividades ejecutadas" de cada obligación, referenciada arriba por su número):
 ${reportsContext || 'Se ejecutaron todas las obligaciones mensuales con soporte en sistemas, bases de datos y comités territoriales.'}
 
 INSTRUCCIONES DE RESPUESTA:
-Debes responder ÚNICAMENTE con un objeto JSON válido (sin código markdown adicional antes o después) con la siguiente estructura exacta:
-{
-  "introduccion": "Texto formal de 2 a 3 párrafos explicando el marco del Plan de Desarrollo, las metas, el objeto contractual y el rol desempeñado.",
-  "metodologiaEnfoque": "Enfoque técnico, operativo, diferencial e interinstitucional aplicado.",
-  "metodologiaEstrategias": "Estrategias implementadas (sistematización, soporte en campo, articulación, seguimiento digital, etc.).",
-  "metodologiaZonas": "Zonas de intervención y cobertura en Quibdó.",
-  "metodologiaHerramientas": "Herramientas técnicas, sistemas de información, software, equipos y canales digitales utilizados.",
-  "cuadroActividades": [
-    {
-      "nro": 1,
-      "actividad": "Resumen técnico y claro de las actividades ejecutadas en este periodo",
-      "periodo": "Enero",
-      "lugar": "Lugar específico (ej. Sede Secretaría, Megacolegio, Casa de Juventudes, etc.)",
-      "poblacion": "Población beneficiaria (ej. Población migrante, Jóvenes, Contratistas, etc.)",
-      "resultados": "Logro o resultado cuantitativo/cualitativo alcanzado",
-      "evidencias": "Listados de asistencia, actas, registros fotográficos e informe mensual No. X."
-    }
-  ],
-  "productosEntregados": [
-    "Informe mensual 1...",
-    "Bases de datos actualizadas...",
-    "Listados consolidados...",
-    "Soportes digitales..."
-  ],
-  "resultadosAlcanzados": [
-    "Párrafo 1 detallando resultados principales...",
-    "Párrafo 2...",
-    "Párrafo 3..."
-  ],
-  "cumplimientoMeta": "Análisis detallado de cómo las actividades aportaron al cumplimiento de la Meta e Indicador del Plan de Desarrollo.",
-  "analisisTecnico": "Análisis técnico sobre la efectividad en sistemas de información, articulación operativa e impacto en la ruta misional.",
-  "impactoEjecucion": "Impacto generado en la dependencia y recomendaciones de continuidad tecnológica.",
-  "conclusiones": "Conclusión final certificando el cumplimiento a cabalidad del objeto y metas.",
-  "recomendaciones": [
-    "Recomendación 1...",
-    "Recomendación 2...",
-    "Recomendación 3..."
-  ]
-}`;
+Responde con un objeto JSON que cumpla el schema entregado. Ten en cuenta lo siguiente para cada campo:
+- "cuadroActividades" debe tener EXACTAMENTE ${reports.length} elementos, uno por cada INFORME MENSUAL listado arriba, en el mismo orden, ni más ni menos.
+- Cada elemento de "cuadroActividades" resume UN mes: su campo "actividad" debe ser un párrafo narrativo fluido que combine de forma coherente las obligaciones que tuvieron avance ese mes (no enumeres "Obligación 1: ... Obligación 2: ..."). El campo "periodo" debe ser el nombre real del mes de ese informe (el que aparece como "Mes:" en sus datos). El campo "evidencias" debe terminar siempre con "e informe mensual No. X" (X = número real de ese informe).
+- "lugar" y "poblacion" deben tomarse de lo mencionado en los datos de ese mes; si no hay algo específico, usa un término general ("Sede de la dependencia", "Comunidad y beneficiarios del programa") en vez de inventar un lugar o población concretos.
+- "introduccion" debe tener 2 a 3 párrafos formales explicando el marco del Plan de Desarrollo, las metas, el objeto contractual y el rol desempeñado.
+- "productosEntregados", "resultadosAlcanzados" y "recomendaciones" son listas de texto (párrafos u oraciones), no deben estar vacías.`;
 
   try {
     const ai = new GoogleGenAI({ apiKey: keyToUse });
-    
+
     // Función auxiliar para llamar a Gemini con reintentos y fallback automático
     const callGeminiJson = async (targetModel: string) => {
       return await ai.models.generateContent({
@@ -386,6 +443,8 @@ Debes responder ÚNICAMENTE con un objeto JSON válido (sin código markdown adi
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
+          responseSchema: INFORME_FINAL_RESPONSE_SCHEMA,
+          temperature: 0.35
         }
       });
     };
@@ -396,7 +455,7 @@ Debes responder ÚNICAMENTE con un objeto JSON válido (sin código markdown adi
     } catch (primaryErr: any) {
       console.warn(`[Gemini] Error con modelo principal ${modelToUse}:`, primaryErr);
       const errStr = (primaryErr?.message || '').toLowerCase();
-      
+
       // Si el modelo principal experimenta 503 (alta demanda) o 429 quota 0, usamos gemini-3.1-flash-lite
       if (modelToUse !== 'gemini-3.1-flash-lite' && (errStr.includes('503') || errStr.includes('429') || errStr.includes('unavailable') || errStr.includes('resource_exhausted'))) {
         console.log('[Gemini] Activando modelo de respaldo automático: gemini-3.1-flash-lite...');
@@ -414,45 +473,47 @@ Debes responder ÚNICAMENTE con un objeto JSON válido (sin código markdown adi
       const cleanJson = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
       parsed = JSON.parse(cleanJson);
     } catch (parseError) {
-      console.warn('Fallo al parsear JSON de Gemini, aplicando rescate de texto:', parseError);
+      console.warn('Fallo al parsear JSON de Gemini:', parseError, 'Respuesta cruda:', responseText.slice(0, 500));
     }
 
-    if (parsed && typeof parsed === 'object') {
-      return {
-        ...defaultData,
-        introduccion: parsed.introduccion || defaultData.introduccion,
-        metodologiaEnfoque: parsed.metodologiaEnfoque || defaultData.metodologiaEnfoque,
-        metodologiaEstrategias: parsed.metodologiaEstrategias || defaultData.metodologiaEstrategias,
-        metodologiaZonas: parsed.metodologiaZonas || defaultData.metodologiaZonas,
-        metodologiaHerramientas: parsed.metodologiaHerramientas || defaultData.metodologiaHerramientas,
-        cuadroActividades: Array.isArray(parsed.cuadroActividades) && parsed.cuadroActividades.length > 0 
-          ? parsed.cuadroActividades.map((a: any, idx: number) => ({
-              nro: a.nro || idx + 1,
-              actividad: a.actividad || `Actividad mes ${idx + 1}`,
-              periodo: a.periodo || `Mes ${idx + 1}`,
-              lugar: a.lugar || 'Quibdó',
-              poblacion: a.poblacion || 'Comunidad y beneficiarios',
-              resultados: a.resultados || 'Cumplimiento a satisfacción',
-              evidencias: a.evidencias || `Informe mensual No. ${idx + 1}`
-            }))
-          : defaultData.cuadroActividades,
-        productosEntregados: Array.isArray(parsed.productosEntregados) && parsed.productosEntregados.length > 0
-          ? parsed.productosEntregados
-          : defaultData.productosEntregados,
-        resultadosAlcanzados: Array.isArray(parsed.resultadosAlcanzados) && parsed.resultadosAlcanzados.length > 0
-          ? parsed.resultadosAlcanzados
-          : defaultData.resultadosAlcanzados,
-        cumplimientoMeta: parsed.cumplimientoMeta || defaultData.cumplimientoMeta,
-        analisisTecnico: parsed.analisisTecnico || defaultData.analisisTecnico,
-        impactoEjecucion: parsed.impactoEjecucion || defaultData.impactoEjecucion,
-        conclusiones: parsed.conclusiones || defaultData.conclusiones,
-        recomendaciones: Array.isArray(parsed.recomendaciones) && parsed.recomendaciones.length > 0
-          ? parsed.recomendaciones
-          : defaultData.recomendaciones,
-        generadoConIA: true,
-        fechaGeneracionIA: new Date().toISOString()
-      };
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error('La Inteligencia Artificial no devolvió un resultado con el formato esperado. Intenta nuevamente o cambia de modelo en el panel de SuperAdmin.');
     }
+
+    return {
+      ...defaultData,
+      introduccion: parsed.introduccion || defaultData.introduccion,
+      metodologiaEnfoque: parsed.metodologiaEnfoque || defaultData.metodologiaEnfoque,
+      metodologiaEstrategias: parsed.metodologiaEstrategias || defaultData.metodologiaEstrategias,
+      metodologiaZonas: parsed.metodologiaZonas || defaultData.metodologiaZonas,
+      metodologiaHerramientas: parsed.metodologiaHerramientas || defaultData.metodologiaHerramientas,
+      cuadroActividades: Array.isArray(parsed.cuadroActividades) && parsed.cuadroActividades.length > 0
+        ? parsed.cuadroActividades.map((a: any, idx: number) => ({
+            nro: a.nro || idx + 1,
+            actividad: a.actividad || `Actividad mes ${idx + 1}`,
+            periodo: a.periodo || `Mes ${idx + 1}`,
+            lugar: a.lugar || 'Quibdó',
+            poblacion: a.poblacion || 'Comunidad y beneficiarios',
+            resultados: a.resultados || 'Cumplimiento a satisfacción',
+            evidencias: a.evidencias || `Informe mensual No. ${idx + 1}`
+          }))
+        : defaultData.cuadroActividades,
+      productosEntregados: Array.isArray(parsed.productosEntregados) && parsed.productosEntregados.length > 0
+        ? parsed.productosEntregados
+        : defaultData.productosEntregados,
+      resultadosAlcanzados: Array.isArray(parsed.resultadosAlcanzados) && parsed.resultadosAlcanzados.length > 0
+        ? parsed.resultadosAlcanzados
+        : defaultData.resultadosAlcanzados,
+      cumplimientoMeta: parsed.cumplimientoMeta || defaultData.cumplimientoMeta,
+      analisisTecnico: parsed.analisisTecnico || defaultData.analisisTecnico,
+      impactoEjecucion: parsed.impactoEjecucion || defaultData.impactoEjecucion,
+      conclusiones: parsed.conclusiones || defaultData.conclusiones,
+      recomendaciones: Array.isArray(parsed.recomendaciones) && parsed.recomendaciones.length > 0
+        ? parsed.recomendaciones
+        : defaultData.recomendaciones,
+      generadoConIA: true,
+      fechaGeneracionIA: new Date().toISOString()
+    };
   } catch (apiError: any) {
     console.error('Error al generar con Gemini API:', apiError);
     const parsed = parseGeminiError(apiError, modelToUse);

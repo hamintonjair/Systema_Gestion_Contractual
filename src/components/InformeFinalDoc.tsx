@@ -346,6 +346,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
         user,
         reports,
         contratoNro: cleanContrato,
+        contratoAno: contratoAno || undefined,
         metaPlanDesarrollo: metaInput.trim(),
         indicador: indicadorInput.trim(),
         fechaPresentacion: fechaInput.trim() || undefined,
