@@ -15,18 +15,26 @@ function escapeXml(unsafe: string | null | undefined): string {
     .replace(/'/g, '&apos;');
 }
 
+// Fuente y tamaño de los campos generales de la plantilla (Century Gothic 11pt;
+// w:sz/w:szCs van en medios puntos, por eso 22 = 11pt). Se repite explícitamente
+// en cada run nuevo creado por un salto de línea: sin esto, el run heredaría la
+// fuente por defecto de Word en vez de mantener Century Gothic 11.
+const RPR_CAMPO_GENERAL = '<w:rPr><w:rFonts w:ascii="Century Gothic" w:eastAsia="Calibri" w:hAnsi="Century Gothic" w:cs="Times New Roman"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
+
 /**
  * Igual que escapeXml, pero convierte cada salto de línea del valor en un
  * salto de línea real de Word (<w:br/>). Un <w:t> nunca renderiza un '\n'
  * como salto de línea: el texto queda corrido en una sola línea aunque el
  * dato original venga en varios renglones (ej. varias Metas del Plan de
  * Desarrollo). Debe usarse solo dentro de un <w:t>...</w:t> ya existente,
- * cerrando y reabriendo el run alrededor de cada <w:br/>.
+ * cerrando y reabriendo el run alrededor de cada <w:br/>, repitiendo la
+ * fuente/tamaño para que los renglones nuevos no pierdan el formato.
  */
 function escapeXmlWithLineBreaks(unsafe: string | null | undefined): string {
   if (unsafe === null || unsafe === undefined) return '';
   const lineas = String(unsafe).split(/\r\n|\r|\n/);
-  return lineas.map(l => escapeXml(l)).join('</w:t></w:r><w:r><w:br/></w:r><w:r><w:t xml:space="preserve">');
+  const separador = `</w:t></w:r><w:r>${RPR_CAMPO_GENERAL}<w:br/></w:r><w:r>${RPR_CAMPO_GENERAL}<w:t xml:space="preserve">`;
+  return lineas.map(l => escapeXml(l)).join(separador);
 }
 
 /**
