@@ -2144,7 +2144,7 @@ export default function ReportEditor({
                   </div>
                   <button
                     type="button"
-                    onClick={handleAplicarLiquidacionCalculada}
+                    onClick={() => handleAplicarLiquidacionCalculada()}
                     className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                     title="Insertar automáticamente en letras y números en el recuadro"
                   >
@@ -2153,11 +2153,11 @@ export default function ReportEditor({
                   </button>
                 </div>
                 <div className="text-[10px] text-gray-600 flex items-center gap-3 flex-wrap">
-                  <span><strong>% Ejecución:</strong> {liquidacionDinamica.porcentajeEjecucionFormatted}</span>
+                  <span><strong>% Ejecución:</strong> {liquidacionDinamica.porcentajeEjecucionFormateado}</span>
                   <span>•</span>
                   <span><strong>Saldo Restante:</strong> {formatearMonedaCol(liquidacionDinamica.saldoPorPagar)}</span>
                   <span>•</span>
-                  <span><strong>Período:</strong> {liquidacionDinamica.fechaInicioPeriodo} - {liquidacionDinamica.fechaFinPeriodo}</span>
+                  <span><strong>Período:</strong> {liquidacionDinamica.fechaInicioPago} - {liquidacionDinamica.fechaFinPago}</span>
                 </div>
               </div>
 

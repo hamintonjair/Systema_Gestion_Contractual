@@ -12,6 +12,7 @@ import AutorizacionDesembolsoDoc from './AutorizacionDesembolsoDoc';
 import ReportPreview from './ReportPreview';
 import CertificadoSupervisionModal from './CertificadoSupervisionModal';
 import WhatsAppNotifyModal from './WhatsAppNotifyModal';
+import RowActionsMenu from './RowActionsMenu';
 import Footer from './Footer';
 import { WhatsAppNotificationPayload } from '../utils/whatsappNotifier';
 import { 
@@ -22,9 +23,8 @@ import {
   CheckCircle2, 
   XCircle, 
   Printer, 
-  Eye, 
-  EyeOff,
-  Search, 
+  Eye,
+  Search,
   Filter,
   DollarSign,
   ArrowUpRight,
@@ -351,7 +351,11 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     setSelectedCertReportData(repData);
     setShowCertModal(true);
   };
-  const [visiblePasswords, setVisiblePasswords] = useState<{ [id: string]: boolean }>({});
+  const [resettingPasswordId, setResettingPasswordId] = useState<string | null>(null);
+  const [revealedNewPassword, setRevealedNewPassword] = useState<{ id: string; password: string } | null>(null);
+  const [contractorToResetPassword, setContractorToResetPassword] = useState<AuthUser | null>(null);
+  const [resetPasswordInput, setResetPasswordInput] = useState('');
+  const [resetPasswordError, setResetPasswordError] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Form New Contractor (Solo datos de usuario y credenciales)
@@ -398,11 +402,32 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     setLoading(false);
   };
 
+  // Depuración automática de informes/Informe Final vencidos (política de retención según duración del
+  // contrato). No depende de que el contratista entre a su propio panel: se dispara también desde aquí.
+  const runRetentionSweep = async () => {
+    const sweepKey = user.secretariaId || 'sin_secretaria';
+    if (!supabaseService.shouldRunRetentionSweep(sweepKey)) return;
+    supabaseService.markRetentionSweepRun(sweepKey);
+    try {
+      const [infs, conts] = await Promise.all([
+        supabaseService.getInformes(user.secretariaId),
+        supabaseService.getContractors(user.secretariaId),
+      ]);
+      await supabaseService.sweepExpiredReportsForSecretaria(
+        infs,
+        conts.map(c => c.documentoIdentidad).filter(Boolean) as string[]
+      );
+    } catch (e) {
+      console.warn('No se pudo ejecutar la depuración automática de informes vencidos:', e);
+    }
+  };
+
   const inspectingInformeRef = React.useRef(inspectingInforme);
   inspectingInformeRef.current = inspectingInforme;
 
   useEffect(() => {
     loadData();
+    runRetentionSweep();
 
     const handleCommentsUpdate = async () => {
       loadData();
@@ -443,12 +468,17 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
       handleCommentsUpdate();
     }, 4000);
 
+    // 4. Depuración automática de informes/Informe Final vencidos: cada 30 minutos (NO en el polling de
+    // 4s, para no sobrecargar la base de datos con esta revisión más costosa por cada contratista)
+    const retentionInterval = setInterval(runRetentionSweep, 30 * 60 * 1000);
+
     return () => {
       window.removeEventListener('informe_radicado_event', loadData);
       window.removeEventListener('informe_comments_updated', handleCommentsUpdate);
       window.removeEventListener('notificaciones_actualizadas', handleCommentsUpdate);
       supabase.removeChannel(channel);
       clearInterval(pollInterval);
+      clearInterval(retentionInterval);
     };
   }, [user.secretariaId]);
 
@@ -510,8 +540,8 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
     setEditNombre(c.nombreCompleto || '');
     setEditCedula(c.documentoIdentidad || '');
     setEditCorreo(c.email || '');
-    const currentPass = c.password || supabaseService.getUserPassword(c.email) || supabaseService.getUserPassword(c.documentoIdentidad) || (c.role === 'secretaria_admin' || c.role === 'secretaria_supervisor' ? 'Supervisor2026*' : 'Contratista2026*');
-    setEditPassword(currentPass);
+    // Por seguridad no se precarga la contraseña actual: se deja en blanco y solo se actualiza si se escribe una nueva.
+    setEditPassword('');
     setEditTelefono(c.telefono || '');
     setEditBarrio(c.barrio || c.direccion || '');
     setEditCargo(c.cargo || (c.role === 'secretaria_admin' || c.role === 'secretaria_supervisor' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista de Prestación de Servicios'));
@@ -564,7 +594,7 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
   };
 
   const handleCopyCredentials = (c: AuthUser) => {
-    const credText = `🏛️ ALCALDÍA DE QUIBDÓ - CREDENCIALES DE ACCESO
+    const credText = `🏛️ ALCALDÍA DE QUIBDÓ - DATOS DE ACCESO
 Usuario / Funcionario: ${c.nombreCompleto}
 Cédula: ${c.documentoIdentidad}
 Rol: ${c.role === 'secretaria_admin' ? 'Supervisor / Apoyo a la Supervisión' : 'Contratista'}
@@ -572,15 +602,46 @@ Secretaría: ${c.secretariaNombre || user.secretariaNombre}
 Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vinculado'}
 
 🔐 Usuario / Correo: ${c.email}
-🔑 Contraseña: ${c.password ? c.password : 'Protegida en Base de Datos (Ingreso con Cédula o clave registrada)'}`;
+🔑 Contraseña: Protegida por seguridad. Usa "Restablecer contraseña" en esta tarjeta para generar una nueva y compartirla.`;
 
     navigator.clipboard.writeText(credText);
     setCopiedId(c.id);
     setTimeout(() => setCopiedId(null), 2500);
   };
 
-  const togglePasswordVisibility = (id: string) => {
-    setVisiblePasswords(prev => ({ ...prev, [id]: !prev[id] }));
+  const handleOpenResetPasswordModal = (c: AuthUser) => {
+    setContractorToResetPassword(c);
+    setResetPasswordInput('');
+    setResetPasswordError('');
+  };
+
+  const confirmResetPassword = async () => {
+    if (!contractorToResetPassword) return;
+    const newPassword = resetPasswordInput.trim();
+    if (newPassword.length < 6) {
+      setResetPasswordError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    setResettingPasswordId(contractorToResetPassword.id);
+    const result = await supabaseService.updateContractor(contractorToResetPassword.id, { password: newPassword });
+    if (result.success) {
+      const updated = await supabaseService.getContractors(user.secretariaId);
+      setContractors(updated);
+      setRevealedNewPassword({ id: contractorToResetPassword.id, password: newPassword });
+      const credText = `🏛️ ALCALDÍA DE QUIBDÓ - NUEVA CONTRASEÑA DE ACCESO
+Usuario / Funcionario: ${contractorToResetPassword.nombreCompleto}
+Cédula: ${contractorToResetPassword.documentoIdentidad}
+🔐 Usuario / Correo: ${contractorToResetPassword.email}
+🔑 Nueva Contraseña: ${newPassword}
+
+Por seguridad, cambia esta contraseña la próxima vez que ingreses.`;
+      navigator.clipboard.writeText(credText);
+      setContractorToResetPassword(null);
+    } else {
+      setResetPasswordError(result.error || 'No se pudo actualizar la contraseña. Intenta de nuevo.');
+    }
+    setResettingPasswordId(null);
   };
 
   const handleUpdateStatus = async (id: string, newStatus: EstadoInforme) => {
@@ -1043,9 +1104,8 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
       )}
 
       {/* Selector de Pestañas Principales */}
-      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 rounded-xl shadow-xs">
-        <div className="flex space-x-1 sm:space-x-3 overflow-x-auto">
-          
+      <div className="flex flex-wrap items-center gap-1 sm:gap-3 border-b border-gray-200 bg-white px-4 py-1.5 rounded-xl shadow-xs">
+
           <button
             onClick={() => { setActiveTab('informes'); setStatusFilter('todos'); }}
             className={`py-3.5 px-3 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
@@ -1106,12 +1166,10 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
             </span>
           </button>
 
-        </div>
-
         {activeTab === 'contratistas' && (
           <button
             onClick={() => setShowAddContractorModal(true)}
-            className="px-3.5 py-2 bg-[#006b33] hover:bg-[#005729] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
+            className="ml-auto my-1 px-3.5 py-2 bg-[#006b33] hover:bg-[#005729] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
           >
             <UserPlus size={15} />
             <span className="hidden sm:inline">Vincular Nuevo Contratista</span>
@@ -1246,8 +1304,29 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
                     <tr>
                       <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                         <FileText size={36} className="mx-auto text-gray-300 mb-2" />
-                        <p className="font-semibold text-gray-700 text-sm">No se encontraron informes radicados</p>
-                        <p className="text-xs text-gray-400 mt-1">Los informes enviados por los contratistas asignados aparecerán aquí en tiempo real.</p>
+                        {searchTerm || statusFilter !== 'todos' ? (
+                          <>
+                            <p className="font-semibold text-gray-700 text-sm">Sin coincidencias para el filtro aplicado</p>
+                            <p className="text-xs text-gray-400 mt-1">Intenta con otro término de búsqueda o restablece el filtro de estado.</p>
+                            <button
+                              onClick={() => { setSearchTerm(''); setStatusFilter('todos'); }}
+                              className="mt-3 px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg text-xs font-bold transition-colors"
+                            >
+                              Restablecer búsqueda y filtros
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-gray-700 text-sm">Aún no hay informes radicados</p>
+                            <p className="text-xs text-gray-400 mt-1">Los informes enviados por los contratistas asignados aparecerán aquí en tiempo real.</p>
+                            <button
+                              onClick={() => setActiveTab('contratistas')}
+                              className="mt-3 px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg text-xs font-bold transition-colors"
+                            >
+                              Ver Directorio de Contratistas
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ) : (
@@ -1551,44 +1630,45 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
                             Aprobado
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 text-right space-x-1.5 whitespace-nowrap">
-                          <button
-                            onClick={() => handleOpenInspectModal(item)}
-                            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded border border-emerald-300 font-semibold text-[11px] inline-flex items-center gap-1"
-                            title="Ver detalles e inspeccionar informe aprobado"
-                          >
-                            <Eye size={13} />
-                            Revisar / Inspeccionar
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              handleOpenInspectModal(item);
-                              setTimeout(() => setAdminModuleTab('supervision'), 100);
-                            }}
-                            className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-semibold text-[11px] inline-flex items-center gap-1 shadow-xs"
-                            title="Ver / Emitir Certificado de Supervisión de Pago"
-                          >
-                            <FileCheck size={13} />
-                            Certificado Supervisión
-                          </button>
-
-                          <button
-                            onClick={() => handleOpenWhatsAppModal(item, 'aprobado')}
-                            className="px-2 py-1 bg-emerald-50 hover:bg-[#25D366] text-emerald-800 hover:text-white border border-emerald-300 hover:border-[#25D366] rounded font-semibold text-[11px] inline-flex items-center gap-1 transition-all"
-                            title="Enviar confirmación de aprobación por WhatsApp"
-                          >
-                            <MessageSquare size={13} />
-                            <span className="hidden sm:inline">WhatsApp</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleUpdateStatus(item.id, 'Enviado')}
-                            className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 font-semibold text-[11px] inline-flex items-center gap-1 transition-colors"
-                            title="Reabrir informe para requerir nuevas correcciones"
-                          >
-                            Reabrir
-                          </button>
+                        <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleOpenInspectModal(item)}
+                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded border border-emerald-300 font-semibold text-[11px] inline-flex items-center gap-1"
+                              title="Ver detalles e inspeccionar informe aprobado"
+                            >
+                              <Eye size={13} />
+                              Revisar / Inspeccionar
+                            </button>
+                            <RowActionsMenu
+                              actions={[
+                                {
+                                  key: 'certificado',
+                                  label: 'Certificado Supervisión',
+                                  icon: <FileCheck size={14} className="text-emerald-700" />,
+                                  title: 'Ver / Emitir Certificado de Supervisión de Pago',
+                                  onClick: () => {
+                                    handleOpenInspectModal(item);
+                                    setTimeout(() => setAdminModuleTab('supervision'), 100);
+                                  },
+                                },
+                                {
+                                  key: 'whatsapp',
+                                  label: 'Enviar por WhatsApp',
+                                  icon: <MessageSquare size={14} className="text-emerald-600" />,
+                                  title: 'Enviar confirmación de aprobación por WhatsApp',
+                                  onClick: () => handleOpenWhatsAppModal(item, 'aprobado'),
+                                },
+                                {
+                                  key: 'reabrir',
+                                  label: 'Reabrir informe',
+                                  icon: <RotateCcw size={14} className="text-gray-500" />,
+                                  title: 'Reabrir informe para requerir nuevas correcciones',
+                                  onClick: () => handleUpdateStatus(item.id, 'Enviado'),
+                                },
+                              ]}
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -1792,44 +1872,45 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
                               Aprobado
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 text-right space-x-1.5 whitespace-nowrap">
-                            <button
-                              onClick={() => handleOpenInspectModal(item)}
-                              className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-900 rounded border border-purple-300 font-semibold text-[11px] inline-flex items-center gap-1"
-                              title="Ver detalles e inspeccionar informe pasado"
-                            >
-                              <Eye size={13} />
-                              Revisar / Inspeccionar
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                handleOpenInspectModal(item);
-                                setTimeout(() => setAdminModuleTab('supervision'), 100);
-                              }}
-                              className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-semibold text-[11px] inline-flex items-center gap-1 shadow-xs"
-                              title="Ver / Emitir Certificado de Supervisión de Pago"
-                            >
-                              <FileCheck size={13} />
-                              Certificado Supervisión
-                            </button>
-
-                            <button
-                              onClick={() => handleOpenWhatsAppModal(item, 'aprobado')}
-                              className="px-2 py-1 bg-emerald-50 hover:bg-[#25D366] text-emerald-800 hover:text-white border border-emerald-300 hover:border-[#25D366] rounded font-semibold text-[11px] inline-flex items-center gap-1 transition-all"
-                              title="Enviar confirmación por WhatsApp"
-                            >
-                              <MessageSquare size={13} />
-                              <span className="hidden sm:inline">WhatsApp</span>
-                            </button>
-
-                            <button
-                              onClick={() => handleUpdateStatus(item.id, 'Enviado')}
-                              className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 font-semibold text-[11px] inline-flex items-center gap-1 transition-colors"
-                              title="Reabrir informe para requerir nuevas correcciones"
-                            >
-                              Reabrir
-                            </button>
+                          <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleOpenInspectModal(item)}
+                                className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-900 rounded border border-purple-300 font-semibold text-[11px] inline-flex items-center gap-1"
+                                title="Ver detalles e inspeccionar informe pasado"
+                              >
+                                <Eye size={13} />
+                                Revisar / Inspeccionar
+                              </button>
+                              <RowActionsMenu
+                                actions={[
+                                  {
+                                    key: 'certificado',
+                                    label: 'Certificado Supervisión',
+                                    icon: <FileCheck size={14} className="text-emerald-700" />,
+                                    title: 'Ver / Emitir Certificado de Supervisión de Pago',
+                                    onClick: () => {
+                                      handleOpenInspectModal(item);
+                                      setTimeout(() => setAdminModuleTab('supervision'), 100);
+                                    },
+                                  },
+                                  {
+                                    key: 'whatsapp',
+                                    label: 'Enviar por WhatsApp',
+                                    icon: <MessageSquare size={14} className="text-emerald-600" />,
+                                    title: 'Enviar confirmación por WhatsApp',
+                                    onClick: () => handleOpenWhatsAppModal(item, 'aprobado'),
+                                  },
+                                  {
+                                    key: 'reabrir',
+                                    label: 'Reabrir informe',
+                                    icon: <RotateCcw size={14} className="text-gray-500" />,
+                                    title: 'Reabrir informe para requerir nuevas correcciones',
+                                    onClick: () => handleUpdateStatus(item.id, 'Enviado'),
+                                  },
+                                ]}
+                              />
+                            </div>
                           </td>
                         </tr>
                       );
@@ -2066,25 +2147,31 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
                         <KeyRound size={13} className="text-amber-600" /> Contraseña:
                       </span>
                       <div className="flex items-center gap-2">
-                        {c.password ? (
+                        {revealedNewPassword?.id === c.id ? (
                           <>
-                            <span className="font-bold text-gray-900">
-                              {visiblePasswords[c.id] ? c.password : '••••••••••••'}
-                            </span>
+                            <span className="font-bold text-emerald-800">{revealedNewPassword.password}</span>
                             <button
                               type="button"
-                              onClick={() => togglePasswordVisibility(c.id)}
-                              className="text-gray-400 hover:text-gray-700 p-0.5 rounded hover:bg-gray-200 transition-colors"
-                              title="Mostrar/Ocultar contraseña"
+                              onClick={() => setRevealedNewPassword(null)}
+                              className="text-[10px] font-sans font-semibold text-gray-500 hover:text-gray-800 underline"
                             >
-                              {visiblePasswords[c.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                              Ocultar
                             </button>
                           </>
                         ) : (
                           <span className="text-[10px] font-sans text-gray-600 bg-white px-2 py-0.5 rounded border border-gray-200 flex items-center gap-1 font-medium shadow-2xs">
-                            <Shield size={11} className="text-emerald-600" /> Protegida en BD
+                            <Shield size={11} className="text-emerald-600" /> Protegida
                           </span>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenResetPasswordModal(c)}
+                          disabled={resettingPasswordId === c.id}
+                          className="text-gray-400 hover:text-emerald-700 p-0.5 rounded hover:bg-emerald-50 transition-colors disabled:opacity-50"
+                          title="Restablecer contraseña: define una nueva clave para este usuario"
+                        >
+                          <RotateCcw size={13} className={resettingPasswordId === c.id ? 'animate-spin' : ''} />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2126,22 +2213,6 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
 
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => handleOpenWhatsAppModal(c, 'recordatorio')}
-                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-[#25D366] text-emerald-800 hover:text-white border border-emerald-300 hover:border-[#25D366] rounded-lg text-xs font-semibold flex items-center gap-1 transition-all"
-                      title="Enviar mensaje oficial por WhatsApp al contratista"
-                    >
-                      <MessageSquare size={13} />
-                      <span>WhatsApp</span>
-                    </button>
-                    <button
-                      onClick={() => handleOpenEditModal(c)}
-                      className="px-2.5 py-1.5 bg-gray-100 hover:bg-emerald-50 text-gray-700 hover:text-emerald-800 border border-gray-200 hover:border-emerald-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                      title="Editar datos del contratista"
-                    >
-                      <Edit size={13} />
-                      <span>Editar</span>
-                    </button>
-                    <button
                       onClick={() => setSelectedContractorForReports(c)}
                       className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
                       title="Ver historial individual de informes y certificados de este contratista"
@@ -2149,22 +2220,40 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
                       <FileBadge size={14} />
                       <span>Historial & Certificados</span>
                     </button>
-                    <button
-                      onClick={() => {
-                        setActiveTab('informes');
-                        setSearchTerm(c.nombreCompleto);
-                      }}
-                      className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold transition-colors"
-                    >
-                      Ver Informes
-                    </button>
-                    <button
-                      onClick={() => handleDeleteContractor(c)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                      title="Desvincular contratista"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <RowActionsMenu
+                      actions={[
+                        {
+                          key: 'ver-informes',
+                          label: 'Ver Informes',
+                          icon: <FileText size={14} className="text-emerald-700" />,
+                          onClick: () => {
+                            setActiveTab('informes');
+                            setSearchTerm(c.nombreCompleto);
+                          },
+                        },
+                        {
+                          key: 'whatsapp',
+                          label: 'Enviar por WhatsApp',
+                          icon: <MessageSquare size={14} className="text-emerald-600" />,
+                          title: 'Enviar mensaje oficial por WhatsApp al contratista',
+                          onClick: () => handleOpenWhatsAppModal(c, 'recordatorio'),
+                        },
+                        {
+                          key: 'editar',
+                          label: 'Editar datos',
+                          icon: <Edit size={14} className="text-gray-500" />,
+                          title: 'Editar datos del contratista',
+                          onClick: () => handleOpenEditModal(c),
+                        },
+                        {
+                          key: 'eliminar',
+                          label: 'Desvincular contratista',
+                          icon: <Trash2 size={14} />,
+                          danger: true,
+                          onClick: () => handleDeleteContractor(c),
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -3068,6 +3157,69 @@ Contrato: ${c.contratoNro ? '#' + c.contratoNro : 'A registrar / Sin contrato vi
               >
                 <Trash2 size={14} />
                 Sí, Desvincular
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE RESTABLECER CONTRASEÑA (SANDBOX-SAFE) */}
+      {contractorToResetPassword && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white text-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 text-amber-700 mb-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <KeyRound size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Restablecer Contraseña</h3>
+                <p className="text-xs text-gray-500">La contraseña actual dejará de funcionar de inmediato</p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-200 text-xs space-y-1.5 my-4">
+              <p><span className="font-semibold text-gray-700">Contratista:</span> {contractorToResetPassword.nombreCompleto}</p>
+              <p><span className="font-semibold text-gray-700">Documento:</span> {contractorToResetPassword.documentoIdentidad}</p>
+              <p><span className="font-semibold text-gray-700">Correo:</span> {contractorToResetPassword.email}</p>
+            </div>
+
+            <label className="block text-xs font-bold text-gray-700 mb-1">
+              Nueva Contraseña *
+            </label>
+            <input
+              type="text"
+              autoFocus
+              value={resetPasswordInput}
+              onChange={(e) => {
+                setResetPasswordInput(e.target.value);
+                if (resetPasswordError) setResetPasswordError('');
+              }}
+              placeholder="Escribe la nueva contraseña (mín. 6 caracteres)"
+              className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-xs focus:ring-2 focus:ring-amber-500 font-mono text-gray-800"
+            />
+            {resetPasswordError && (
+              <p className="text-[11px] text-red-600 mt-1.5 font-semibold">{resetPasswordError}</p>
+            )}
+            <p className="text-[11px] text-gray-500 mt-1.5">
+              Comparte esta contraseña directamente con el contratista; al confirmar se copiará junto con sus datos al portapapeles.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 mt-6">
+              <button
+                type="button"
+                onClick={() => setContractorToResetPassword(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmResetPassword}
+                disabled={resettingPasswordId === contractorToResetPassword.id}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-60"
+              >
+                <KeyRound size={14} />
+                {resettingPasswordId === contractorToResetPassword.id ? 'Guardando...' : 'Restablecer Contraseña'}
               </button>
             </div>
           </div>

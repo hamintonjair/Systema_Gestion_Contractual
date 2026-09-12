@@ -95,7 +95,7 @@ export default function Navbar({
                   {currentUser.role === 'contratista' ? 'Portal Contratista' : currentUser.role === 'secretaria_admin' ? 'Secretaría de Despacho' : currentUser.role === 'secretaria_supervisor' ? 'Supervisión Secretaría' : 'Super Admin'}
                 </span>
               </div>
-              <p className="text-[11px] text-emerald-300/80 mt-0.5 flex items-center gap-1.5 truncate max-w-xs sm:max-w-md">
+              <p className="text-[11px] text-emerald-200 mt-0.5 flex items-center gap-1.5 truncate max-w-xs sm:max-w-md">
                 <span>{currentUser.secretariaNombre || 'Gestión Municipal Central'}</span>
                 {currentUser.secretariaCodigo && (
                   <>
@@ -112,11 +112,11 @@ export default function Navbar({
             
             {/* Selector de Modo Rápido para Supervisores/Secretaría Admin (Contratista <-> Supervisión) */}
             {(currentUser.role === 'secretaria_admin' || currentUser.role === 'secretaria_supervisor') && (
-              <div className="hidden md:flex items-center bg-emerald-950/80 p-1 rounded-xl border border-emerald-700/60 shadow-inner">
+              <div className="flex items-center bg-emerald-950/80 p-1 rounded-xl border border-emerald-700/60 shadow-inner">
                 <button
                   type="button"
                   onClick={() => onViewChange('dashboard')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     currentView === 'dashboard' || (currentView === 'editor' && !hasUnsavedChanges)
                       ? 'bg-emerald-600 text-white shadow-sm'
                       : 'text-emerald-300 hover:text-white hover:bg-emerald-900/60'
@@ -124,12 +124,12 @@ export default function Navbar({
                   title="Gestiona tus propios informes mensuales, obligaciones y cuentas de cobro"
                 >
                   <FileText size={14} />
-                  <span>Mis Cuentas de Cobro</span>
+                  <span className="hidden sm:inline">Mis Cuentas de Cobro</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => onViewChange('admin')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     currentView === 'admin'
                       ? 'bg-[#006b33] text-white shadow-sm border border-emerald-400/40'
                       : 'text-emerald-300 hover:text-white hover:bg-emerald-900/60'
@@ -137,7 +137,7 @@ export default function Navbar({
                   title="Revisar informes de contratistas, observaciones y expedir certificados"
                 >
                   <ShieldCheck size={14} />
-                  <span>Supervisión Secretaría</span>
+                  <span className="hidden sm:inline">Supervisión Secretaría</span>
                 </button>
               </div>
             )}

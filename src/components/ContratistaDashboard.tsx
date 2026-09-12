@@ -793,7 +793,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
         reportToDelete.anexos
       );
 
-      // 2. Ejecutar la rutina depuradora de tareas/informes vencidos (mayores a 7 meses / 210 días)
+      // 2. Ejecutar la rutina depuradora de informes/Informe Final vencidos (plazo según duración real del contrato)
       const remainingReports = reportsList.filter(r => r.informeNro !== reportToDelete.informeNro);
       await supabaseService.cleanupExpiredReports(remainingReports, user.documentoIdentidad);
 
@@ -1504,7 +1504,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
           </div>
 
-          {/* Nota Institucional de Retención y Depuración (7 Meses) */}
+          {/* Nota Institucional de Retención y Depuración (Según Duración del Contrato) */}
           <div className="bg-amber-50/90 border border-amber-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 text-amber-950 shadow-xs">
             <div className="w-10 h-10 rounded-xl bg-amber-200/80 border border-amber-300 flex items-center justify-center shrink-0 text-amber-900">
               <AlertTriangle size={20} />
@@ -1512,15 +1512,15 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
             <div className="space-y-1 flex-1 text-xs">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-black text-amber-950 uppercase tracking-wide text-[10px] bg-amber-200 px-2 py-0.5 rounded">
-                  Política de Retención y Depuración (7 Meses)
+                  Política de Retención y Depuración
                 </span>
                 <span className="text-amber-800 font-semibold text-[11px]">• Alcaldía de Quibdó</span>
               </div>
               <p className="text-amber-900 leading-relaxed">
-                Por política de optimización y depuración de almacenamiento institucional, los <strong>informes mensuales radicados, sus evidencias de actividades y los anexos fotográficos</strong> permanecerán disponibles en el portal durante un período máximo de <strong>7 meses (210 días)</strong>. Cumplido este plazo, los registros con fotos de informes revisados y tramitados son eliminados automáticamente del sistema.
+                Por política de optimización y depuración de almacenamiento institucional, los <strong>informes mensuales radicados, el Informe Final, sus evidencias de actividades y los anexos fotográficos</strong> permanecerán disponibles en el portal durante un período máximo equivalente a <strong>la duración de tu contrato más 15 días</strong> (por ejemplo, un contrato de 6 meses conserva sus registros unos 6 meses y 15 días). Cumplido este plazo, los registros con fotos de informes revisados y tramitados son eliminados automáticamente del sistema.
               </p>
               <p className="text-amber-800 font-medium pt-0.5">
-                💡 <strong>Nota para el contratista:</strong> Se recomienda consultar y conservar en su archivo digital personal la copia oficial en PDF de cada informe aprobado.
+                💡 <strong>Nota para el contratista:</strong> Se recomienda consultar y conservar en su archivo digital personal la copia oficial en PDF de cada informe aprobado y del Informe Final.
               </p>
             </div>
           </div>

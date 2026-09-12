@@ -142,6 +142,19 @@ export default function SuperAdminView({ user }: Props) {
         saveStoredGeminiKey(aiConf.apiKey);
         saveStoredGeminiModel(aiConf.modelo);
       }
+
+      // Depuración automática de informes/Informe Final vencidos (política de retención según duración
+      // del contrato). No bloquea la carga de la pantalla: corre en segundo plano, y no más de una vez
+      // por hora (evita repetirla en cada recarga/HMR o remontaje del panel).
+      if (supabaseService.shouldRunRetentionSweep('superadmin_global')) {
+        supabaseService.markRetentionSweepRun('superadmin_global');
+        supabaseService
+          .sweepExpiredReportsForSecretaria(
+            reports || [],
+            (users || []).map(u => u.documentoIdentidad).filter(Boolean) as string[]
+          )
+          .catch(e => console.warn('No se pudo ejecutar la depuración automática de informes vencidos:', e));
+      }
     } catch (e) {
       console.error('Error loading data:', e);
     } finally {
@@ -354,13 +367,13 @@ export default function SuperAdminView({ user }: Props) {
 
   const getReportsCount = (sec: Secretaria) => {
     return allReports.filter(
-      r => r.secretariaId === sec.id || r.secretariaNombre?.toLowerCase() === sec.nombre.toLowerCase()
+      r => r.secretaria_nombre?.trim().toLowerCase() === sec.nombre.trim().toLowerCase()
     ).length;
   };
 
   const getReportsForSecretaria = (sec: Secretaria) => {
     const reports = allReports.filter(
-      r => r.secretariaId === sec.id || r.secretariaNombre?.toLowerCase() === sec.nombre.toLowerCase()
+      r => r.secretaria_nombre?.trim().toLowerCase() === sec.nombre.trim().toLowerCase()
     );
 
     const aprobados = reports.filter(r => r.estado === 'Aprobado').length;
@@ -469,7 +482,7 @@ export default function SuperAdminView({ user }: Props) {
       )}
 
       {/* NAVEGACIÓN POR PESTAÑAS */}
-      <div className="flex border-b border-gray-200 bg-white rounded-t-xl px-4 pt-2 shadow-xs overflow-x-auto">
+      <div className="flex flex-wrap border-b border-gray-200 bg-white rounded-t-xl px-4 pt-2 shadow-xs">
         <button
           onClick={() => setActiveTab('dashboard')}
           className={`py-3 px-4 font-bold text-xs sm:text-sm border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
@@ -479,7 +492,7 @@ export default function SuperAdminView({ user }: Props) {
           }`}
         >
           <LayoutDashboard size={18} />
-          <span>📊 Módulo Dashboard y Métricas</span>
+          <span>Dashboard y Métricas</span>
         </button>
 
         <button
@@ -491,7 +504,7 @@ export default function SuperAdminView({ user }: Props) {
           }`}
         >
           <Building2 size={18} />
-          <span>🏛️ Gestión de Secretarías ({totalSecretarias})</span>
+          <span>Secretarías ({totalSecretarias})</span>
         </button>
 
         <button
@@ -503,7 +516,7 @@ export default function SuperAdminView({ user }: Props) {
           }`}
         >
           <Users size={18} />
-          <span>👥 Directorio General de Usuarios ({allUsers.length})</span>
+          <span>Directorio de Usuarios ({allUsers.length})</span>
         </button>
 
         <button
@@ -515,7 +528,7 @@ export default function SuperAdminView({ user }: Props) {
           }`}
         >
           <Sparkles size={18} className="text-purple-600 animate-pulse" />
-          <span>✨ Configuración de IA (Google Gemini)</span>
+          <span>Configuración de IA</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-black border border-purple-200">
             Nuevo
           </span>
@@ -809,7 +822,22 @@ export default function SuperAdminView({ user }: Props) {
             </div>
           </div>
 
-          {/* Grid de Secretarías */}
+          {/* Grid de Secretarías o Estado Vacío */}
+          {filteredSecretarias.length === 0 ? (
+            <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center">
+              <Building2 size={36} className="mx-auto text-gray-300 mb-2" />
+              <h4 className="font-bold text-gray-700 text-sm">No se encontraron secretarías</h4>
+              <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+                Ninguna secretaría coincide con "{searchTerm}". Intenta con otro término de búsqueda.
+              </p>
+              <button
+                onClick={() => setSearchTerm('')}
+                className="mt-3 px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg text-xs font-bold transition-colors"
+              >
+                Restablecer búsqueda
+              </button>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredSecretarias.map((sec) => {
               const admin = getAdminForSecretaria(sec);
@@ -922,6 +950,7 @@ export default function SuperAdminView({ user }: Props) {
               );
             })}
           </div>
+          )}
 
         </div>
       )}
@@ -1010,7 +1039,13 @@ export default function SuperAdminView({ user }: Props) {
                   {filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                        No se encontraron usuarios coincidentes con la búsqueda.
+                        <p>No se encontraron usuarios coincidentes con la búsqueda o los filtros aplicados.</p>
+                        <button
+                          onClick={() => { setSearchTerm(''); setRoleFilter('todos'); setSecFilter('todas'); }}
+                          className="mt-3 px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg text-xs font-bold transition-colors"
+                        >
+                          Restablecer búsqueda y filtros
+                        </button>
                       </td>
                     </tr>
                   ) : (

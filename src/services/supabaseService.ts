@@ -377,6 +377,11 @@ const mapStatusFromDb = (dbStatus?: string, hasComments: boolean = false): Estad
 // Cuentas de respaldo dinámicas de la base de datos (se leen directamente de la tabla 'profiles')
 const SYSTEM_CORE_USERS: AuthUser[] = [];
 
+// Umbral mínimo entre barridos de depuración automática de informes vencidos, para no repetir esta
+// revisión (costosa: 1+ consultas por contratista) en cada recarga de la app (HMR en desarrollo, cambios
+// de pestaña, montajes repetidos) ni sobrecargar la base de datos innecesariamente.
+const RETENTION_SWEEP_MIN_INTERVAL_MS = 60 * 60 * 1000; // 1 hora
+
 export const supabaseService = {
   // Helper: Obtener comentarios guardados por documento y número de informe
   getStoredComments(docKey?: string, informeNro?: string): Record<string, FieldComment> {
@@ -3224,9 +3229,16 @@ export const supabaseService = {
     }
   },
 
-  // 12. Depuración Automática de Informes y Fotos mayores a 7 meses (210 días)
+  // 12. Depuración Automática de Informes, Fotos e Informe Final según la duración real de cada contrato
+  //
+  // El plazo de retención ya NO es un valor fijo para todos los contratistas: se calcula a partir de la
+  // duración real del contrato (fecha_inicio a fecha_terminacion, registrada desde el primer informe /
+  // tabla 'contratos') más 15 días de gracia. Así, un contrato de 3 meses se depura ~3 meses + 15 días
+  // después de vencer, y uno de 6 meses ~6 meses + 15 días, en vez de aplicar 7 meses parejo a todos.
+  // El Informe Final, al entregarse antes de finalizar el contrato, se depura bajo esta misma política.
   async cleanupExpiredReports(reports: ReportData[], contractorDoc?: string): Promise<{ cleanedCount: number; validReports: ReportData[] }> {
-    const MAX_RETENTION_DAYS = 210; // 7 meses (aproximadamente 210 días)
+    const FALLBACK_RETENTION_DAYS = 210; // Respaldo (7 meses) solo si no se logra determinar la duración real del contrato
+    const GRACE_DAYS = 15;
     const now = new Date();
 
     const parseDate = (dStr?: string): Date | null => {
@@ -3249,12 +3261,40 @@ export const supabaseService = {
       return isNaN(d.getTime()) ? null : d;
     };
 
+    const contratoDurationDays = (inicio?: string, fin?: string): number | null => {
+      const dInicio = parseDate(inicio);
+      const dFin = parseDate(fin);
+      if (!dInicio || !dFin || dFin <= dInicio) return null;
+      return Math.round((dFin.getTime() - dInicio.getTime()) / (1000 * 60 * 60 * 24));
+    };
+
+    // Determinar el plazo de retención real de este contrato: 1) tabla 'contratos' (fuente autoritativa),
+    // 2) fechas del propio informe como respaldo, 3) valor fijo de 210 días como último recurso.
+    const resolveRetentionDays = async (): Promise<number> => {
+      if (contractorDoc) {
+        try {
+          const contrato = await this.getContratoDeContratista(undefined, contractorDoc);
+          const dias = contratoDurationDays(contrato?.fechaInicio, contrato?.fechaTerminacion);
+          if (dias) return dias + GRACE_DAYS;
+        } catch (e) {
+          console.warn('No se pudo calcular la duración del contrato en tabla contratos:', e);
+        }
+      }
+      for (const rep of reports) {
+        const dias = contratoDurationDays(rep.fechaInicio, rep.fechaTerminacion);
+        if (dias) return dias + GRACE_DAYS;
+      }
+      return FALLBACK_RETENTION_DAYS;
+    };
+
+    const retentionDays = await resolveRetentionDays();
+
     const validReports: ReportData[] = [];
     let cleanedCount = 0;
 
     for (const rep of reports) {
       // NUNCA eliminar informes en Borrador, Enviados, En Revisión o Rechazados
-      // La política de 7 meses aplica ÚNICAMENTE a informes históricos que ya fueron totalmente 'Aprobados'
+      // La política de retención aplica ÚNICAMENTE a informes históricos que ya fueron totalmente 'Aprobados'
       if (rep.estado !== 'Aprobado') {
         validReports.push(rep);
         continue;
@@ -3266,7 +3306,7 @@ export const supabaseService = {
       if (targetDate) {
         const diffMs = now.getTime() - targetDate.getTime();
         const diffDays = diffMs / (1000 * 60 * 60 * 24);
-        if (diffDays > MAX_RETENTION_DAYS) {
+        if (diffDays > retentionDays) {
           isExpired = true;
         }
       }
@@ -3280,7 +3320,79 @@ export const supabaseService = {
       }
     }
 
+    // El Informe Final se radica antes de finalizar el contrato y debe depurarse bajo la misma política de retención
+    if (contractorDoc) {
+      try {
+        const informeFinal = await this.getInformeFinal(contractorDoc);
+        if (informeFinal) {
+          const targetDate = parseDate(informeFinal.fechaPresentacion) || parseDate(informeFinal.updatedAt);
+          if (targetDate) {
+            const diffDays = (now.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24);
+            if (diffDays > retentionDays) {
+              await this.deleteInformeFinal(contractorDoc, informeFinal.contratoNro);
+              cleanedCount++;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('No se pudo depurar el Informe Final vencido:', e);
+      }
+    }
+
     return { cleanedCount, validReports };
+  },
+
+  // 12b. Throttle del barrido de depuración: evita repetirlo antes de RETENTION_SWEEP_MIN_INTERVAL_MS
+  // (1 hora) para un mismo 'key' (ej. una secretaría o "global" para Super Admin). Sin esto, cada
+  // remontaje del componente (recarga de HMR incluida) dispararía de nuevo el barrido completo.
+  shouldRunRetentionSweep(key: string): boolean {
+    if (typeof localStorage === 'undefined') return true;
+    try {
+      const raw = localStorage.getItem(`retention_sweep_last_run_${key}`);
+      if (!raw) return true;
+      const last = parseInt(raw, 10);
+      return isNaN(last) || Date.now() - last > RETENTION_SWEEP_MIN_INTERVAL_MS;
+    } catch (e) {
+      return true;
+    }
+  },
+
+  markRetentionSweepRun(key: string): void {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(`retention_sweep_last_run_${key}`, String(Date.now()));
+    } catch (e) {}
+  },
+
+  // 12c. Ejecuta la depuración automática (informes + Informe Final vencidos) para un conjunto de
+  // contratistas agrupando por documento. Pensado para dispararse también desde los paneles de
+  // administración (Secretaría / Super Admin), para que la depuración no dependa únicamente de que el
+  // propio contratista vuelva a entrar a su panel.
+  async sweepExpiredReportsForSecretaria(informes: InformeSummary[], contractorDocs: string[]): Promise<void> {
+    const porDocumento = new Map<string, ReportData[]>();
+
+    for (const inf of informes) {
+      const doc = inf.contratista_documento;
+      if (!doc) continue;
+      if (!porDocumento.has(doc)) porDocumento.set(doc, []);
+      porDocumento.get(doc)!.push({
+        id: inf.id,
+        informeNro: String(inf.informe_nro),
+        estado: inf.estado,
+        fechaPresentacion: inf.fecha_presentacion,
+        periodoHasta: inf.periodo_hasta,
+        contratistaDocumento: inf.contratista_documento,
+      } as unknown as ReportData);
+    }
+
+    // Incluir también contratistas sin informes mensuales restantes: pueden tener un Informe Final huérfano
+    for (const doc of contractorDocs) {
+      if (doc && !porDocumento.has(doc)) porDocumento.set(doc, []);
+    }
+
+    await Promise.all(
+      Array.from(porDocumento.entries()).map(([doc, list]) => this.cleanupExpiredReports(list, doc))
+    );
   },
 
   // 13. Guardar / Sincronizar Certificado de Supervisión en Supabase y LocalStorage

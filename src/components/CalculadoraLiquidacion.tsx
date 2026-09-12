@@ -218,7 +218,7 @@ VALORES FINAL PARA CERTIFICADO DE SUPERVISIÓN:
 
         <div className="text-[11px] text-emerald-950 font-medium flex items-center justify-between border-t border-emerald-200/80 pt-1.5 gap-1">
           <span className="text-emerald-800 text-[10px]">
-            Período: <strong className="font-mono">{liquidacion.fechaInicioPeriodo}</strong> al <strong className="font-mono">{liquidacion.fechaFinPeriodo}</strong>
+            Período: <strong className="font-mono">{liquidacion.fechaInicioPago}</strong> al <strong className="font-mono">{liquidacion.fechaFinPago}</strong>
           </span>
           <span className="text-emerald-900 font-mono font-bold text-[10px]">
             {liquidacion.porcentajeEjecucion.toFixed(2).replace('.', ',')}% ejecución

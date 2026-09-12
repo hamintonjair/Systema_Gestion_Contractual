@@ -26,6 +26,7 @@ import { InformeFinalData, ReportData, AuthUser, ActividadInformeFinal, AnexoFot
 import { generateInformeFinalWithAI, resolveGeminiConfig } from '../services/geminiService';
 import { supabaseService } from '../services/supabaseService';
 import { exportInformeFinalToWord, validateInformeFinalForExport } from '../export/informeFinalWord';
+import RowActionsMenu from './RowActionsMenu';
 
 const MESES_ES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -646,29 +647,27 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
             )}
           </button>
 
-          {/* Reset to Blank Form (Always available) */}
-          <button
-            id="btn-reset-vacio-informe-final"
-            type="button"
-            onClick={() => setShowResetConfirmModal(true)}
-            title="Vaciar campos y comenzar con el formato oficial en blanco"
-            className="inline-flex items-center px-3 py-2 text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-lg shadow-sm transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5 mr-1.5 text-rose-600" />
-            Limpiar / Formato Vacío
-          </button>
-
-          {/* Download Blank Official .docx Template directly */}
-          <button
-            id="btn-descargar-plantilla-vacia-docx"
-            type="button"
-            onClick={handleDownloadBlankTemplate}
-            title="Descargar el archivo oficial INFORME_FINAL_EJECUCION.docx en blanco"
-            className="inline-flex items-center px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg shadow-sm transition-colors"
-          >
-            <FileDown className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
-            Descargar Formato Vacío (.docx)
-          </button>
+          {/* Acciones secundarias (poco frecuentes): plantilla en blanco y reinicio */}
+          <RowActionsMenu
+            actions={[
+              {
+                key: 'descargar-plantilla-vacia',
+                label: 'Descargar Formato Vacío (.docx)',
+                icon: <FileDown size={14} className="text-blue-600" />,
+                title: 'Descargar el archivo oficial INFORME_FINAL_EJECUCION.docx en blanco',
+                onClick: handleDownloadBlankTemplate,
+              },
+              {
+                key: 'limpiar-formato-vacio',
+                label: 'Limpiar / Formato Vacío',
+                icon: <RotateCcw size={14} />,
+                title: 'Vaciar campos y comenzar con el formato oficial en blanco',
+                danger: true,
+                onClick: () => setShowResetConfirmModal(true),
+              },
+            ]}
+            buttonClassName="inline-flex items-center px-2.5 py-2 text-xs font-medium text-slate-600 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg shadow-sm transition-colors"
+          />
 
           {/* Save Draft Button - Always allowed even with incomplete data */}
           <button

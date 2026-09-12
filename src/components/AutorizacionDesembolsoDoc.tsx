@@ -1505,13 +1505,7 @@ export default function AutorizacionDesembolsoDoc({
               <div className="flex flex-row items-end">
                 <div className="w-[110px] font-bold text-[12px] leading-none pb-1">FIRMA</div>
                 <div className="border-b-2 border-black w-[320px] sm:w-[360px] h-9 flex items-end pl-2 pb-0.5 relative">
-                  {formData.firmaContratista ? (
-                    <img 
-                      src={formData.firmaContratista} 
-                      alt="Firma Contratista" 
-                      className="max-h-11 print:max-h-9 object-contain absolute bottom-0.5 left-2"
-                    />
-                  ) : isEditing ? (
+                  {isEditing ? (
                     <input 
                       type="text" 
                       className="w-full bg-amber-50 outline-none text-xs font-serif italic text-gray-500" 
