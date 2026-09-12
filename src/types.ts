@@ -25,7 +25,7 @@ export const parseContractNumberAndYear = (
   let ano = defaultYear;
 
   const rep = (reports && reports.length > 0)
-    ? (reports.find(r => r.contratoNro && r.contratoNro.trim() !== '' && !r.contratoNro.includes('590')) || reports[0])
+    ? (reports.find(r => r.contratoNro && r.contratoNro.trim() !== '') || reports[0])
     : null;
 
   const extractDigits = (str?: string) => {
@@ -52,7 +52,7 @@ export const parseContractNumberAndYear = (
 
     // Extraer solo dígitos de lo que queda
     const digitsOnly = cleanWithoutYear.replace(/\D/g, '');
-    if (digitsOnly && !/^20\d{2}$/.test(digitsOnly) && digitsOnly !== '590' && !/^20\d{2}20\d{2}$/.test(digitsOnly)) {
+    if (digitsOnly && !/^20\d{2}$/.test(digitsOnly) && !/^20\d{2}20\d{2}$/.test(digitsOnly)) {
       return digitsOnly;
     }
     return '';
@@ -82,7 +82,7 @@ export const parseContractNumberAndYear = (
     };
     const candidato = [rawStr, user?.contratoNro, rep?.contratoNro]
       .map(v => (v || '').trim())
-      .find(v => v !== '' && !/^20\d{2}$/.test(v) && v !== '590' && !esEtiquetaFormateada(v));
+      .find(v => v !== '' && !/^20\d{2}$/.test(v) && !esEtiquetaFormateada(v));
     numero = candidato ? candidato.replace(/[^0-9A-Za-z_-]/g, '') : '';
   }
 

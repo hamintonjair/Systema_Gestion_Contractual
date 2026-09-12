@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AutorizacionDesembolsoData, ReportData, createDefaultAutorizacionDesembolsoData, FieldComment } from '../types';
+import { AutorizacionDesembolsoData, ReportData, AuthUser, createDefaultAutorizacionDesembolsoData, FieldComment } from '../types';
 import { obtenerValoresMonetariosReporte, convertirNumeroALetras, formatearObjetoConPeriodo, formatFechaAnioMesDia } from '../utils/numberToWords';
 import { limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
 import { supabaseService } from '../services/supabaseService';
@@ -12,6 +12,7 @@ interface Props {
   key?: React.Key;
   data?: AutorizacionDesembolsoData;
   reportData?: ReportData;
+  user?: AuthUser;
   onChange?: (updated: AutorizacionDesembolsoData) => void;
   onSave?: (saved: AutorizacionDesembolsoData) => void;
   isEditable?: boolean;
@@ -43,6 +44,7 @@ function parseObjetoConPeriodo(objetoTexto?: string): { objetoBase: string; peri
 export default function AutorizacionDesembolsoDoc({
   data,
   reportData,
+  user,
   onChange,
   onSave,
   isEditable = true,
@@ -109,16 +111,16 @@ export default function AutorizacionDesembolsoDoc({
         reportId: reportData.id,
         fechaExpedicion: defaultFechaExp,
         consecutivoNro: reportData.informeNro || '1',
-        nombre: reportData.contratistaNombre || 'HAMINTON MENA MENA',
-        nitCc: reportData.contratistaDocumento || '80772379',
-        telefono: reportData.contratistaTelefono || '3124943527',
-        direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
-        nroCuenta: reportData.numeroCuenta || '53686186829',
-        banco: (reportData.banco || 'BANCOLOMBIA').toUpperCase(),
-        tipoCuenta: (reportData.tipoCuenta || 'AHORRO').toUpperCase(),
-        ciudad: (reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
-        contratoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
-        conceptoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
+        nombre: user?.nombreCompleto || reportData.contratistaNombre || '',
+        nitCc: user?.documentoIdentidad || reportData.contratistaDocumento || '',
+        telefono: user?.telefono || reportData.contratistaTelefono || '',
+        direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || user?.direccion || user?.barrio || '').toUpperCase(),
+        nroCuenta: user?.numeroCuenta || reportData.numeroCuenta || '',
+        banco: (user?.banco || reportData.banco || '').toUpperCase(),
+        tipoCuenta: (user?.tipoCuenta || reportData.tipoCuenta || '').toUpperCase(),
+        ciudad: (user?.ciudad || user?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || '').toUpperCase(),
+        contratoNro: (reportData.contratoNro || user?.contratoNro) ? (reportData.contratoNro || user?.contratoNro || '').trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
+        conceptoNro: (reportData.contratoNro || user?.contratoNro) ? (reportData.contratoNro || user?.contratoNro || '').trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
         concepto: 'PRESTACION DE SERVICIOS',
         objeto: defaultObjeto,
         valorNumeros: valorNumeroFormateado,
@@ -157,8 +159,8 @@ export default function AutorizacionDesembolsoDoc({
         objeto: (baseData.objeto && baseData.objeto.trim()) ? baseData.objeto : defaultObjeto,
         fechaExpedicion: (baseData.fechaExpedicion && baseData.fechaExpedicion.trim()) ? baseData.fechaExpedicion : defaultFechaExp,
         consecutivoNro: (baseData.consecutivoNro && baseData.consecutivoNro.trim()) ? baseData.consecutivoNro : (reportData.informeNro || '1'),
-        nombre: (baseData.nombre && baseData.nombre.trim()) ? baseData.nombre : (reportData.contratistaNombre || 'HAMINTON MENA MENA'),
-        nitCc: (baseData.nitCc && baseData.nitCc.trim()) ? baseData.nitCc : (reportData.contratistaDocumento || '80772379'),
+        nombre: (baseData.nombre && baseData.nombre.trim()) ? baseData.nombre : (user?.nombreCompleto || reportData.contratistaNombre || ''),
+        nitCc: (baseData.nitCc && baseData.nitCc.trim()) ? baseData.nitCc : (user?.documentoIdentidad || reportData.contratistaDocumento || ''),
       };
     }
 
@@ -191,16 +193,22 @@ export default function AutorizacionDesembolsoDoc({
       if (data) {
         baseData = data;
       } else if (reportData) {
+        // El documento del contratista autenticado manda sobre el de reportData: cuando
+        // el contratista aun no tiene informes, reportData cae al mock generico
+        // (initialMockData, documento '1077456123'), que puede coincidir con datos de
+        // demostracion guardados en Supabase y filtrarlos hacia una persona real.
+        const lookupDoc = user?.documentoIdentidad || reportData.contratistaDocumento;
+
         // Cargar desde Supabase o localStorage
         const savedDB = await supabaseService.getAutorizacionDesembolso(
           reportData.id,
-          reportData.contratistaDocumento,
+          lookupDoc,
           reportData.informeNro?.toString()
         );
         if (savedDB) {
           baseData = savedDB as AutorizacionDesembolsoData;
         } else {
-          const key = storageKey || `desembolso_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}`;
+          const key = storageKey || `desembolso_${lookupDoc || ''}_${reportData.informeNro || '1'}`;
           const saved = localStorage.getItem(key);
           if (saved) {
             try { baseData = JSON.parse(saved); } catch (e) { baseData = null; }
@@ -230,16 +238,16 @@ export default function AutorizacionDesembolsoDoc({
             reportId: reportData.id,
             fechaExpedicion: defaultFechaExp,
             consecutivoNro: reportData.informeNro || '1',
-            nombre: reportData.contratistaNombre || 'HAMINTON MENA MENA',
-            nitCc: reportData.contratistaDocumento || '80772379',
-            telefono: reportData.contratistaTelefono || '3124943527',
-            direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
-            nroCuenta: reportData.numeroCuenta || '53686186829',
-            banco: (reportData.banco || 'BANCOLOMBIA').toUpperCase(),
-            tipoCuenta: (reportData.tipoCuenta || 'AHORRO').toUpperCase(),
-            ciudad: (reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
-            contratoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
-            conceptoNro: reportData.contratoNro ? reportData.contratoNro.trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '590',
+            nombre: user?.nombreCompleto || reportData.contratistaNombre || '',
+            nitCc: user?.documentoIdentidad || reportData.contratistaDocumento || '',
+            telefono: user?.telefono || reportData.contratistaTelefono || '',
+            direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || user?.direccion || user?.barrio || '').toUpperCase(),
+            nroCuenta: user?.numeroCuenta || reportData.numeroCuenta || '',
+            banco: (user?.banco || reportData.banco || '').toUpperCase(),
+            tipoCuenta: (user?.tipoCuenta || reportData.tipoCuenta || '').toUpperCase(),
+            ciudad: (user?.ciudad || user?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || '').toUpperCase(),
+            contratoNro: (reportData.contratoNro || user?.contratoNro) ? (reportData.contratoNro || user?.contratoNro || '').trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
+            conceptoNro: (reportData.contratoNro || user?.contratoNro) ? (reportData.contratoNro || user?.contratoNro || '').trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
             concepto: 'PRESTACION DE SERVICIOS',
             objeto: defaultObjeto,
             valorNumeros: valorNumeroFormateado,
@@ -277,14 +285,14 @@ export default function AutorizacionDesembolsoDoc({
               objeto: (baseData.objeto && baseData.objeto.trim()) ? baseData.objeto : defaultObjeto,
               fechaExpedicion: (baseData.fechaExpedicion && baseData.fechaExpedicion.trim()) ? baseData.fechaExpedicion : defaultFechaExp,
               consecutivoNro: (baseData.consecutivoNro && baseData.consecutivoNro.trim()) ? baseData.consecutivoNro : (reportData.informeNro || '1'),
-              nombre: (baseData.nombre && baseData.nombre.trim()) ? baseData.nombre : (reportData.contratistaNombre || 'HAMINTON MENA MENA'),
-              nitCc: (baseData.nitCc && baseData.nitCc.trim()) ? baseData.nitCc : (reportData.contratistaDocumento || '80772379'),
-              direccion: (baseData.direccion && baseData.direccion.trim()) ? baseData.direccion : (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
-              telefono: (baseData.telefono && baseData.telefono.trim()) ? baseData.telefono : (reportData.contratistaTelefono || '3124943527'),
-              nroCuenta: (baseData.nroCuenta && baseData.nroCuenta.trim()) ? baseData.nroCuenta : (reportData.numeroCuenta || '53686186829'),
-              banco: (baseData.banco && baseData.banco.trim()) ? baseData.banco : (reportData.banco || 'BANCOLOMBIA').toUpperCase(),
-              tipoCuenta: (baseData.tipoCuenta && baseData.tipoCuenta.trim()) ? baseData.tipoCuenta : (reportData.tipoCuenta || 'AHORRO').toUpperCase(),
-              ciudad: (baseData.ciudad && baseData.ciudad.trim()) ? baseData.ciudad : (reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
+              nombre: (baseData.nombre && baseData.nombre.trim()) ? baseData.nombre : (user?.nombreCompleto || reportData.contratistaNombre || ''),
+              nitCc: (baseData.nitCc && baseData.nitCc.trim()) ? baseData.nitCc : (user?.documentoIdentidad || reportData.contratistaDocumento || ''),
+              direccion: (baseData.direccion && baseData.direccion.trim()) ? baseData.direccion : (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || user?.direccion || user?.barrio || '').toUpperCase(),
+              telefono: (baseData.telefono && baseData.telefono.trim()) ? baseData.telefono : (user?.telefono || reportData.contratistaTelefono || ''),
+              nroCuenta: (baseData.nroCuenta && baseData.nroCuenta.trim()) ? baseData.nroCuenta : (user?.numeroCuenta || reportData.numeroCuenta || ''),
+              banco: (baseData.banco && baseData.banco.trim()) ? baseData.banco : (user?.banco || reportData.banco || '').toUpperCase(),
+              tipoCuenta: (baseData.tipoCuenta && baseData.tipoCuenta.trim()) ? baseData.tipoCuenta : (user?.tipoCuenta || reportData.tipoCuenta || '').toUpperCase(),
+              ciudad: (baseData.ciudad && baseData.ciudad.trim()) ? baseData.ciudad : (user?.ciudad || user?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || '').toUpperCase(),
             });
           }
         } else if (baseData) {
@@ -294,7 +302,7 @@ export default function AutorizacionDesembolsoDoc({
     };
 
     loadData();
-  }, [data, reportData?.id, reportData?.informeNro, reportData?.contratistaNombre, reportData?.contratistaDocumento, reportData?.contratistaTelefono, reportData?.barrio, reportData?.direccion, reportData?.numeroCuenta, reportData?.banco, reportData?.tipoCuenta, reportData?.ciudad, reportData?.valorPagar, reportData?.valorContrato, reportData?.valorMensual, reportData?.periodoDesde, reportData?.periodoHasta, reportData?.fechaPresentacion, storageKey]);
+  }, [data, reportData?.id, reportData?.informeNro, reportData?.contratistaNombre, reportData?.contratistaDocumento, reportData?.contratistaTelefono, reportData?.barrio, reportData?.direccion, reportData?.numeroCuenta, reportData?.banco, reportData?.tipoCuenta, reportData?.ciudad, reportData?.valorPagar, reportData?.valorContrato, reportData?.valorMensual, reportData?.periodoDesde, reportData?.periodoHasta, reportData?.fechaPresentacion, user?.nombreCompleto, user?.documentoIdentidad, user?.telefono, user?.numeroCuenta, user?.banco, user?.tipoCuenta, user?.ciudad, user?.ciudadCuenta, user?.direccion, user?.barrio, storageKey]);
 
   useEffect(() => {
     const handleSyncEvent = (e: any) => {
@@ -1085,7 +1093,7 @@ export default function AutorizacionDesembolsoDoc({
                     <input 
                       type="text" 
                       inputMode="numeric"
-                      value={(formData.contratoNro || formData.conceptoNro || '590').replace(/\D/g, '')} 
+                      value={(formData.contratoNro || formData.conceptoNro || '').replace(/\D/g, '')} 
                       onChange={(e) => {
                         const cleanVal = e.target.value.replace(/\D/g, '');
                         handleFieldChange('contratoNro', cleanVal);
@@ -1094,7 +1102,7 @@ export default function AutorizacionDesembolsoDoc({
                       className="w-full text-center bg-amber-50 outline-none uppercase font-arial font-bold text-[11px]" 
                     />
                   ) : (
-                    <span className="font-arial font-bold">{(formData.contratoNro || formData.conceptoNro || '590').replace(/\D/g, '')}</span>
+                    <span className="font-arial font-bold">{(formData.contratoNro || formData.conceptoNro || '').replace(/\D/g, '')}</span>
                   )}
                 </div>
               </div>
@@ -1524,7 +1532,7 @@ export default function AutorizacionDesembolsoDoc({
                       className="w-full bg-amber-50 outline-none font-serif uppercase text-[11px] leading-none" 
                     />
                   ) : (
-                    <span className="leading-none">{formData.direccion || 'BARRIO BUENOS AIRES'}</span>
+                    <span className="leading-none">{formData.direccion}</span>
                   )}
                 </div>
               </div>
@@ -1541,7 +1549,7 @@ export default function AutorizacionDesembolsoDoc({
                       className="w-full bg-amber-50 outline-none font-serif uppercase text-[11px] leading-none" 
                     />
                   ) : (
-                    <span className="leading-none">{formData.telefono || '3124943527'}</span>
+                    <span className="leading-none">{formData.telefono}</span>
                   )}
                 </div>
               </div>

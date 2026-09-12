@@ -107,9 +107,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
 
   // Form states for AI modal & initial configuration
   const initialParsedContrato = useMemo(() => {
-    const rawC = (data.contratoNro && !data.contratoNro.includes('590'))
-      ? data.contratoNro 
-      : ((initialData?.contratoNro && !initialData.contratoNro.includes('590')) ? initialData.contratoNro : user?.contratoNro);
+    const rawC = data.contratoNro || initialData?.contratoNro || user?.contratoNro;
     return parseContractNumberAndYear(rawC, user, reports);
   }, [data.contratoNro, initialData?.contratoNro, user, reports]);
 
@@ -171,7 +169,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
             parsed.conclusiones
           );
           if (hasLocalWork) {
-            const rawC = (parsed.contratoNro && !parsed.contratoNro.includes('590')) ? parsed.contratoNro : (user?.contratoNro || initialData.contratoNro);
+            const rawC = parsed.contratoNro || user?.contratoNro || initialData.contratoNro;
             const parsedC = resolverContrato(rawC);
             if (parsedC.numero) {
               parsed.contratoNro = parsedC.full;
@@ -189,7 +187,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
         } catch (e) {}
       }
 
-      const rawC = (initialData.contratoNro && !initialData.contratoNro.includes('590')) ? initialData.contratoNro : user?.contratoNro;
+      const rawC = initialData.contratoNro || user?.contratoNro;
       const parsedC = resolverContrato(rawC);
       if (parsedC.numero) {
         initialData.contratoNro = parsedC.full;

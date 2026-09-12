@@ -89,11 +89,11 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     let isMounted = true;
     const loadInformeFinal = async () => {
       // 0. Si el perfil del usuario no tiene contrato real o supervisor, intentar consultar su perfil completo de BD
-      if (!user.contratoNro || user.contratoNro.includes('590') || !user.objetoContrato || !user.supervisorNombre) {
+      if (!user.contratoNro || !user.objetoContrato || !user.supervisorNombre) {
         try {
           const fullProf = await supabaseService.getUserProfile(user.documentoIdentidad);
           if (fullProf) {
-            if ((!user.contratoNro || user.contratoNro.includes('590')) && fullProf.contratoNro) {
+            if (!user.contratoNro && fullProf.contratoNro) {
               user.contratoNro = fullProf.contratoNro;
             }
             if (!user.objetoContrato && fullProf.objetoContrato) user.objetoContrato = fullProf.objetoContrato;
@@ -147,7 +147,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
             ? candidate.contratistaLugarDoc
             : (user.ciudad || (reportsList[0] as any)?.contratistaLugarDoc || candidate.contratistaLugarDoc || 'Bogotá D.C'),
           contratoNro: parseContractNumberAndYear(
-            (candidate.contratoNro && !candidate.contratoNro.includes('590')) ? candidate.contratoNro : (user.contratoNro || reportsList[0]?.contratoNro),
+            candidate.contratoNro || user.contratoNro || reportsList[0]?.contratoNro,
             user,
             reportsList
           ).full
@@ -2364,6 +2364,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
             <AutorizacionDesembolsoDoc
               key={`des_${selectedDesembolsoReport?.id || selectedDesembolsoReport?.informeNro || '1'}`}
               reportData={selectedDesembolsoReport || reportsList[0] || initialMockData}
+              user={user}
               storageKey={`desembolso_${user.documentoIdentidad || ''}_${selectedDesembolsoReport?.informeNro || '1'}`}
               isEditable={true}
             />

@@ -1045,7 +1045,7 @@ export const supabaseService = {
       } catch (cErr) {}
 
       if (!error && data && data.length > 0) {
-        const isValNro = (n?: any) => n && String(n).trim() !== '' && !String(n).includes('590') && !/^20\d{2}$/.test(String(n));
+        const isValNro = (n?: any) => n && String(n).trim() !== '' && !/^20\d{2}$/.test(String(n));
 
         contractorsFromDb = data.map((row: any) => {
           const doc = row.documento_identidad || '';
@@ -1125,9 +1125,7 @@ export const supabaseService = {
         const existing = map.get(key);
         const resolvedPass = c.password || existing?.password || this.getUserPassword(c.email) || this.getUserPassword(c.documentoIdentidad) || (c.role === 'secretaria_admin' || c.role === 'secretaria_supervisor' ? 'Supervisor2026*' : 'Contratista2026*');
         if (existing) {
-          const mergedContratoNro = (existing.contratoNro && !existing.contratoNro.includes('590'))
-            ? existing.contratoNro
-            : ((c.contratoNro && !c.contratoNro.includes('590')) ? c.contratoNro : (existing.contratoNro || c.contratoNro));
+          const mergedContratoNro = existing.contratoNro || c.contratoNro;
           map.set(key, {
             ...existing,
             ...c,
@@ -1299,7 +1297,7 @@ export const supabaseService = {
           console.warn('Notice checking existing contrato:', cCheckErr);
         }
 
-        const isValNro = (n?: any) => n && String(n).trim() !== '' && !String(n).includes('590') && !/^20\d{2}$/.test(String(n));
+        const isValNro = (n?: any) => n && String(n).trim() !== '' && !/^20\d{2}$/.test(String(n));
         const finalPayloadContratoNro = (isValNro(contratoNro))
           ? contratoNro
           : (existingContrato?.contrato_nro && isValNro(existingContrato.contrato_nro) ? existingContrato.contrato_nro : '');
@@ -1761,7 +1759,7 @@ export const supabaseService = {
 
       if (data && data.length > 0) {
         const row = data[0];
-        const isValContNro = (n?: any) => n && String(n).trim() !== '' && !String(n).includes('590') && !/^20\d{2}$/.test(String(n));
+        const isValContNro = (n?: any) => n && String(n).trim() !== '' && !/^20\d{2}$/.test(String(n));
 
         const contList = Array.isArray(row.contratos) ? row.contratos : (row.contratos ? [row.contratos] : []);
         let cont = contList.find((c: any) => c && isValContNro(c.contrato_nro)) || contList[0];
@@ -2019,7 +2017,7 @@ export const supabaseService = {
           .maybeSingle();
 
         if (existingContract?.id) {
-          const isValNro = (n?: any) => n && String(n).trim() !== '' && !String(n).includes('590') && !/^20\d{2}$/.test(String(n));
+          const isValNro = (n?: any) => n && String(n).trim() !== '' && !/^20\d{2}$/.test(String(n));
           if (existingContract.contrato_nro && isValNro(existingContract.contrato_nro) && (!contractPayload.contrato_nro || !isValNro(contractPayload.contrato_nro))) {
             contractPayload.contrato_nro = existingContract.contrato_nro;
           }
@@ -4611,7 +4609,6 @@ export const supabaseService = {
       n !== null &&
       n !== undefined &&
       String(n).trim() !== '' &&
-      !String(n).includes('590') &&
       !/^20[0-9]{2}$/.test(String(n).trim());
 
     const COLUMNAS = '*, sec_secretarias(nombre, codigo)';
@@ -4652,7 +4649,7 @@ export const supabaseService = {
 
       if (filas.length === 0) return null;
 
-      // Preferir la fila con un numero de contrato real sobre el placeholder '590'
+      // Preferir la fila con un numero de contrato asignado sobre una vacia o sin numero
       const fila = filas.find((f: any) => esNroValido(f.contrato_nro)) || filas[0];
       if (!fila) return null;
 
