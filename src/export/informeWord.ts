@@ -907,7 +907,7 @@ export async function generarInformeWordDocx(data: ReportData): Promise<Blob> {
     // Also check global anexos linked to this obligation
     if (data.anexos && data.anexos.length > 0) {
       data.anexos.forEach(anx => {
-        if (anx.obligacionIndex === idx || (ob.id && anx.obligacionId === ob.id)) {
+        if (anx.obligacionIndex === (idx + 1) || (ob.id && anx.obligacionId === ob.id)) {
           if (!list.some(existing => existing.id === anx.id || existing.imagenUrl === anx.imagenUrl)) {
             list.push(anx);
           }
