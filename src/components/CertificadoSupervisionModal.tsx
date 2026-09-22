@@ -71,6 +71,7 @@ export default function CertificadoSupervisionModal({
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-200/70 print:p-0 print:bg-white print:overflow-visible print:block">
           <CertificadoSupervisionDoc
             data={certData}
+            reportData={reportData}
             onChange={(updated) => setCertData(updated)}
             isEditable={isEditable}
           />

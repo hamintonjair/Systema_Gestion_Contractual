@@ -5,7 +5,7 @@ import { getDatosLiquidacionPeriodo, limpiarNumeroMoneda } from '../utils/paymen
 import { formatDateSlash, quitarDecimales } from '../utils/formatters';
 import QuibdoLogo from './QuibdoLogo';
 import FieldCommentModal from './FieldCommentModal';
-import { Printer, Download, Edit3, Check, Save, RotateCcw, Sparkles, Image as ImageIcon, Calculator, MessageSquare, AlertTriangle, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { Printer, Download, Edit3, Check, Save, RotateCcw, Sparkles, Image as ImageIcon, Calculator, MessageSquare, AlertTriangle, CheckCircle2, FileSpreadsheet, Trash2, Loader2, X } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -129,6 +129,9 @@ export default function CertificadoSupervisionDoc({
   const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
+  const [isClearing, setIsClearing] = useState<boolean>(false);
+  const [showClearModal, setShowClearModal] = useState<boolean>(false);
+  const [clearSuccess, setClearSuccess] = useState<boolean>(false);
 
   const getIdentityKey = () => {
     if (data?.id) return `data_${data.id}`;
@@ -799,6 +802,41 @@ export default function CertificadoSupervisionDoc({
     }
   };
 
+  const handleVaciarCertificado = async () => {
+    setIsClearing(true);
+    try {
+      const informeId = reportData?.id || formData.reportId;
+      const contratistaDocumento = reportData?.contratistaDocumento || formData.contratistaDocumento;
+      const pagoNro = reportData?.informeNro || formData.pagoNro || '1';
+
+      // 1. Eliminar registro en Supabase (tabla certificaciones_supervision) y limpiar copias locales
+      await supabaseService.vaciarCertificadoSupervision({
+        informeId,
+        contratistaDocumento,
+        pagoNro,
+      });
+
+      // 2. Generar datos frescos y limpios recalculados a partir del informe original
+      const freshDefaults = createDefaultCertificadoData(reportData);
+      setFormData(freshDefaults);
+      setHasChanges(false);
+      setShowClearModal(false);
+      setClearSuccess(true);
+
+      if (onChange) {
+        onChange(freshDefaults);
+      }
+
+      window.dispatchEvent(new CustomEvent('certificado_cleared_event', { detail: freshDefaults }));
+      window.dispatchEvent(new CustomEvent('certificado_updated_event', { detail: freshDefaults }));
+      setTimeout(() => setClearSuccess(false), 4500);
+    } catch (err: any) {
+      console.error('Error al vaciar certificado:', err);
+      alert('Error al vaciar los datos del certificado: ' + (err?.message || 'Error desconocido'));
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   return (
     <div className="w-full flex flex-col items-center select-text">
@@ -847,6 +885,18 @@ export default function CertificadoSupervisionDoc({
             </button>
           )}
 
+          {/* Botón Vaciar */}
+          <button
+            type="button"
+            onClick={() => setShowClearModal(true)}
+            disabled={isClearing}
+            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 border border-rose-300 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            title="Vaciar y eliminar el registro de este informe en la tabla certificaciones_supervision de la base de datos"
+          >
+            <Trash2 size={14} className="text-rose-600" />
+            <span>Vaciar</span>
+          </button>
+
           <button
             onClick={handleExportExcel}
             disabled={isExportingExcel}
@@ -858,6 +908,106 @@ export default function CertificadoSupervisionDoc({
           </button>
         </div>
       </div>
+
+      {/* Alerta de Éxito al Vaciar */}
+      {clearSuccess && (
+        <div className="w-full max-w-[850px] mb-2 p-3 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between text-xs text-emerald-900 shadow-xs print:hidden">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            <span className="font-bold">
+              ¡Datos eliminados de la tabla certificaciones_supervision con éxito! El certificado se ha restablecido a los valores calculados del informe.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setClearSuccess(false)}
+            className="text-emerald-700 hover:text-emerald-950 p-1"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Modal de Confirmación para Vaciar Certificado */}
+      {showClearModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 print:hidden">
+          <div className="bg-white rounded-2xl border border-slate-300 shadow-2xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-600 shrink-0">
+                <Trash2 size={20} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-black text-slate-900">
+                  ¿Vaciar y eliminar datos de este certificado?
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Esta acción eliminará permanentemente el registro correspondiente a este informe en la tabla{' '}
+                  <code className="px-1.5 py-0.5 bg-slate-100 text-rose-700 font-mono font-bold rounded border border-slate-200 text-[11px]">
+                    certificaciones_supervision
+                  </code>{' '}
+                  de Supabase y limpiará la memoria local en caso de que se haya guardado con errores.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1.5 font-sans">
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-medium">Pago / Informe:</span>
+                <span className="font-bold text-slate-800">#{formData.pagoNro || reportData?.informeNro || '1'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-medium">Contratista:</span>
+                <span className="font-bold text-slate-800 truncate max-w-[220px]">{formData.contratistaNombre}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-medium">Documento C.C.:</span>
+                <span className="font-bold text-slate-800 font-mono">{formData.contratistaDocumento}</span>
+              </div>
+              {(reportData?.id || formData.reportId) && (
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-slate-400 font-medium">ID Informe:</span>
+                  <span className="font-mono text-slate-600 truncate max-w-[210px]" title={reportData?.id || formData.reportId}>
+                    {reportData?.id || formData.reportId}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11.5px] text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+              ⚠️ Al vaciar, todos los campos se restablecerán a los valores por defecto calculados automáticamente desde los datos actuales del informe.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowClearModal(false)}
+                disabled={isClearing}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleVaciarCertificado}
+                disabled={isClearing}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+              >
+                {isClearing ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Eliminando en base de datos...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    <span>Sí, Vaciar y Eliminar</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Guía Paso a Paso para Edición de Campos (Oculta al imprimir) */}
       {!hideGuide && (

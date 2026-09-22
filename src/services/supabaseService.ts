@@ -3724,6 +3724,73 @@ export const supabaseService = {
     return null;
   },
 
+  // 14b. Vaciar / Eliminar registro de Certificado de Supervisión de la tabla certificaciones_supervision y cachés
+  async vaciarCertificadoSupervision(params: {
+    informeId?: string;
+    contratistaDocumento?: string;
+    pagoNro?: string | number;
+    certId?: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { informeId, contratistaDocumento, pagoNro, certId } = params;
+      const cleanDoc = (contratistaDocumento || '').replace(/[^0-9]/g, '');
+      const pNroStr = pagoNro !== undefined ? String(pagoNro) : '';
+
+      // 1. Eliminar por ID único de registro si se tiene
+      if (certId && isUuid(certId)) {
+        await supabase.from('certificaciones_supervision').delete().eq('id', certId);
+      }
+
+      // 2. Eliminar por informe_id UUID si se tiene
+      if (informeId && isUuid(informeId)) {
+        await supabase.from('certificaciones_supervision').delete().eq('informe_id', informeId);
+      }
+
+      // 3. Eliminar por documento del contratista y número de pago
+      if ((contratistaDocumento || cleanDoc) && pNroStr) {
+        if (cleanDoc) {
+          await supabase
+            .from('certificaciones_supervision')
+            .delete()
+            .eq('contratista_documento', cleanDoc)
+            .eq('pago_nro', pNroStr);
+        }
+        if (contratistaDocumento && contratistaDocumento !== cleanDoc) {
+          await supabase
+            .from('certificaciones_supervision')
+            .delete()
+            .eq('contratista_documento', contratistaDocumento)
+            .eq('pago_nro', pNroStr);
+        }
+      }
+
+      // 4. Limpiar todas las claves de caché y persistencia local para este pago y contratista
+      if (typeof localStorage !== 'undefined') {
+        const keysToRemove = [
+          informeId ? `cert_data_${informeId}_${pNroStr}` : '',
+          contratistaDocumento ? `cert_data_${contratistaDocumento}_${pNroStr}` : '',
+          cleanDoc ? `cert_data_${cleanDoc}_${pNroStr}` : '',
+          pNroStr ? `cert_data_${pNroStr}` : '',
+          informeId ? `cert_data_${informeId}` : '',
+          contratistaDocumento ? `cert_data_${contratistaDocumento}` : '',
+          cleanDoc ? `cert_data_${cleanDoc}` : '',
+          'cert_data_global',
+        ].filter(Boolean);
+
+        keysToRemove.forEach(k => {
+          try {
+            localStorage.removeItem(k);
+          } catch (e) {}
+        });
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error al vaciar certificado_supervision en Supabase:', err);
+      return { success: false, error: err?.message || 'Error al eliminar registro de la tabla' };
+    }
+  },
+
   // 15. Guardar Soporte Fiduciaria
   async saveSoporteFiduciaria(
     informeId: string,

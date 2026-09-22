@@ -389,23 +389,61 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
   const [lastActionTimestamp, setLastActionTimestamp] = useState<number>(0);
   const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [bellBadgeCleared, setBellBadgeCleared] = useState(false);
+
+  // Claves completas para consultar o persistir el descarte de la alerta de un informe aprobado
+  const getApprovalDismissKeys = (informeNro?: string | number, reportId?: string) => {
+    const keys: string[] = [];
+    const rawDoc = String(user?.documentoIdentidad || '').trim();
+    const cleanDoc = rawDoc.replace(/\D/g, '');
+    const infStr = String(informeNro || '').trim();
+    
+    if (infStr) {
+      if (cleanDoc) keys.push(`notified_approved_${cleanDoc}_${infStr}`);
+      if (rawDoc) keys.push(`notified_approved_${rawDoc}_${infStr}`);
+      keys.push(`notified_approved_${infStr}`);
+    }
+    if (reportId) {
+      if (cleanDoc) keys.push(`notified_approved_id_${cleanDoc}_${reportId}`);
+      if (rawDoc) keys.push(`notified_approved_id_${rawDoc}_${reportId}`);
+      keys.push(`notified_approved_id_${reportId}`);
+    }
+    return keys;
+  };
+
+  const isApprovedReportDismissed = (r: ReportData) => {
+    const keys = getApprovalDismissKeys(r.informeNro, r.id);
+    return keys.some(k => {
+      try {
+        return localStorage.getItem(k) === 'seen';
+      } catch (e) {
+        return false;
+      }
+    });
+  };
+
+  const dismissApprovedReport = (r: ReportData) => {
+    const keys = getApprovalDismissKeys(r.informeNro, r.id);
+    keys.forEach(k => {
+      try {
+        localStorage.setItem(k, 'seen');
+      } catch (e) {}
+    });
+    if (user?.documentoIdentidad) {
+      supabaseService.marcarNotificacionesInformeResueltas(user.documentoIdentidad, String(r.informeNro), r.id).catch(() => {});
+    }
+    setLastActionTimestamp(Date.now());
+  };
 
   const handleDismissAllApproved = () => {
-    unseenApprovedReports.forEach(r => {
-      if (r.informeNro) {
-        const key = `notified_approved_${user.documentoIdentidad || ''}_${r.informeNro}`;
-        localStorage.setItem(key, 'seen');
-      }
+    reportsList.filter(r => r.estado === 'Aprobado').forEach(r => {
+      dismissApprovedReport(r);
     });
     setLastActionTimestamp(Date.now());
   };
 
   const handleInterceptOpenReport = (report: ReportData) => {
-    if (report.informeNro) {
-      const key = `notified_approved_${user.documentoIdentidad || ''}_${report.informeNro}`;
-      localStorage.setItem(key, 'seen');
-    }
-    setLastActionTimestamp(Date.now());
+    dismissApprovedReport(report);
     onOpenReportEditor(report);
   };
 
@@ -413,21 +451,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     const nextState = !showNotificationsMenu;
     setShowNotificationsMenu(nextState);
     if (nextState) {
-      if (unseenApprovedReports.length > 0) {
-        unseenApprovedReports.forEach(r => {
-          if (r.informeNro) {
-            const key = `notified_approved_${user.documentoIdentidad || ''}_${r.informeNro}`;
-            localStorage.setItem(key, 'seen');
-          }
-        });
-      }
-      if (allUnseenObservations.length > 0) {
-        allUnseenObservations.forEach(obs => {
-          const key = `notified_obs_${user.documentoIdentidad || ''}_${obs.report.informeNro || ''}_${obs.key}`;
-          localStorage.setItem(key, 'seen');
-        });
-      }
-      setLastActionTimestamp(Date.now());
+      setBellBadgeCleared(true);
     }
   };
 
@@ -813,14 +837,15 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
   const totalAprobados = reportsList.filter(r => r.estado === 'Aprobado').length;
   
-  // Informes aprobados que el contratista aún NO ha marcado como vistos/ingresados
-  const allUnseenApproved = reportsList.filter(r => {
-    if (r.estado !== 'Aprobado') return false;
-    const key = `notified_approved_${user.documentoIdentidad || ''}_${r.informeNro}`;
-    return localStorage.getItem(key) !== 'seen';
-  });
+  // Informes aprobados cuya alerta de aprobación aún NO ha sido descartada ni consultada
+  const allUnseenApproved = useMemo(() => {
+    return reportsList.filter(r => {
+      if (r.estado !== 'Aprobado') return false;
+      return !isApprovedReportDismissed(r);
+    });
+  }, [reportsList, user.documentoIdentidad, lastActionTimestamp]);
 
-  // Mostramos únicamente el último informe aprobado (el más reciente, número de informe más alto) para no acumular alertas antiguas
+  // Mostramos únicamente el último informe aprobado (el más reciente, número de informe más alto) cuya alerta siga pendiente
   const unseenApprovedReports = allUnseenApproved.length > 0
     ? [allUnseenApproved.reduce((max, cur) => (Number(cur.informeNro || 0) > Number(max.informeNro || 0) ? cur : max))]
     : [];
@@ -893,7 +918,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     return list;
   }, [pendingCommentsByModule, user.documentoIdentidad, lastActionTimestamp]);
 
-  const totalNotificationsUnseen = totalAprobadosUnseen + allUnseenObservations.length;
+  const totalNotificationsUnseen = bellBadgeCleared ? 0 : (totalAprobadosUnseen + allUnseenObservations.length);
   
   // Informes devueltos con observaciones PENDIENTES directamente en el informe principal (1) por corregir
   const reportsWithPendingObs = reportsList.filter(r => {
@@ -1107,13 +1132,23 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                     )}
 
                     {/* SECCIÓN 2: Informes Aprobados */}
-                    {reportsList.some(r => r.estado === 'Aprobado') && (
+                    {allUnseenApproved.length > 0 && (
                       <div className="space-y-2 pt-1">
-                        <div className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
-                          <Sparkles size={13} className="text-emerald-600" />
-                          <span>Informes aprobados para pago</span>
+                        <div className="flex items-center justify-between text-[11px] font-bold text-emerald-900 uppercase tracking-wider">
+                          <div className="flex items-center gap-1.5">
+                            <Sparkles size={13} className="text-emerald-600" />
+                            <span>Informes aprobados para pago ({allUnseenApproved.length})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleDismissAllApproved}
+                            className="text-[10.5px] text-emerald-700 hover:text-emerald-950 font-bold hover:underline normal-case px-1.5 py-0.5 rounded hover:bg-emerald-100 transition-colors"
+                            title="Descartar todas las alertas de aprobación"
+                          >
+                            Descartar todas
+                          </button>
                         </div>
-                        {reportsList.filter(r => r.estado === 'Aprobado').map(r => (
+                        {allUnseenApproved.map(r => (
                           <div key={r.id || r.informeNro} className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2">
                             <div className="flex items-start justify-between gap-2">
                               <div>
@@ -1130,18 +1165,37 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                                   Aprobado por: {r.supervisorNombre || activeSupervisor}
                                 </p>
                               </div>
+                              <button
+                                type="button"
+                                onClick={() => dismissApprovedReport(r)}
+                                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-emerald-100/70 transition-colors"
+                                title="Descartar alerta de este informe"
+                              >
+                                <X size={14} />
+                              </button>
                             </div>
 
                             <div className="flex items-center gap-2 pt-1 border-t border-emerald-100">
                               <button
+                                type="button"
                                 onClick={() => {
+                                  dismissApprovedReport(r);
                                   setShowNotificationsMenu(false);
                                   handleInterceptOpenReport(r);
                                 }}
-                                className="w-full py-1.5 px-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-colors"
+                                className="flex-1 py-1.5 px-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-colors"
                               >
                                 <FileEdit size={12} />
                                 <span>Consultar Informe</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => dismissApprovedReport(r)}
+                                className="py-1.5 px-2.5 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-colors"
+                                title="Quitar alerta de este informe"
+                              >
+                                <Check size={12} />
+                                <span>Descartar alerta</span>
                               </button>
                             </div>
                           </div>
@@ -1149,7 +1203,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                       </div>
                     )}
 
-                    {allUnseenObservations.length === 0 && totalAprobados === 0 && (
+                    {allUnseenObservations.length === 0 && allUnseenApproved.length === 0 && (
                       <div className="text-center py-6 text-slate-400 text-xs">
                         <CheckCircle2 size={24} className="mx-auto mb-1 text-slate-300" />
                         <p>No tienes notificaciones u observaciones pendientes.</p>
@@ -1403,7 +1457,11 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                 {unseenApprovedReports.map(apRep => (
                   <button
                     key={apRep.id || apRep.informeNro}
-                    onClick={() => handleInterceptOpenReport(apRep)}
+                    type="button"
+                    onClick={() => {
+                      dismissApprovedReport(apRep);
+                      handleInterceptOpenReport(apRep);
+                    }}
                     className="px-3.5 py-2 bg-gradient-to-r from-amber-400 to-amber-300 hover:from-amber-300 hover:to-amber-200 text-gray-950 rounded-xl font-black text-xs inline-flex items-center gap-1.5 shadow-md transition-all hover:scale-105"
                     title={`Consultar Informe #${apRep.informeNro}`}
                   >
@@ -1411,6 +1469,16 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                     <span>Consultar Informe #{apRep.informeNro}</span>
                   </button>
                 ))}
+
+                <button
+                  type="button"
+                  onClick={() => handleDismissAllApproved()}
+                  className="px-3.5 py-2 bg-emerald-950/80 hover:bg-emerald-950 text-emerald-200 hover:text-white border border-emerald-600/70 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition-all shadow-xs"
+                  title="Descartar esta alerta de aprobación"
+                >
+                  <Check size={14} className="text-emerald-400" />
+                  <span>Descartar alerta</span>
+                </button>
               </div>
             </div>
           )}
@@ -1604,11 +1672,25 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                             const allCorregidos = commList.length > 0 && pendingComms.length === 0;
 
                             if (report.estado === 'Aprobado') {
+                              const alertActive = !isApprovedReportDismissed(report);
                               return (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                  <Check size={11} className="text-emerald-700" />
-                                  Aprobado
-                                </span>
+                                <div className="inline-flex items-center gap-1.5 flex-wrap">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    <Check size={11} className="text-emerald-700" />
+                                    Aprobado
+                                  </span>
+                                  {alertActive && (
+                                    <button
+                                      type="button"
+                                      onClick={() => dismissApprovedReport(report)}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 transition-colors shadow-xs cursor-pointer"
+                                      title="La alerta de aprobación sigue activa. Haz clic aquí para descartarla"
+                                    >
+                                      <BellRing size={10} className="text-amber-700 animate-pulse" />
+                                      <span>Alerta activa • Descartar</span>
+                                    </button>
+                                  )}
+                                </div>
                               );
                             }
 
@@ -1764,6 +1846,19 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
                             </button>
                           );
                         })()}
+
+                        {/* Botón para descartar alerta de aprobación si sigue activa */}
+                        {report.estado === 'Aprobado' && !isApprovedReportDismissed(report) && (
+                          <button
+                            type="button"
+                            onClick={() => dismissApprovedReport(report)}
+                            className="px-2.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-300 rounded-xl font-bold text-xs inline-flex items-center gap-1 transition-colors shadow-xs"
+                            title="Quitar la alerta de aprobación de este informe"
+                          >
+                            <Check size={13} className="text-amber-700" />
+                            <span>Descartar alerta</span>
+                          </button>
+                        )}
 
 
 
