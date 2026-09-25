@@ -187,24 +187,21 @@ const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[
   const assignedAnexosIds = new Set<string>();
 
   const obsWithFotos = obligaciones.map((obs, idx) => {
+    const targetObligacionNumber = idx + 1;
     // 1. Priorizar la búsqueda de fotos coincidentes en la base de datos (Supabase)
     const matchedDb = allAnexos.filter(a => {
       if (assignedAnexosIds.has(a.id)) return false;
       if (a.obligacionId && a.obligacionId === obs.id) return true;
-      if (a.obligacionIndex !== undefined && a.obligacionIndex === (idx + 1)) return true;
+      if (a.obligacionIndex !== undefined && a.obligacionIndex === targetObligacionNumber) return true;
+      
       const t = (a.titulo || '').toLowerCase();
-      if (
-        t.includes(`obligación #${idx + 1}`) || 
-        t.includes(`obligacion #${idx + 1}`) || 
-        t.includes(`obligación ${idx + 1}`) || 
-        t.includes(`obligacion ${idx + 1}`) || 
-        t.includes(`obl #${idx + 1}`) ||
-        t.includes(`obligación n° ${idx + 1}`) ||
-        t.includes(`obligacion n ${idx + 1}`) ||
-        t.startsWith(`[obligación ${idx + 1}]`) || 
-        t.startsWith(`[obligacion ${idx + 1}]`)
-      ) {
-        return true;
+      // Extraer número de obligación con regex estricta:
+      // Coincide con: "obligación #1", "obligacion # 1", "obligación 1", "obl #1", "obligación n° 1", "[obligación 1]", etc.
+      // IMPORTANTE: Requiere coincidencia numérica exacta (\d+) para evitar que "Obligación #1" coincida con #10, #11, #12, etc.
+      const match = t.match(/(?:obligaci[oó]n|obl)\s*(?:#|n°|nº|n\b|\s)?\s*(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        return num === targetObligacionNumber;
       }
       return false;
     });
@@ -227,8 +224,8 @@ const associateFotosToObligaciones = (obligaciones: Obligacion[], anexos: Anexo[
     const finalFotos = combined.map((f, fIdx) => ({
       ...f,
       obligacionId: obs.id,
-      obligacionIndex: idx + 1,
-      titulo: f.titulo || `Evidencia fotográfica ${fIdx + 1} - Obligación #${idx + 1}`
+      obligacionIndex: targetObligacionNumber,
+      titulo: f.titulo || `Evidencia fotográfica ${fIdx + 1} - Obligación #${targetObligacionNumber}`
     }));
 
     return {

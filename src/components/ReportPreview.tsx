@@ -123,9 +123,7 @@ export default function ReportPreview({
         const isKeyNumMatch = targetNum !== null && (
           lowerK.includes(`obligacion_${targetNum}_`) ||
           lowerK.includes(`ob_${targetNum}_`) ||
-          lowerCommFn.includes(`obligación #${targetNum}`) ||
-          lowerCommFn.includes(`obligacion #${targetNum}`) ||
-          lowerCommFn.includes(`obligación ${targetNum}`)
+          new RegExp(`(?:obligaci[oó]n|ob)[_\\s#]+${targetNum}\\b`, 'i').test(lowerCommFn)
         );
 
         if (isNumMatch || isKeyNumMatch) {

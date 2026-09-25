@@ -907,7 +907,19 @@ export async function generarInformeWordDocx(data: ReportData): Promise<Blob> {
     // Also check global anexos linked to this obligation
     if (data.anexos && data.anexos.length > 0) {
       data.anexos.forEach(anx => {
-        if (anx.obligacionIndex === idx || (ob.id && anx.obligacionId === ob.id)) {
+        const targetNum = idx + 1;
+        const isIndexMatch = anx.obligacionIndex === targetNum;
+        const isIdMatch = Boolean(ob.id && anx.obligacionId === ob.id);
+        
+        let isTitleMatch = false;
+        if (anx.titulo) {
+          const match = (anx.titulo || '').toLowerCase().match(/(?:obligaci[oó]n|obl)\s*(?:#|n°|nº|n\b|\s)?\s*(\d+)/i);
+          if (match) {
+            isTitleMatch = parseInt(match[1], 10) === targetNum;
+          }
+        }
+
+        if (isIndexMatch || isIdMatch || isTitleMatch) {
           if (!list.some(existing => existing.id === anx.id || existing.imagenUrl === anx.imagenUrl)) {
             list.push(anx);
           }
