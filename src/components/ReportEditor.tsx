@@ -1751,13 +1751,11 @@ export default function ReportEditor({
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                           (obs.fotos?.length || 0) >= 5
                             ? 'bg-amber-100 text-amber-900 border-amber-300'
-                            : (obs.fotos?.length || 0) >= 2
+                            : (obs.fotos?.length || 0) >= 1
                               ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                              : (obs.fotos?.length || 0) === 1
-                                ? 'bg-orange-100 text-orange-900 border-orange-300'
-                                : 'bg-red-50 text-red-700 border-red-200'
+                              : 'bg-red-50 text-red-700 border-red-200'
                         }`}>
-                          {obs.fotos?.length || 0} / 5 fotos {(obs.fotos?.length || 0) < 2 ? '(mín. 2)' : '✓'}
+                          {obs.fotos?.length || 0} / 5 fotos {(obs.fotos?.length || 0) < 1 ? '(mín. 1)' : '✓'}
                         </span>
                       </div>
 
@@ -1766,7 +1764,7 @@ export default function ReportEditor({
                         <label className={`cursor-pointer border-2 border-dashed rounded-lg p-3 flex flex-col sm:flex-row items-center justify-center gap-2 text-center transition-all ${
                           isUploadingFotos 
                             ? 'bg-gray-100 border-gray-300 text-gray-500' 
-                            : (obs.fotos?.length || 0) < 2
+                            : (obs.fotos?.length || 0) < 1
                               ? 'bg-white border-emerald-400 hover:border-emerald-600 hover:bg-emerald-50/60 text-emerald-950 shadow-xs'
                               : 'bg-white border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50 text-emerald-900 shadow-xs'
                         }`}>
@@ -1780,7 +1778,7 @@ export default function ReportEditor({
                               {isUploadingFotos ? 'Comprimiendo y subiendo...' : `Subir fotos para Obligación #${idx + 1}`}
                             </p>
                             <p className="text-[10px] text-gray-500">
-                              Requerido mín. 2 fotos (puedes subir hasta {5 - (obs.fotos?.length || 0)} foto(s) más en JPG, PNG, WebP)
+                              Requerido mín. 1 foto (puedes subir hasta {5 - (obs.fotos?.length || 0)} foto(s) más en JPG, PNG, WebP)
                             </p>
                           </div>
                           <span className="px-2.5 py-1 bg-emerald-700 text-white rounded text-[11px] font-semibold hover:bg-emerald-800 shrink-0">
@@ -1918,8 +1916,8 @@ export default function ReportEditor({
               </div>
               <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-xs col-span-2 sm:col-span-1">
                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Rango Permitido</span>
-                <span className="text-lg font-black text-emerald-800">2 a 5</span>
-                <span className="text-[10px] text-gray-400 block mt-0.5">mín. 2, máx. 5 por obligación</span>
+                <span className="text-lg font-black text-emerald-800">1 a 5</span>
+                <span className="text-[10px] text-gray-400 block mt-0.5">mín. 1, máx. 5 por obligación</span>
               </div>
             </div>
 
@@ -1940,13 +1938,11 @@ export default function ReportEditor({
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                             obsFotos.length >= 5
                               ? 'bg-amber-100 text-amber-900 border-amber-300'
-                              : obsFotos.length >= 2
+                              : obsFotos.length >= 1
                                 ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                                : obsFotos.length === 1
-                                  ? 'bg-orange-100 text-orange-900 border-orange-300'
-                                  : 'bg-red-50 text-red-700 border-red-200'
+                                : 'bg-red-50 text-red-700 border-red-200'
                           }`}>
-                            {obsFotos.length} / 5 fotos {obsFotos.length < 2 ? '(mín. 2)' : '✓'}
+                            {obsFotos.length} / 5 fotos {obsFotos.length < 1 ? '(mín. 1)' : '✓'}
                           </span>
                         </div>
                         <p className="text-xs text-gray-600 mt-1 font-medium line-clamp-1">
@@ -1975,9 +1971,9 @@ export default function ReportEditor({
                     {obsFotos.length === 0 ? (
                       <div className="py-4 border-2 border-dashed border-gray-200 rounded-lg text-center">
                         <Camera size={22} className="text-gray-300 mx-auto mb-1" />
-                        <p className="text-xs text-gray-500 font-medium">No has adjuntado evidencias para esta obligación (se requieren mínimo 2)</p>
+                        <p className="text-xs text-gray-500 font-medium">No has adjuntado evidencias para esta obligación (se requiere mínimo 1)</p>
                         <label className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold underline cursor-pointer mt-1 inline-block">
-                          Adjuntar fotos ahora (mín. 2, máx. 5)
+                          Adjuntar fotos ahora (mín. 1, máx. 5)
                           <input
                             type="file"
                             multiple

@@ -60,13 +60,13 @@ export function validateReportForRadicacion(report: ReportData): { isValid: bool
         });
       }
 
-      // Validar evidencias fotográficas: REQUISITO INDISPENSABLE (al menos 2 fotos por obligación)
+      // Validar evidencias fotográficas: REQUISITO INDISPENSABLE (al menos 1 foto por obligación)
       const fotosCount = obs.fotos?.length || 0;
-      if (fotosCount < 2) {
+      if (fotosCount < 1) {
         errors.push({
           type: 'fotos',
           obligacionNum: num,
-          message: `La Obligación #${num} tiene ${fotosCount} foto(s) adjunta(s). Requisito Indispensable: cada obligación debe tener al menos dos (2) evidencias fotográficas (mínimo 2, máximo 5).`
+          message: `La Obligación #${num} tiene ${fotosCount} foto(s) adjunta(s). Requisito Indispensable: cada obligación debe tener al menos una (1) evidencia fotográfica (mínimo 1, máximo 5).`
         });
       }
     });
