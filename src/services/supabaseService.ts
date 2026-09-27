@@ -257,6 +257,12 @@ const parseObservacionesAndComments = (rawObs?: string): {
   valorPagarText?: string;
   plazoText?: string;
   valorMensualText?: string;
+  fechaRegistroPresupuestalText?: string;
+  codigoRubroText?: string;
+  numeroCuentaText?: string;
+  bancoText?: string;
+  tipoCuentaText?: string;
+  ciudadText?: string;
 } => {
   if (!rawObs) return { cleanObs: '', comments: {} };
   let current = rawObs;
@@ -264,6 +270,12 @@ const parseObservacionesAndComments = (rawObs?: string): {
   let valorPagarText: string | undefined;
   let plazoText: string | undefined;
   let valorMensualText: string | undefined;
+  let fechaRegistroPresupuestalText: string | undefined;
+  let codigoRubroText: string | undefined;
+  let numeroCuentaText: string | undefined;
+  let bancoText: string | undefined;
+  let tipoCuentaText: string | undefined;
+  let ciudadText: string | undefined;
 
   // 1. Extraer __COMMENTS_JSON__: si existe
   if (current.includes('__COMMENTS_JSON__ :') || current.includes('__COMMENTS_JSON__:')) {
@@ -271,13 +283,12 @@ const parseObservacionesAndComments = (rawObs?: string): {
     const marker = isSpaced ? '__COMMENTS_JSON__ :' : '__COMMENTS_JSON__:';
     const idx = current.indexOf(marker);
     const afterComments = current.slice(idx + marker.length);
-    const rawJson = afterComments.split('__VALOR_PAGAR__:')[0].split('__PLAZO__:')[0].split('__VALOR_MENSUAL__:')[0].trim();
+    const rawJson = afterComments.split('__')[0].trim();
     try {
       comments = JSON.parse(rawJson);
     } catch (e) {
       console.warn('Error parsing __COMMENTS_JSON__:', e);
     }
-    // Remover la sección de comentarios del string actual
     current = current.slice(0, idx) + afterComments.slice(rawJson.length);
   }
 
@@ -285,13 +296,12 @@ const parseObservacionesAndComments = (rawObs?: string): {
   if (current.includes('__VALOR_PAGAR__:')) {
     const idx = current.indexOf('__VALOR_PAGAR__:');
     const afterVp = current.slice(idx + '__VALOR_PAGAR__:'.length);
-    const rawVp = afterVp.split('__COMMENTS_JSON__')[0].split('__PLAZO__:')[0].split('__VALOR_MENSUAL__:')[0].trim();
+    const rawVp = afterVp.split('__')[0].trim();
     try {
       valorPagarText = decodeURIComponent(rawVp);
     } catch (e) {
       valorPagarText = rawVp;
     }
-    // Remover la sección de valor a pagar del string actual
     current = current.slice(0, idx) + afterVp.slice(rawVp.length);
   }
 
@@ -299,13 +309,12 @@ const parseObservacionesAndComments = (rawObs?: string): {
   if (current.includes('__PLAZO__:')) {
     const idx = current.indexOf('__PLAZO__:');
     const afterPl = current.slice(idx + '__PLAZO__:'.length);
-    const rawPl = afterPl.split('__COMMENTS_JSON__')[0].split('__VALOR_PAGAR__:')[0].split('__VALOR_MENSUAL__:')[0].trim();
+    const rawPl = afterPl.split('__')[0].trim();
     try {
       plazoText = decodeURIComponent(rawPl);
     } catch (e) {
       plazoText = rawPl;
     }
-    // Remover la sección de plazo del string actual
     current = current.slice(0, idx) + afterPl.slice(rawPl.length);
   }
 
@@ -313,14 +322,91 @@ const parseObservacionesAndComments = (rawObs?: string): {
   if (current.includes('__VALOR_MENSUAL__:')) {
     const idx = current.indexOf('__VALOR_MENSUAL__:');
     const afterVm = current.slice(idx + '__VALOR_MENSUAL__:'.length);
-    const rawVm = afterVm.split('__COMMENTS_JSON__')[0].split('__VALOR_PAGAR__:')[0].split('__PLAZO__:')[0].trim();
+    const rawVm = afterVm.split('__')[0].trim();
     try {
       valorMensualText = decodeURIComponent(rawVm);
     } catch (e) {
       valorMensualText = rawVm;
     }
-    // Remover la sección de valor mensual del string actual
     current = current.slice(0, idx) + afterVm.slice(rawVm.length);
+  }
+
+  // 5. Extraer __FECHA_REGISTRO_PRESUPUESTAL__: si existe
+  if (current.includes('__FECHA_REGISTRO_PRESUPUESTAL__:')) {
+    const idx = current.indexOf('__FECHA_REGISTRO_PRESUPUESTAL__:');
+    const afterFrp = current.slice(idx + '__FECHA_REGISTRO_PRESUPUESTAL__:'.length);
+    const rawFrp = afterFrp.split('__')[0].trim();
+    try {
+      fechaRegistroPresupuestalText = decodeURIComponent(rawFrp);
+    } catch (e) {
+      fechaRegistroPresupuestalText = rawFrp;
+    }
+    current = current.slice(0, idx) + afterFrp.slice(rawFrp.length);
+  }
+
+  // 6. Extraer __CODIGO_RUBRO__: si existe
+  if (current.includes('__CODIGO_RUBRO__:')) {
+    const idx = current.indexOf('__CODIGO_RUBRO__:');
+    const afterCr = current.slice(idx + '__CODIGO_RUBRO__:'.length);
+    const rawCr = afterCr.split('__')[0].trim();
+    try {
+      codigoRubroText = decodeURIComponent(rawCr);
+    } catch (e) {
+      codigoRubroText = rawCr;
+    }
+    current = current.slice(0, idx) + afterCr.slice(rawCr.length);
+  }
+
+  // 7. Extraer __NUMERO_CUENTA__: si existe
+  if (current.includes('__NUMERO_CUENTA__:')) {
+    const idx = current.indexOf('__NUMERO_CUENTA__:');
+    const afterNc = current.slice(idx + '__NUMERO_CUENTA__:'.length);
+    const rawNc = afterNc.split('__')[0].trim();
+    try {
+      numeroCuentaText = decodeURIComponent(rawNc);
+    } catch (e) {
+      numeroCuentaText = rawNc;
+    }
+    current = current.slice(0, idx) + afterNc.slice(rawNc.length);
+  }
+
+  // 8. Extraer __BANCO__: si existe
+  if (current.includes('__BANCO__:')) {
+    const idx = current.indexOf('__BANCO__:');
+    const afterB = current.slice(idx + '__BANCO__:'.length);
+    const rawB = afterB.split('__')[0].trim();
+    try {
+      bancoText = decodeURIComponent(rawB);
+    } catch (e) {
+      bancoText = rawB;
+    }
+    current = current.slice(0, idx) + afterB.slice(rawB.length);
+  }
+
+  // 9. Extraer __TIPO_CUENTA__: si existe
+  if (current.includes('__TIPO_CUENTA__:')) {
+    const idx = current.indexOf('__TIPO_CUENTA__:');
+    const afterTc = current.slice(idx + '__TIPO_CUENTA__:'.length);
+    const rawTc = afterTc.split('__')[0].trim();
+    try {
+      tipoCuentaText = decodeURIComponent(rawTc);
+    } catch (e) {
+      tipoCuentaText = rawTc;
+    }
+    current = current.slice(0, idx) + afterTc.slice(rawTc.length);
+  }
+
+  // 10. Extraer __CIUDAD__: si existe
+  if (current.includes('__CIUDAD__:')) {
+    const idx = current.indexOf('__CIUDAD__:');
+    const afterCd = current.slice(idx + '__CIUDAD__:'.length);
+    const rawCd = afterCd.split('__')[0].trim();
+    try {
+      ciudadText = decodeURIComponent(rawCd);
+    } catch (e) {
+      ciudadText = rawCd;
+    }
+    current = current.slice(0, idx) + afterCd.slice(rawCd.length);
   }
 
   // Limpiar saltos de línea sobrantes y posibles marcadores vacíos
@@ -328,11 +414,29 @@ const parseObservacionesAndComments = (rawObs?: string): {
     .replace(/__VALOR_PAGAR__:\s*/g, '')
     .replace(/__PLAZO__:\s*/g, '')
     .replace(/__VALOR_MENSUAL__:\s*/g, '')
+    .replace(/__FECHA_REGISTRO_PRESUPUESTAL__:\s*/g, '')
+    .replace(/__CODIGO_RUBRO__:\s*/g, '')
+    .replace(/__NUMERO_CUENTA__:\s*/g, '')
+    .replace(/__BANCO__:\s*/g, '')
+    .replace(/__TIPO_CUENTA__:\s*/g, '')
+    .replace(/__CIUDAD__:\s*/g, '')
     .replace(/__COMMENTS_JSON__:\s*/g, '')
     .replace(/__COMMENTS_JSON__\s*:\s*/g, '')
     .trim();
 
-  return { cleanObs, comments, valorPagarText, plazoText, valorMensualText };
+  return {
+    cleanObs,
+    comments,
+    valorPagarText,
+    plazoText,
+    valorMensualText,
+    fechaRegistroPresupuestalText,
+    codigoRubroText,
+    numeroCuentaText,
+    bancoText,
+    tipoCuentaText,
+    ciudadText
+  };
 };
 
 const buildObservacionesWithComments = (
@@ -340,7 +444,13 @@ const buildObservacionesWithComments = (
   comments?: Record<string, FieldComment>, 
   valorPagarText?: string,
   plazoText?: string,
-  valorMensualText?: string
+  valorMensualText?: string,
+  fechaRegistroPresupuestal?: string,
+  codigoRubro?: string,
+  numeroCuenta?: string,
+  banco?: string,
+  tipoCuenta?: string,
+  ciudad?: string
 ): string => {
   let baseObs = cleanObs || '';
   if (valorPagarText && valorPagarText.trim()) {
@@ -351,6 +461,24 @@ const buildObservacionesWithComments = (
   }
   if (valorMensualText && valorMensualText.trim()) {
     baseObs = `${baseObs}\n\n__VALOR_MENSUAL__:${encodeURIComponent(valorMensualText.trim())}`;
+  }
+  if (fechaRegistroPresupuestal && fechaRegistroPresupuestal.trim()) {
+    baseObs = `${baseObs}\n\n__FECHA_REGISTRO_PRESUPUESTAL__:${encodeURIComponent(fechaRegistroPresupuestal.trim())}`;
+  }
+  if (codigoRubro && codigoRubro.trim()) {
+    baseObs = `${baseObs}\n\n__CODIGO_RUBRO__:${encodeURIComponent(codigoRubro.trim())}`;
+  }
+  if (numeroCuenta && numeroCuenta.trim()) {
+    baseObs = `${baseObs}\n\n__NUMERO_CUENTA__:${encodeURIComponent(numeroCuenta.trim())}`;
+  }
+  if (banco && banco.trim()) {
+    baseObs = `${baseObs}\n\n__BANCO__:${encodeURIComponent(banco.trim())}`;
+  }
+  if (tipoCuenta && tipoCuenta.trim()) {
+    baseObs = `${baseObs}\n\n__TIPO_CUENTA__:${encodeURIComponent(tipoCuenta.trim())}`;
+  }
+  if (ciudad && ciudad.trim()) {
+    baseObs = `${baseObs}\n\n__CIUDAD__:${encodeURIComponent(ciudad.trim())}`;
   }
   if (comments && Object.keys(comments).length > 0) {
     return `${baseObs}\n\n__COMMENTS_JSON__:${JSON.stringify(comments)}`;
@@ -1046,6 +1174,24 @@ export const supabaseService = {
         if (cData) allDbContratos = cData;
       } catch (cErr) {}
 
+      let allDbCerts: any[] = [];
+      try {
+        const { data: certsData } = await supabase
+          .from('certificaciones_supervision')
+          .select('contratista_documento, datos_formulario, created_at')
+          .order('created_at', { ascending: false });
+        if (certsData) allDbCerts = certsData;
+      } catch (cErr) {}
+
+      let allDbInformes: any[] = [];
+      try {
+        const { data: infData } = await supabase
+          .from('informes_mensuales')
+          .select('id, contrato_id, informe_nro, observaciones, created_at')
+          .order('created_at', { ascending: false });
+        if (infData) allDbInformes = infData;
+      } catch (iErr) {}
+
       if (!error && data && data.length > 0) {
         const isValNro = (n?: any) => n && String(n).trim() !== '' && !/^20\d{2}$/.test(String(n));
 
@@ -1071,6 +1217,26 @@ export const supabaseService = {
           const cont = combinedConts.find((c: any) => c && isValNro(c.contrato_nro)) || combinedConts[0];
           const finalContNro = (cont && isValNro(cont.contrato_nro)) ? String(cont.contrato_nro).trim() : (cont?.contrato_nro || '');
 
+          const latestCert = allDbCerts.find((c: any) => {
+            const cDoc = (c.contratista_documento || '').replace(/\D/g, '');
+            return (cleanDoc && cDoc === cleanDoc) || (doc && c.contratista_documento === doc);
+          });
+          const certForm = latestCert?.datos_formulario || {};
+
+          // Buscar último informe mensual para este contratista/contrato
+          const matchingContratoIds = new Set(combinedConts.map((c: any) => c.id).filter(Boolean));
+          const latestInf = allDbInformes.find((inf: any) => matchingContratoIds.has(inf.contrato_id));
+          const parsedInfObs = latestInf?.observaciones ? parseObservacionesAndComments(latestInf.observaciones) : null;
+
+          const finalNumeroCuenta = cont?.numero_cuenta || parsedInfObs?.numeroCuentaText || certForm?.numeroCuenta || '';
+          const finalBanco = cont?.banco || parsedInfObs?.bancoText || certForm?.banco || '';
+          const finalTipoCuenta = cont?.tipo_cuenta || parsedInfObs?.tipoCuentaText || certForm?.tipoCuenta || 'AHORRO';
+          const finalCiudad = cont?.ciudad || parsedInfObs?.ciudadText || certForm?.ciudad || '';
+          const finalFechaRegistroPresupuestal = parsedInfObs?.fechaRegistroPresupuestalText 
+            ? formatDateSlash(parsedInfObs.fechaRegistroPresupuestalText) 
+            : (certForm?.fechaRegistroPresupuestal ? formatDateSlash(certForm.fechaRegistroPresupuestal) : '');
+          const finalCodigoRubro = parsedInfObs?.codigoRubroText || certForm?.codigoRubro || '';
+
           return {
             id: row.id,
             email: mail,
@@ -1085,15 +1251,17 @@ export const supabaseService = {
             telefono: row.telefono || '',
             barrio: row.direccion || '',
             direccion: row.direccion || '',
-            numeroCuenta: cont?.numero_cuenta || '53686186829',
-            banco: cont?.banco || 'BANCOLOMBIA',
-            tipoCuenta: cont?.tipo_cuenta || 'AHORRO',
-            ciudad: cont?.ciudad || 'CHOCÓ',
+            numeroCuenta: finalNumeroCuenta,
+            banco: finalBanco,
+            tipoCuenta: finalTipoCuenta,
+            ciudad: finalCiudad,
+            fechaRegistroPresupuestal: finalFechaRegistroPresupuestal,
+            codigoRubro: finalCodigoRubro,
             contratoNro: finalContNro,
             objetoContrato: cont?.objeto || '',
             valorContrato: cont?.valor_contrato ? String(cont.valor_contrato) : '',
-            cdpNro: cont?.cdp_nro || '',
-            crpNro: cont?.crp_nro || '',
+            cdpNro: cont?.cdp_nro || certForm?.cdpNro || '',
+            crpNro: cont?.crp_nro || certForm?.crpNro || '',
             polizaNro: cont?.poliza_nro || '',
             fechaPoliza: cont?.fecha_aprobacion_poliza || '',
             fechaInicio: cont?.fecha_inicio || '',
@@ -1321,10 +1489,10 @@ export const supabaseService = {
           supervisor_documento: contractorData.supervisorDocumento || '35602521',
           apoyo_supervision_nombre: contractorData.apoyoSupervisionNombre && contractorData.apoyoSupervisionNombre !== 'N/A' ? contractorData.apoyoSupervisionNombre : null,
           apoyo_supervision_documento: contractorData.apoyoSupervisionDocumento && contractorData.apoyoSupervisionDocumento !== 'N/A' ? contractorData.apoyoSupervisionDocumento : null,
-          numero_cuenta: contractorData.numeroCuenta || '53686186829',
-          banco: contractorData.banco || 'BANCOLOMBIA',
+          numero_cuenta: contractorData.numeroCuenta || '',
+          banco: contractorData.banco || '',
           tipo_cuenta: contractorData.tipoCuenta || 'AHORRO',
-          ciudad: contractorData.ciudad || 'CHOCÓ',
+          ciudad: contractorData.ciudad || '',
           vigencia: 2026,
         };
 
@@ -1995,10 +2163,10 @@ export const supabaseService = {
         supervisor_documento: report.supervisorDocumento || user?.supervisorDocumento || '35.602.521',
         apoyo_supervision_nombre: report.apoyoSupervisionNombre && report.apoyoSupervisionNombre !== 'N/A' ? report.apoyoSupervisionNombre : null,
         apoyo_supervision_documento: report.apoyoSupervisionDocumento && report.apoyoSupervisionDocumento !== 'N/A' ? report.apoyoSupervisionDocumento : null,
-        numero_cuenta: report.numeroCuenta || user?.numeroCuenta || '53686186829',
-        banco: report.banco || user?.banco || 'BANCOLOMBIA',
+        numero_cuenta: report.numeroCuenta || user?.numeroCuenta || '',
+        banco: report.banco || user?.banco || '',
         tipo_cuenta: report.tipoCuenta || user?.tipoCuenta || 'AHORRO',
-        ciudad: report.ciudad || report.ciudadCuenta || user?.ciudad || 'CHOCÓ',
+        ciudad: report.ciudad || report.ciudadCuenta || user?.ciudad || '',
         vigencia: 2026
       };
 
@@ -2171,6 +2339,10 @@ export const supabaseService = {
             apoyo_supervision_nombre,
             apoyo_supervision_documento,
             secretaria_id,
+            numero_cuenta,
+            banco,
+            tipo_cuenta,
+            ciudad,
             profiles:contratista_id (
               id,
               nombre_completo,
@@ -2222,7 +2394,7 @@ export const supabaseService = {
             imagenUrl: a.imagen_url || '',
           }));
 
-        const { cleanObs, comments: obsComments, valorPagarText, plazoText, valorMensualText } = parseObservacionesAndComments(row.observaciones);
+        const { cleanObs, comments: obsComments, valorPagarText, plazoText, valorMensualText, fechaRegistroPresupuestalText, codigoRubroText, numeroCuentaText, bancoText, tipoCuentaText, ciudadText } = parseObservacionesAndComments(row.observaciones);
         let dbComments = (row.comentarios_campos && typeof row.comentarios_campos === 'object' && Object.keys(row.comentarios_campos).length > 0)
           ? row.comentarios_campos
           : ((obsComments && typeof obsComments === 'object' && Object.keys(obsComments).length > 0) ? obsComments : null);
@@ -2297,16 +2469,16 @@ export const supabaseService = {
           valorPagar: finalValorPagar,
           estado: finalState,
           comentariosCampos: finalComments,
-          numeroCuenta: storedData?.numeroCuenta || (row.contratos as any)?.numero_cuenta || '53686186829',
-          banco: storedData?.banco || (row.contratos as any)?.banco || 'BANCOLOMBIA',
-          tipoCuenta: storedData?.tipoCuenta || (row.contratos as any)?.tipo_cuenta || 'AHORRO',
-          ciudad: storedData?.ciudad || storedData?.ciudadCuenta || (row.contratos as any)?.ciudad || 'CHOCÓ',
-          ciudadCuenta: storedData?.ciudadCuenta || storedData?.ciudad || (row.contratos as any)?.ciudad || 'CHOCÓ',
+          numeroCuenta: numeroCuentaText || storedData?.numeroCuenta || (row.contratos as any)?.numero_cuenta || '',
+          banco: bancoText || storedData?.banco || (row.contratos as any)?.banco || '',
+          tipoCuenta: tipoCuentaText || storedData?.tipoCuenta || (row.contratos as any)?.tipo_cuenta || 'AHORRO',
+          ciudad: ciudadText || storedData?.ciudad || storedData?.ciudadCuenta || (row.contratos as any)?.ciudad || '',
+          ciudadCuenta: ciudadText || storedData?.ciudadCuenta || storedData?.ciudad || (row.contratos as any)?.ciudad || '',
           barrio: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.barrio || storedData?.direccion || '',
           direccion: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.direccion || storedData?.barrio || '',
           contratistaDireccion: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.contratistaDireccion || storedData?.barrio || storedData?.direccion || '',
-          fechaRegistroPresupuestal: storedData?.fechaRegistroPresupuestal ? formatDateSlash(storedData.fechaRegistroPresupuestal) : '14/01/2026',
-          codigoRubro: storedData?.codigoRubro || '2.3.2.02.02.008.04.01.02',
+          fechaRegistroPresupuestal: fechaRegistroPresupuestalText ? formatDateSlash(fechaRegistroPresupuestalText) : (storedData?.fechaRegistroPresupuestal ? formatDateSlash(storedData.fechaRegistroPresupuestal) : ''),
+          codigoRubro: codigoRubroText || storedData?.codigoRubro || '',
           syncedToDb: true,
         };
       }
@@ -2351,6 +2523,10 @@ export const supabaseService = {
             apoyo_supervision_nombre,
             apoyo_supervision_documento,
             secretaria_id,
+            numero_cuenta,
+            banco,
+            tipo_cuenta,
+            ciudad,
             profiles:contratista_id (
               id,
               nombre_completo,
@@ -2409,7 +2585,7 @@ export const supabaseService = {
                 imagenUrl: a.imagen_url || '',
               }));
 
-            const { cleanObs, comments: obsComments, valorPagarText, plazoText, valorMensualText } = parseObservacionesAndComments(row.observaciones);
+            const { cleanObs, comments: obsComments, valorPagarText, plazoText, valorMensualText, fechaRegistroPresupuestalText, codigoRubroText, numeroCuentaText, bancoText, tipoCuentaText, ciudadText } = parseObservacionesAndComments(row.observaciones);
             let dbComments = (row.comentarios_campos && typeof row.comentarios_campos === 'object' && Object.keys(row.comentarios_campos).length > 0)
               ? row.comentarios_campos
               : ((obsComments && typeof obsComments === 'object' && Object.keys(obsComments).length > 0) ? obsComments : null);
@@ -2488,16 +2664,16 @@ export const supabaseService = {
               valorPagarCertificado: row.valor_pagar_certificado || (numCert ? String(numCert) : ''),
               estado: finalState,
               comentariosCampos: finalComments,
-              numeroCuenta: storedData?.numeroCuenta || (row.contratos as any)?.numero_cuenta || '53686186829',
-              banco: storedData?.banco || (row.contratos as any)?.banco || 'BANCOLOMBIA',
-              tipoCuenta: storedData?.tipoCuenta || (row.contratos as any)?.tipo_cuenta || 'AHORRO',
-              ciudad: storedData?.ciudad || storedData?.ciudadCuenta || (row.contratos as any)?.ciudad || 'CHOCÓ',
-              ciudadCuenta: storedData?.ciudadCuenta || storedData?.ciudad || (row.contratos as any)?.ciudad || 'CHOCÓ',
+              numeroCuenta: numeroCuentaText || storedData?.numeroCuenta || (row.contratos as any)?.numero_cuenta || '',
+              banco: bancoText || storedData?.banco || (row.contratos as any)?.banco || '',
+              tipoCuenta: tipoCuentaText || storedData?.tipoCuenta || (row.contratos as any)?.tipo_cuenta || 'AHORRO',
+              ciudad: ciudadText || storedData?.ciudad || storedData?.ciudadCuenta || (row.contratos as any)?.ciudad || '',
+              ciudadCuenta: ciudadText || storedData?.ciudadCuenta || storedData?.ciudad || (row.contratos as any)?.ciudad || '',
               barrio: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.barrio || storedData?.direccion || '',
               direccion: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.direccion || storedData?.barrio || '',
               contratistaDireccion: (row.contratos?.profiles as any)?.direccion || (row.contratos?.profiles as any)?.barrio || storedData?.contratistaDireccion || storedData?.barrio || storedData?.direccion || '',
-              fechaRegistroPresupuestal: storedData?.fechaRegistroPresupuestal ? formatDateSlash(storedData.fechaRegistroPresupuestal) : '14/01/2026',
-              codigoRubro: storedData?.codigoRubro || '2.3.2.02.02.008.04.01.02',
+              fechaRegistroPresupuestal: fechaRegistroPresupuestalText ? formatDateSlash(fechaRegistroPresupuestalText) : (storedData?.fechaRegistroPresupuestal ? formatDateSlash(storedData.fechaRegistroPresupuestal) : ''),
+              codigoRubro: codigoRubroText || storedData?.codigoRubro || '',
               syncedToDb: true,
             };
           });
@@ -2579,10 +2755,10 @@ export const supabaseService = {
             supervisor_documento: report.supervisorDocumento || '35.602.521',
             apoyo_supervision_nombre: report.apoyoSupervisionNombre && report.apoyoSupervisionNombre !== 'N/A' ? report.apoyoSupervisionNombre : null,
             apoyo_supervision_documento: report.apoyoSupervisionDocumento && report.apoyoSupervisionDocumento !== 'N/A' ? report.apoyoSupervisionDocumento : null,
-            numero_cuenta: report.numeroCuenta || '53686186829',
-            banco: report.banco || 'BANCOLOMBIA',
-            tipo_cuenta: report.tipoCuenta || 'AHORRO',
-            ciudad: report.ciudad || report.ciudadCuenta || 'CHOCÓ',
+            numero_cuenta: report.numeroCuenta || user?.numeroCuenta || '',
+            banco: report.banco || user?.banco || 'BANCOLOMBIA',
+            tipo_cuenta: report.tipoCuenta || user?.tipoCuenta || 'AHORRO',
+            ciudad: report.ciudad || report.ciudadCuenta || user?.ciudad || 'CHOCÓ',
           }).eq('id', contratoId);
 
           const dirVal = report.direccion || report.barrio || report.contratistaDireccion;
@@ -2616,7 +2792,19 @@ export const supabaseService = {
 
       const contractorDoc = report.contratistaDocumento || user?.documentoIdentidad;
       const cleanObsText = report.observaciones !== undefined && report.observaciones !== null ? report.observaciones : '';
-      const fullObsPayload = buildObservacionesWithComments(cleanObsText, report.comentariosCampos, report.valorPagar, report.plazo, report.valorMensual);
+      const fullObsPayload = buildObservacionesWithComments(
+        cleanObsText, 
+        report.comentariosCampos, 
+        report.valorPagar, 
+        report.plazo, 
+        report.valorMensual,
+        report.fechaRegistroPresupuestal,
+        report.codigoRubro,
+        report.numeroCuenta,
+        report.banco,
+        report.tipoCuenta,
+        report.ciudad || report.ciudadCuenta
+      );
 
       const parsedValorPagar = limpiarNumeroMoneda(report.valorPagar) || 3338300;
 
@@ -3426,43 +3614,46 @@ export const supabaseService = {
               supervisorNombre: certData.supervisorNombre || prevObj.supervisorNombre,
               objeto: certData.objeto || prevObj.objeto,
               pagoNro: pagoNroStr,
-              fechaRegistroPresupuestal: prevObj.fechaRegistroPresupuestal || certData.fechaRegistroPresupuestal,
-              codigoRubro: prevObj.codigoRubro || certData.codigoRubro,
-              fechaRegistroPresupuestal2: prevObj.fechaRegistroPresupuestal2 ?? certData.fechaRegistroPresupuestal2,
-              codigoRubro2: prevObj.codigoRubro2 ?? certData.codigoRubro2,
-              fechaRegistroPresupuestal3: prevObj.fechaRegistroPresupuestal3 ?? certData.fechaRegistroPresupuestal3,
-              codigoRubro3: prevObj.codigoRubro3 ?? certData.codigoRubro3,
-              fechaRegistroPresupuestal4: prevObj.fechaRegistroPresupuestal4 ?? certData.fechaRegistroPresupuestal4,
-              codigoRubro4: prevObj.codigoRubro4 ?? certData.codigoRubro4,
-              fechaRegistroPresupuestal5: prevObj.fechaRegistroPresupuestal5 ?? certData.fechaRegistroPresupuestal5,
-              codigoRubro5: prevObj.codigoRubro5 ?? certData.codigoRubro5,
-              cdpNro: prevObj.cdpNro || certData.cdpNro,
-              cdpNro2: prevObj.cdpNro2 ?? certData.cdpNro2,
-              cdpNro3: prevObj.cdpNro3 ?? certData.cdpNro3,
-              cdpNro4: prevObj.cdpNro4 ?? certData.cdpNro4,
-              cdpNro5: prevObj.cdpNro5 ?? certData.cdpNro5,
-              crpNro: prevObj.crpNro || certData.crpNro,
-              crpNro2: prevObj.crpNro2 ?? certData.crpNro2,
-              crpNro3: prevObj.crpNro3 ?? certData.crpNro3,
-              crpNro4: prevObj.crpNro4 ?? certData.crpNro4,
-              crpNro5: prevObj.crpNro5 ?? certData.crpNro5,
-              valorRubro: prevObj.valorRubro || certData.valorRubro,
-              valorRubro2: prevObj.valorRubro2 ?? certData.valorRubro2,
-              valorRubro3: prevObj.valorRubro3 ?? certData.valorRubro3,
-              valorRubro4: prevObj.valorRubro4 ?? certData.valorRubro4,
-              valorRubro5: prevObj.valorRubro5 ?? certData.valorRubro5,
-              saludValor: prevObj.saludValor || certData.saludValor,
-              saludEps: prevObj.saludEps || certData.saludEps,
-              saludPlanilla: prevObj.saludPlanilla || certData.saludPlanilla,
-              pensionValor: prevObj.pensionValor || certData.pensionValor,
-              pensionFondo: prevObj.pensionFondo || certData.pensionFondo,
-              pensionPlanilla: prevObj.pensionPlanilla || certData.pensionPlanilla,
-              arpValor: prevObj.arpValor || certData.arpValor,
-              arpAseguradora: prevObj.arpAseguradora || certData.arpAseguradora,
-              arpPlanilla: prevObj.arpPlanilla || certData.arpPlanilla,
-              expedicionDia: prevObj.expedicionDia || certData.expedicionDia,
-              expedicionMes: prevObj.expedicionMes || certData.expedicionMes,
-              expedicionAno: prevObj.expedicionAno || certData.expedicionAno,
+              numeroCuenta: certData.numeroCuenta || prevObj.numeroCuenta || '',
+              banco: certData.banco || prevObj.banco || '',
+              tipoCuenta: certData.tipoCuenta || prevObj.tipoCuenta || 'AHORRO',
+              fechaRegistroPresupuestal: certData.fechaRegistroPresupuestal || prevObj.fechaRegistroPresupuestal || '',
+              codigoRubro: certData.codigoRubro || prevObj.codigoRubro || '',
+              fechaRegistroPresupuestal2: certData.fechaRegistroPresupuestal2 ?? prevObj.fechaRegistroPresupuestal2,
+              codigoRubro2: certData.codigoRubro2 ?? prevObj.codigoRubro2,
+              fechaRegistroPresupuestal3: certData.fechaRegistroPresupuestal3 ?? prevObj.fechaRegistroPresupuestal3,
+              codigoRubro3: certData.codigoRubro3 ?? prevObj.codigoRubro3,
+              fechaRegistroPresupuestal4: certData.fechaRegistroPresupuestal4 ?? prevObj.fechaRegistroPresupuestal4,
+              codigoRubro4: certData.codigoRubro4 ?? prevObj.codigoRubro4,
+              fechaRegistroPresupuestal5: certData.fechaRegistroPresupuestal5 ?? prevObj.fechaRegistroPresupuestal5,
+              codigoRubro5: certData.codigoRubro5 ?? prevObj.codigoRubro5,
+              cdpNro: certData.cdpNro || prevObj.cdpNro || '',
+              cdpNro2: certData.cdpNro2 ?? prevObj.cdpNro2,
+              cdpNro3: certData.cdpNro3 ?? prevObj.cdpNro3,
+              cdpNro4: certData.cdpNro4 ?? prevObj.cdpNro4,
+              cdpNro5: certData.cdpNro5 ?? prevObj.cdpNro5,
+              crpNro: certData.crpNro || prevObj.crpNro || '',
+              crpNro2: certData.crpNro2 ?? prevObj.crpNro2,
+              crpNro3: certData.crpNro3 ?? prevObj.crpNro3,
+              crpNro4: certData.crpNro4 ?? prevObj.crpNro4,
+              crpNro5: certData.crpNro5 ?? prevObj.crpNro5,
+              valorRubro: certData.valorRubro || prevObj.valorRubro,
+              valorRubro2: certData.valorRubro2 ?? prevObj.valorRubro2,
+              valorRubro3: certData.valorRubro3 ?? prevObj.valorRubro3,
+              valorRubro4: certData.valorRubro4 ?? prevObj.valorRubro4,
+              valorRubro5: certData.valorRubro5 ?? prevObj.valorRubro5,
+              saludValor: certData.saludValor || prevObj.saludValor,
+              saludEps: certData.saludEps || prevObj.saludEps,
+              saludPlanilla: certData.saludPlanilla || prevObj.saludPlanilla,
+              pensionValor: certData.pensionValor || prevObj.pensionValor,
+              pensionFondo: certData.pensionFondo || prevObj.pensionFondo,
+              pensionPlanilla: certData.pensionPlanilla || prevObj.pensionPlanilla,
+              arpValor: certData.arpValor || prevObj.arpValor,
+              arpAseguradora: certData.arpAseguradora || prevObj.arpAseguradora,
+              arpPlanilla: certData.arpPlanilla || prevObj.arpPlanilla,
+              expedicionDia: certData.expedicionDia || prevObj.expedicionDia,
+              expedicionMes: certData.expedicionMes || prevObj.expedicionMes,
+              expedicionAno: certData.expedicionAno || prevObj.expedicionAno,
               valorAvalado: prevObj.valorAvalado || certData.valorAvalado,
               saldoPorPagar: prevObj.saldoPorPagar || certData.saldoPorPagar,
               porcentajeEjecucion: prevObj.porcentajeEjecucion || certData.porcentajeEjecucion,
@@ -3551,27 +3742,30 @@ export const supabaseService = {
       if (options?.excludeLiquidacion && existingDbForm) {
         mergedCertData = {
           ...mergedCertData,
-          fechaRegistroPresupuestal: existingDbForm.fechaRegistroPresupuestal || mergedCertData.fechaRegistroPresupuestal,
-          codigoRubro: existingDbForm.codigoRubro || mergedCertData.codigoRubro,
-          fechaRegistroPresupuestal2: existingDbForm.fechaRegistroPresupuestal2 ?? mergedCertData.fechaRegistroPresupuestal2,
-          codigoRubro2: existingDbForm.codigoRubro2 ?? mergedCertData.codigoRubro2,
-          fechaRegistroPresupuestal3: existingDbForm.fechaRegistroPresupuestal3 ?? mergedCertData.fechaRegistroPresupuestal3,
-          codigoRubro3: existingDbForm.codigoRubro3 ?? mergedCertData.codigoRubro3,
-          fechaRegistroPresupuestal4: existingDbForm.fechaRegistroPresupuestal4 ?? mergedCertData.fechaRegistroPresupuestal4,
-          codigoRubro4: existingDbForm.codigoRubro4 ?? mergedCertData.codigoRubro4,
-          fechaRegistroPresupuestal5: existingDbForm.fechaRegistroPresupuestal5 ?? mergedCertData.fechaRegistroPresupuestal5,
-          codigoRubro5: existingDbForm.codigoRubro5 ?? mergedCertData.codigoRubro5,
-          cdpNro: existingDbForm.cdpNro || mergedCertData.cdpNro,
-          cdpNro2: existingDbForm.cdpNro2 ?? mergedCertData.cdpNro2,
-          cdpNro3: existingDbForm.cdpNro3 ?? mergedCertData.cdpNro3,
-          cdpNro4: existingDbForm.cdpNro4 ?? mergedCertData.cdpNro4,
-          cdpNro5: existingDbForm.cdpNro5 ?? mergedCertData.cdpNro5,
-          crpNro: existingDbForm.crpNro || mergedCertData.crpNro,
-          crpNro2: existingDbForm.crpNro2 ?? mergedCertData.crpNro2,
-          crpNro3: existingDbForm.crpNro3 ?? mergedCertData.crpNro3,
-          crpNro4: existingDbForm.crpNro4 ?? mergedCertData.crpNro4,
-          crpNro5: existingDbForm.crpNro5 ?? mergedCertData.crpNro5,
-          valorRubro: existingDbForm.valorRubro || mergedCertData.valorRubro,
+          numeroCuenta: mergedCertData.numeroCuenta || existingDbForm.numeroCuenta || '',
+          banco: mergedCertData.banco || existingDbForm.banco || '',
+          tipoCuenta: mergedCertData.tipoCuenta || existingDbForm.tipoCuenta || 'AHORRO',
+          fechaRegistroPresupuestal: mergedCertData.fechaRegistroPresupuestal || existingDbForm.fechaRegistroPresupuestal || '',
+          codigoRubro: mergedCertData.codigoRubro || existingDbForm.codigoRubro || '',
+          fechaRegistroPresupuestal2: mergedCertData.fechaRegistroPresupuestal2 ?? existingDbForm.fechaRegistroPresupuestal2,
+          codigoRubro2: mergedCertData.codigoRubro2 ?? existingDbForm.codigoRubro2,
+          fechaRegistroPresupuestal3: mergedCertData.fechaRegistroPresupuestal3 ?? existingDbForm.fechaRegistroPresupuestal3,
+          codigoRubro3: mergedCertData.codigoRubro3 ?? existingDbForm.codigoRubro3,
+          fechaRegistroPresupuestal4: mergedCertData.fechaRegistroPresupuestal4 ?? existingDbForm.fechaRegistroPresupuestal4,
+          codigoRubro4: mergedCertData.codigoRubro4 ?? existingDbForm.codigoRubro4,
+          fechaRegistroPresupuestal5: mergedCertData.fechaRegistroPresupuestal5 ?? existingDbForm.fechaRegistroPresupuestal5,
+          codigoRubro5: mergedCertData.codigoRubro5 ?? existingDbForm.codigoRubro5,
+          cdpNro: mergedCertData.cdpNro || existingDbForm.cdpNro || '',
+          cdpNro2: mergedCertData.cdpNro2 ?? existingDbForm.cdpNro2,
+          cdpNro3: mergedCertData.cdpNro3 ?? existingDbForm.cdpNro3,
+          cdpNro4: mergedCertData.cdpNro4 ?? existingDbForm.cdpNro4,
+          cdpNro5: mergedCertData.cdpNro5 ?? existingDbForm.cdpNro5,
+          crpNro: mergedCertData.crpNro || existingDbForm.crpNro || '',
+          crpNro2: mergedCertData.crpNro2 ?? existingDbForm.crpNro2,
+          crpNro3: mergedCertData.crpNro3 ?? existingDbForm.crpNro3,
+          crpNro4: mergedCertData.crpNro4 ?? existingDbForm.crpNro4,
+          crpNro5: mergedCertData.crpNro5 ?? existingDbForm.crpNro5,
+          valorRubro: mergedCertData.valorRubro || existingDbForm.valorRubro,
           valorRubro2: existingDbForm.valorRubro2 ?? mergedCertData.valorRubro2,
           valorRubro3: existingDbForm.valorRubro3 ?? mergedCertData.valorRubro3,
           valorRubro4: existingDbForm.valorRubro4 ?? mergedCertData.valorRubro4,

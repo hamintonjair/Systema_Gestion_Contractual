@@ -312,9 +312,9 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
   // Datos Bancarios y Presupuestales del Contratista (Requeridos para Certificado de Supervisión, Soporte Fiduciaria y Desembolso)
   const [newNumeroCuenta, setNewNumeroCuenta] = useState(user.numeroCuenta || '');
-  const [newBanco, setNewBanco] = useState(user.banco || 'BANCOLOMBIA');
+  const [newBanco, setNewBanco] = useState(user.banco || '');
   const [newTipoCuenta, setNewTipoCuenta] = useState(user.tipoCuenta || 'AHORRO');
-  const [newCiudad, setNewCiudad] = useState(user.ciudad || user.ciudadCuenta || 'CHOCÓ');
+  const [newCiudad, setNewCiudad] = useState(user.ciudad || user.ciudadCuenta || '');
   const [newFechaRegistroPresupuestal, setNewFechaRegistroPresupuestal] = useState(convertDDMMYYYYtoYYYYMMDD(user.fechaRegistroPresupuestal));
   const [newCodigoRubro, setNewCodigoRubro] = useState(user.codigoRubro || '');
 
@@ -342,9 +342,9 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
       setNewPolizaNro(lastReport.polizaNro || user.polizaNro || '');
       setNewFechaPoliza(convertDDMMYYYYtoYYYYMMDD(lastReport.fechaPoliza || user.fechaPoliza));
       setNewNumeroCuenta(lastReport.numeroCuenta || user.numeroCuenta || '');
-      setNewBanco(lastReport.banco || user.banco || 'BANCOLOMBIA');
+      setNewBanco(lastReport.banco || user.banco || '');
       setNewTipoCuenta(lastReport.tipoCuenta || user.tipoCuenta || 'AHORRO');
-      setNewCiudad(lastReport.ciudad || lastReport.ciudadCuenta || user.ciudad || user.ciudadCuenta || 'CHOCÓ');
+      setNewCiudad(lastReport.ciudad || lastReport.ciudadCuenta || user.ciudad || user.ciudadCuenta || '');
       setNewFechaRegistroPresupuestal(convertDDMMYYYYtoYYYYMMDD(lastReport.fechaRegistroPresupuestal || user.fechaRegistroPresupuestal));
       setNewCodigoRubro(lastReport.codigoRubro || user.codigoRubro || '');
     } else {
@@ -369,9 +369,9 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
 
       // Datos Bancarios y Presupuestales
       setNewNumeroCuenta(user.numeroCuenta || '');
-      setNewBanco(user.banco || 'BANCOLOMBIA');
+      setNewBanco(user.banco || '');
       setNewTipoCuenta(user.tipoCuenta || 'AHORRO');
-      setNewCiudad(user.ciudad || user.ciudadCuenta || 'CHOCÓ');
+      setNewCiudad(user.ciudad || user.ciudadCuenta || '');
       setNewFechaRegistroPresupuestal(convertDDMMYYYYtoYYYYMMDD(user.fechaRegistroPresupuestal));
       setNewCodigoRubro(user.codigoRubro || '');
     }
@@ -657,43 +657,43 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
           secretariaCodigo: newSecretariaCodigo || user.secretariaCodigo || '',
           secretariaNit: '891.680.029-7',
           numeroCuenta: newNumeroCuenta || user.numeroCuenta || '',
-          banco: newBanco || user.banco || 'BANCOLOMBIA',
+          banco: newBanco || user.banco || '',
           tipoCuenta: newTipoCuenta || user.tipoCuenta || 'AHORRO',
-          ciudad: newCiudad || user.ciudad || user.ciudadCuenta || 'CHOCÓ',
-          ciudadCuenta: newCiudad || user.ciudad || user.ciudadCuenta || 'CHOCÓ',
+          ciudad: newCiudad || user.ciudad || user.ciudadCuenta || '',
+          ciudadCuenta: newCiudad || user.ciudad || user.ciudadCuenta || '',
           fechaRegistroPresupuestal: formatDateToDDMMYYYY(newFechaRegistroPresupuestal) || user.fechaRegistroPresupuestal || '',
           codigoRubro: newCodigoRubro || user.codigoRubro || '',
           isClonedFromPrevious: false
         };
       } else {
-        // CASO 2: SEGUNDO INFORME EN ADELANTE (Hereda datos del último informe)
+        // CASO 2: SEGUNDO INFORME EN ADELANTE (Hereda datos del modal / último informe)
         baseGeneralData = {
-          objeto: lastSavedReport.objeto || user.objetoContrato || '',
-          contratoNro: lastSavedReport.contratoNro || user.contratoNro || '',
-          valorContrato: lastSavedReport.valorContrato || user.valorContrato || '',
-          valorMensual: lastSavedReport.valorMensual || existingValorMensual || '',
-          cdpNro: lastSavedReport.cdpNro || '',
-          crpNro: lastSavedReport.crpNro || '',
-          polizaNro: lastSavedReport.polizaNro || '',
-          fechaPoliza: lastSavedReport.fechaPoliza || '',
-          plazo: lastSavedReport.plazo || user.plazo || '',
-          fechaInicio: lastSavedReport.fechaInicio || user.fechaInicio || '',
-          fechaTerminacion: lastSavedReport.fechaTerminacion || user.fechaTerminacion || '',
-          supervisorNombre: lastSavedReport.supervisorNombre || user.supervisorNombre || '',
-          supervisorDocumento: lastSavedReport.supervisorDocumento || user.supervisorDocumento || '',
-          apoyoSupervisionNombre: lastSavedReport.apoyoSupervisionNombre || user.apoyoSupervisionNombre || '',
-          apoyoSupervisionDocumento: lastSavedReport.apoyoSupervisionDocumento || user.apoyoSupervisionDocumento || '',
-          secretariaNombre: lastSavedReport.secretariaNombre || user.secretariaNombre || '',
-          secretariaCodigo: lastSavedReport.secretariaCodigo || user.secretariaCodigo || '',
+          objeto: newObjeto || lastSavedReport.objeto || user.objetoContrato || '',
+          contratoNro: newContratoNro || lastSavedReport.contratoNro || user.contratoNro || '',
+          valorContrato: newValorContrato ? formatColombianCurrency(newValorContrato) : (lastSavedReport.valorContrato || user.valorContrato || ''),
+          valorMensual: newValorMensual ? formatColombianCurrency(newValorMensual) : (lastSavedReport.valorMensual || existingValorMensual || ''),
+          cdpNro: newCdpNro || lastSavedReport.cdpNro || user.cdpNro || '',
+          crpNro: newCrpNro || lastSavedReport.crpNro || user.crpNro || '',
+          polizaNro: newPolizaNro || lastSavedReport.polizaNro || '',
+          fechaPoliza: formatDateToDDMMYYYY(newFechaPoliza) || newFechaPoliza || lastSavedReport.fechaPoliza || '',
+          plazo: newPlazo ? formatPlazoLetraYNumero(newPlazo) : (lastSavedReport.plazo || user.plazo || ''),
+          fechaInicio: formatDateToDDMMYYYY(newFechaInicio) || lastSavedReport.fechaInicio || user.fechaInicio || '',
+          fechaTerminacion: formatDateToDDMMYYYY(newFechaTerminacion) || lastSavedReport.fechaTerminacion || user.fechaTerminacion || '',
+          supervisorNombre: newSupervisorNombre || lastSavedReport.supervisorNombre || user.supervisorNombre || '',
+          supervisorDocumento: user.supervisorDocumento || lastSavedReport.supervisorDocumento || '',
+          apoyoSupervisionNombre: user.apoyoSupervisionNombre || lastSavedReport.apoyoSupervisionNombre || '',
+          apoyoSupervisionDocumento: user.apoyoSupervisionDocumento || lastSavedReport.apoyoSupervisionDocumento || '',
+          secretariaNombre: newSecretariaNombre || lastSavedReport.secretariaNombre || user.secretariaNombre || '',
+          secretariaCodigo: newSecretariaCodigo || lastSavedReport.secretariaCodigo || user.secretariaCodigo || '',
           secretariaNit: lastSavedReport.secretariaNit || '891.680.029-7',
           valorPagar: lastSavedReport.valorPagar,
-          numeroCuenta: lastSavedReport.numeroCuenta || user.numeroCuenta || '',
-          banco: lastSavedReport.banco || user.banco || 'BANCOLOMBIA',
-          tipoCuenta: lastSavedReport.tipoCuenta || user.tipoCuenta || 'AHORRO',
-          ciudad: lastSavedReport.ciudad || lastSavedReport.ciudadCuenta || user.ciudad || user.ciudadCuenta || 'CHOCÓ',
-          ciudadCuenta: lastSavedReport.ciudadCuenta || lastSavedReport.ciudad || user.ciudad || user.ciudadCuenta || 'CHOCÓ',
-          fechaRegistroPresupuestal: lastSavedReport.fechaRegistroPresupuestal || user.fechaRegistroPresupuestal || '',
-          codigoRubro: lastSavedReport.codigoRubro || user.codigoRubro || '',
+          numeroCuenta: newNumeroCuenta || lastSavedReport.numeroCuenta || user.numeroCuenta || '',
+          banco: newBanco || lastSavedReport.banco || user.banco || '',
+          tipoCuenta: newTipoCuenta || lastSavedReport.tipoCuenta || user.tipoCuenta || 'AHORRO',
+          ciudad: newCiudad || lastSavedReport.ciudad || user.ciudad || user.ciudadCuenta || '',
+          ciudadCuenta: newCiudad || lastSavedReport.ciudadCuenta || user.ciudad || user.ciudadCuenta || '',
+          fechaRegistroPresupuestal: formatDateToDDMMYYYY(newFechaRegistroPresupuestal) || lastSavedReport.fechaRegistroPresupuestal || user.fechaRegistroPresupuestal || '',
+          codigoRubro: newCodigoRubro || lastSavedReport.codigoRubro || user.codigoRubro || '',
           isClonedFromPrevious: true
         };
 

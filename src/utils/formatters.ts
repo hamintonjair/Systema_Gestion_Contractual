@@ -197,7 +197,7 @@ export const formatPlazoLetraYNumero = (val?: string | number): string => {
  * Formatea fechas a formato DD/MM/YYYY con barra slash (/) en orden DÍA/MES/AÑO
  */
 export const formatDateSlash = (val?: string): string => {
-  if (!val || val === 'N/A' || val === '-') return val || 'N/A';
+  if (!val || val === 'N/A' || val === '-') return '';
   const str = String(val).trim().split('T')[0];
   
   if (str.includes('/')) {

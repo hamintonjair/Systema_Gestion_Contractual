@@ -19,15 +19,35 @@ export default function CertificadoSupervisionModal({
   isEditable = true,
 }: Props) {
   const [certData, setCertData] = useState<CertificadoSupervisionData>(() => {
-    if (initialCertData) return initialCertData;
-    return createDefaultCertificadoData(reportData);
+    const defaults = createDefaultCertificadoData(reportData);
+    if (initialCertData) {
+      return {
+        ...defaults,
+        ...initialCertData,
+        fechaRegistroPresupuestal: reportData?.fechaRegistroPresupuestal || initialCertData.fechaRegistroPresupuestal || defaults.fechaRegistroPresupuestal || '',
+        codigoRubro: reportData?.codigoRubro || initialCertData.codigoRubro || defaults.codigoRubro || '',
+        numeroCuenta: reportData?.numeroCuenta || initialCertData.numeroCuenta || defaults.numeroCuenta || '',
+        banco: reportData?.banco || initialCertData.banco || defaults.banco || 'BANCOLOMBIA',
+        tipoCuenta: reportData?.tipoCuenta || initialCertData.tipoCuenta || defaults.tipoCuenta || 'AHORRO',
+      };
+    }
+    return defaults;
   });
 
   React.useEffect(() => {
+    const defaults = createDefaultCertificadoData(reportData);
     if (initialCertData) {
-      setCertData(initialCertData);
+      setCertData({
+        ...defaults,
+        ...initialCertData,
+        fechaRegistroPresupuestal: reportData?.fechaRegistroPresupuestal || initialCertData.fechaRegistroPresupuestal || defaults.fechaRegistroPresupuestal || '',
+        codigoRubro: reportData?.codigoRubro || initialCertData.codigoRubro || defaults.codigoRubro || '',
+        numeroCuenta: reportData?.numeroCuenta || initialCertData.numeroCuenta || defaults.numeroCuenta || '',
+        banco: reportData?.banco || initialCertData.banco || defaults.banco || 'BANCOLOMBIA',
+        tipoCuenta: reportData?.tipoCuenta || initialCertData.tipoCuenta || defaults.tipoCuenta || 'AHORRO',
+      });
     } else if (reportData) {
-      setCertData(createDefaultCertificadoData(reportData));
+      setCertData(defaults);
     }
   }, [initialCertData, reportData]);
 
