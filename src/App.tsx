@@ -7,6 +7,7 @@ import ReportPreview from './components/ReportPreview';
 import SecretariaAdminView from './components/SecretariaAdminView';
 import SuperAdminView from './components/SuperAdminView';
 import { AuthUser, DEMO_USERS, ReportData, InformeSummary, initialMockData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData } from './types';
+import { sanitizeCertificadoData, sanitizeSocialField } from './utils/securitySocialUtils';
 import { supabaseService } from './services/supabaseService';
 import { exportInformeToPDF } from './utils/pdfGenerator';
 import { formatFechaAplicacion, formatDateSlash } from './utils/formatters';
@@ -59,13 +60,15 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges, currentView]);
 
-  // Asegurar que el membrete institucional esté siempre precargado
+  // Asegurar que el membrete institucional esté siempre precargado y purgar datos mock legacy
   useEffect(() => {
     supabaseService.getGlobalMembreteUrl().then(url => {
       if (url) {
         setActiveReportData(prev => prev.watermarkImage ? prev : { ...prev, watermarkImage: url });
       }
     }).catch(() => {});
+
+    supabaseService.purgeLegacyMockCertificates().catch(() => {});
   }, []);
 
   // Al cambiar de usuario, redirigir a su vista correspondiente
@@ -276,8 +279,8 @@ export default function App() {
       let liveCert = createDefaultCertificadoData(savedReportWithId);
       if (existingCertRaw) {
         try {
-          const exObj = JSON.parse(existingCertRaw);
-          liveCert = {
+          const exObj = sanitizeCertificadoData(JSON.parse(existingCertRaw));
+          liveCert = sanitizeCertificadoData({
             ...liveCert,
             ...exObj,
             contratistaNombre: savedReportWithId.contratistaNombre || exObj.contratistaNombre,
@@ -289,16 +292,16 @@ export default function App() {
             tipoCuenta: savedReportWithId.tipoCuenta || exObj.tipoCuenta || liveCert.tipoCuenta || 'AHORRO',
             fechaRegistroPresupuestal: savedReportWithId.fechaRegistroPresupuestal || exObj.fechaRegistroPresupuestal || liveCert.fechaRegistroPresupuestal || '',
             codigoRubro: savedReportWithId.codigoRubro || exObj.codigoRubro || liveCert.codigoRubro || '',
-            saludValor: exObj.saludValor || liveCert.saludValor,
-            saludEps: exObj.saludEps || liveCert.saludEps,
-            saludPlanilla: exObj.saludPlanilla || liveCert.saludPlanilla,
-            pensionValor: exObj.pensionValor || liveCert.pensionValor,
-            pensionFondo: exObj.pensionFondo || liveCert.pensionFondo,
-            pensionPlanilla: exObj.pensionPlanilla || liveCert.pensionPlanilla,
-            arpValor: exObj.arpValor || liveCert.arpValor,
-            arpAseguradora: exObj.arpAseguradora || liveCert.arpAseguradora,
-            arpPlanilla: exObj.arpPlanilla || liveCert.arpPlanilla,
-          };
+            saludValor: sanitizeSocialField(exObj.saludValor || liveCert.saludValor),
+            saludEps: sanitizeSocialField(exObj.saludEps || liveCert.saludEps),
+            saludPlanilla: sanitizeSocialField(exObj.saludPlanilla || liveCert.saludPlanilla),
+            pensionValor: sanitizeSocialField(exObj.pensionValor || liveCert.pensionValor),
+            pensionFondo: sanitizeSocialField(exObj.pensionFondo || liveCert.pensionFondo),
+            pensionPlanilla: sanitizeSocialField(exObj.pensionPlanilla || liveCert.pensionPlanilla),
+            arpValor: sanitizeSocialField(exObj.arpValor || liveCert.arpValor),
+            arpAseguradora: sanitizeSocialField(exObj.arpAseguradora || liveCert.arpAseguradora),
+            arpPlanilla: sanitizeSocialField(exObj.arpPlanilla || liveCert.arpPlanilla),
+          });
         } catch (e) {}
       }
 

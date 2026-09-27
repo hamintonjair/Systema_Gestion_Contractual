@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReportPreview from './ReportPreview';
 import { createPortal } from 'react-dom';
 import { Obligacion, ReportData, Anexo, EstadoInforme, FieldComment, extractContratoNroOnly, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData } from '../types';
+import { sanitizeCertificadoData } from '../utils/securitySocialUtils';
 import { 
   Plus, 
   Trash2, 
@@ -239,10 +240,12 @@ export default function ReportEditor({
                               localStorage.getItem(`cert_data_${nroKey}`);
       let existingCert: any = null;
       if (existingCertRaw) {
-        try { existingCert = JSON.parse(existingCertRaw); } catch (e) {}
+        try { 
+          existingCert = sanitizeCertificadoData(JSON.parse(existingCertRaw)); 
+        } catch (e) {}
       }
 
-      const liveCert = {
+      const liveCert = sanitizeCertificadoData({
         ...createDefaultCertificadoData(nextData),
         ...(existingCert || {}),
         valorRubro: res.valorAPagarTabla,
@@ -255,7 +258,7 @@ export default function ReportEditor({
         pagoNro: String(data.informeNro || '1'),
         periodoDesde: existingCert?.periodoDesde || data.periodoDesde || res.fechaInicioPago || '13/08/2026',
         periodoHasta: existingCert?.periodoHasta || data.periodoHasta || res.fechaFinPago || '31/08/2026',
-      };
+      });
 
       localStorage.setItem(`cert_data_${docKey}_${nroKey}`, JSON.stringify(liveCert));
       if (cleanDoc) {

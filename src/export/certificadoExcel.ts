@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs';
 import { CertificadoSupervisionData } from '../types';
+import { sanitizeCertificadoData } from '../utils/securitySocialUtils';
 import { 
   CELL_MAP, 
   PRESUPUESTO_ROWS, 
@@ -123,7 +124,8 @@ interface RubroPresupuestal {
  * Loads the template from public folder, fills fields into specific cells,
  * and returns a Blob of the populated Excel file.
  */
-export async function exportarCertificado(data: CertificadoSupervisionData): Promise<Blob> {
+export async function exportarCertificado(rawInputData: CertificadoSupervisionData): Promise<Blob> {
+  const data = sanitizeCertificadoData(rawInputData);
   console.log('[export] data recibida:', JSON.stringify(data, null, 2));
 
   // 1. Validate required fields

@@ -10,6 +10,7 @@ import html2pdf from 'html2pdf.js';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { exportarCertificado } from '../export/certificadoExcel';
+import { sanitizeCertificadoData, sanitizeSocialField } from '../utils/securitySocialUtils';
 
 interface Props {
   key?: React.Key;
@@ -73,16 +74,16 @@ export default function CertificadoSupervisionDoc({
                     localStorage.getItem(`cert_data_${pNro}`);
       if (saved) {
         try {
-          baseData = JSON.parse(saved);
+          baseData = sanitizeCertificadoData(JSON.parse(saved));
           hasSaved = true;
         } catch (e) {
-          baseData = data || createDefaultCertificadoData(reportData);
+          baseData = sanitizeCertificadoData(data || createDefaultCertificadoData(reportData));
         }
       } else {
-        baseData = data || createDefaultCertificadoData(reportData);
+        baseData = sanitizeCertificadoData(data || createDefaultCertificadoData(reportData));
       }
     } else {
-      baseData = data || createDefaultCertificadoData(reportData);
+      baseData = sanitizeCertificadoData(data || createDefaultCertificadoData(reportData));
     }
 
     if (reportData) {
@@ -111,18 +112,18 @@ export default function CertificadoSupervisionDoc({
         periodoHasta: reportData.periodoHasta || baseData.periodoHasta || liveDefaults.periodoHasta,
         fechaRegistroPresupuestal: reportData.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (baseData.fechaRegistroPresupuestal ? formatDateSlash(baseData.fechaRegistroPresupuestal) : (liveDefaults.fechaRegistroPresupuestal ? formatDateSlash(liveDefaults.fechaRegistroPresupuestal) : '')),
         codigoRubro: reportData.codigoRubro || baseData.codigoRubro || liveDefaults.codigoRubro || '',
-        saludValor: baseData.saludValor || liveDefaults.saludValor,
-        saludEps: baseData.saludEps || liveDefaults.saludEps,
-        saludPlanilla: baseData.saludPlanilla || liveDefaults.saludPlanilla,
-        pensionValor: baseData.pensionValor || liveDefaults.pensionValor,
-        pensionFondo: baseData.pensionFondo || liveDefaults.pensionFondo,
-        pensionPlanilla: baseData.pensionPlanilla || liveDefaults.pensionPlanilla,
-        arpValor: baseData.arpValor || liveDefaults.arpValor,
-        arpAseguradora: baseData.arpAseguradora || liveDefaults.arpAseguradora,
-        arpPlanilla: baseData.arpPlanilla || liveDefaults.arpPlanilla,
+        saludValor: sanitizeSocialField(baseData.saludValor || liveDefaults.saludValor),
+        saludEps: sanitizeSocialField(baseData.saludEps || liveDefaults.saludEps),
+        saludPlanilla: sanitizeSocialField(baseData.saludPlanilla || liveDefaults.saludPlanilla),
+        pensionValor: sanitizeSocialField(baseData.pensionValor || liveDefaults.pensionValor),
+        pensionFondo: sanitizeSocialField(baseData.pensionFondo || liveDefaults.pensionFondo),
+        pensionPlanilla: sanitizeSocialField(baseData.pensionPlanilla || liveDefaults.pensionPlanilla),
+        arpValor: sanitizeSocialField(baseData.arpValor || liveDefaults.arpValor),
+        arpAseguradora: sanitizeSocialField(baseData.arpAseguradora || liveDefaults.arpAseguradora),
+        arpPlanilla: sanitizeSocialField(baseData.arpPlanilla || liveDefaults.arpPlanilla),
       };
     }
-    return baseData;
+    return sanitizeCertificadoData(baseData);
   };
 
   const [formData, setFormData] = useState<CertificadoSupervisionData>(getInitialData);
@@ -167,16 +168,19 @@ export default function CertificadoSupervisionDoc({
                     localStorage.getItem(`cert_data_${pNro}`);
       if (saved) {
         try {
-          baseData = JSON.parse(saved);
+          baseData = sanitizeCertificadoData(JSON.parse(saved));
         } catch (e) {
-          baseData = createDefaultCertificadoData(reportData);
+          baseData = sanitizeCertificadoData(createDefaultCertificadoData(reportData));
         }
       } else {
-        baseData = createDefaultCertificadoData(reportData);
+        baseData = sanitizeCertificadoData(createDefaultCertificadoData(reportData));
       }
     } else {
       return;
     }
+
+    // Ejecutar purga de claves y datos mock heredados en segundo plano
+    supabaseService.purgeLegacyMockCertificates().catch(() => {});
 
     if (reportData) {
       const liveDefaults = createDefaultCertificadoData(reportData);
@@ -214,45 +218,46 @@ export default function CertificadoSupervisionDoc({
         tipoCuenta: reportData.tipoCuenta || baseData.tipoCuenta || liveDefaults.tipoCuenta || 'AHORRO',
         fechaRegistroPresupuestal: reportData.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (baseData.fechaRegistroPresupuestal ? formatDateSlash(baseData.fechaRegistroPresupuestal) : (liveDefaults.fechaRegistroPresupuestal ? formatDateSlash(liveDefaults.fechaRegistroPresupuestal) : '')),
         codigoRubro: reportData.codigoRubro || baseData.codigoRubro || liveDefaults.codigoRubro || '',
-        saludValor: baseData.saludValor || liveDefaults.saludValor,
-        saludEps: baseData.saludEps || liveDefaults.saludEps,
-        saludPlanilla: baseData.saludPlanilla || liveDefaults.saludPlanilla,
-        pensionValor: baseData.pensionValor || liveDefaults.pensionValor,
-        pensionFondo: baseData.pensionFondo || liveDefaults.pensionFondo,
-        pensionPlanilla: baseData.pensionPlanilla || liveDefaults.pensionPlanilla,
-        arpValor: baseData.arpValor || liveDefaults.arpValor,
-        arpAseguradora: baseData.arpAseguradora || liveDefaults.arpAseguradora,
-        arpPlanilla: baseData.arpPlanilla || liveDefaults.arpPlanilla,
+        saludValor: sanitizeSocialField(baseData.saludValor || liveDefaults.saludValor),
+        saludEps: sanitizeSocialField(baseData.saludEps || liveDefaults.saludEps),
+        saludPlanilla: sanitizeSocialField(baseData.saludPlanilla || liveDefaults.saludPlanilla),
+        pensionValor: sanitizeSocialField(baseData.pensionValor || liveDefaults.pensionValor),
+        pensionFondo: sanitizeSocialField(baseData.pensionFondo || liveDefaults.pensionFondo),
+        pensionPlanilla: sanitizeSocialField(baseData.pensionPlanilla || liveDefaults.pensionPlanilla),
+        arpValor: sanitizeSocialField(baseData.arpValor || liveDefaults.arpValor),
+        arpAseguradora: sanitizeSocialField(baseData.arpAseguradora || liveDefaults.arpAseguradora),
+        arpPlanilla: sanitizeSocialField(baseData.arpPlanilla || liveDefaults.arpPlanilla),
         expedicionDia: baseData.expedicionDia || liveDefaults.expedicionDia,
         expedicionMes: baseData.expedicionMes || liveDefaults.expedicionMes,
         expedicionAno: baseData.expedicionAno || liveDefaults.expedicionAno,
       });
     } else {
-      setFormData(baseData);
+      setFormData(sanitizeCertificadoData(baseData));
     }
 
     // Cargar asíncronamente desde Supabase si existe registro persistido
     if (reportData?.id || (reportData?.contratistaDocumento && reportData?.informeNro)) {
       supabaseService.getCertificadoSupervision(reportData.id, reportData.contratistaDocumento, reportData.informeNro).then(serverCert => {
         if (serverCert) {
+          const cleanCert = sanitizeCertificadoData(serverCert);
           const liveDefaults = reportData ? createDefaultCertificadoData(reportData) : null;
           setFormData(prev => ({
             ...prev,
-            ...serverCert,
-            numeroCuenta: reportData?.numeroCuenta || serverCert.numeroCuenta || prev.numeroCuenta || '',
-            banco: reportData?.banco || serverCert.banco || prev.banco || '',
-            tipoCuenta: reportData?.tipoCuenta || serverCert.tipoCuenta || prev.tipoCuenta || 'AHORRO',
-            fechaRegistroPresupuestal: reportData?.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (serverCert.fechaRegistroPresupuestal ? formatDateSlash(serverCert.fechaRegistroPresupuestal) : (prev.fechaRegistroPresupuestal || '')),
-            codigoRubro: reportData?.codigoRubro || serverCert.codigoRubro || prev.codigoRubro || '',
-            saludValor: serverCert.saludValor || prev.saludValor,
-            saludEps: serverCert.saludEps || prev.saludEps,
-            saludPlanilla: serverCert.saludPlanilla || prev.saludPlanilla,
-            pensionValor: serverCert.pensionValor || prev.pensionValor,
-            pensionFondo: serverCert.pensionFondo || prev.pensionFondo,
-            pensionPlanilla: serverCert.pensionPlanilla || prev.pensionPlanilla,
-            arpValor: serverCert.arpValor || prev.arpValor,
-            arpAseguradora: serverCert.arpAseguradora || prev.arpAseguradora,
-            arpPlanilla: serverCert.arpPlanilla || prev.arpPlanilla,
+            ...cleanCert,
+            numeroCuenta: reportData?.numeroCuenta || cleanCert.numeroCuenta || prev.numeroCuenta || '',
+            banco: reportData?.banco || cleanCert.banco || prev.banco || '',
+            tipoCuenta: reportData?.tipoCuenta || cleanCert.tipoCuenta || prev.tipoCuenta || 'AHORRO',
+            fechaRegistroPresupuestal: reportData?.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (cleanCert.fechaRegistroPresupuestal ? formatDateSlash(cleanCert.fechaRegistroPresupuestal) : (prev.fechaRegistroPresupuestal || '')),
+            codigoRubro: reportData?.codigoRubro || cleanCert.codigoRubro || prev.codigoRubro || '',
+            saludValor: sanitizeSocialField(cleanCert.saludValor || prev.saludValor),
+            saludEps: sanitizeSocialField(cleanCert.saludEps || prev.saludEps),
+            saludPlanilla: sanitizeSocialField(cleanCert.saludPlanilla || prev.saludPlanilla),
+            pensionValor: sanitizeSocialField(cleanCert.pensionValor || prev.pensionValor),
+            pensionFondo: sanitizeSocialField(cleanCert.pensionFondo || prev.pensionFondo),
+            pensionPlanilla: sanitizeSocialField(cleanCert.pensionPlanilla || prev.pensionPlanilla),
+            arpValor: sanitizeSocialField(cleanCert.arpValor || prev.arpValor),
+            arpAseguradora: sanitizeSocialField(cleanCert.arpAseguradora || prev.arpAseguradora),
+            arpPlanilla: sanitizeSocialField(cleanCert.arpPlanilla || prev.arpPlanilla),
             // Si el reporte actual tiene plazo explícito, asegurar meses y días calculados
             ...(liveDefaults && reportData?.plazo ? {
               plazoMeses: liveDefaults.plazoMeses,

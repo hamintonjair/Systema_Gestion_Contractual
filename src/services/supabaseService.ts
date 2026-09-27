@@ -4,6 +4,7 @@ import { formatColombianCurrency, formatValorAdicion, formatPlazoLetraYNumero, p
 import { isMainReportComment } from '../utils/commentUtils';
 import { limpiarNumeroMoneda, formatearNumeroTablaCol } from '../utils/paymentPlanUtils';
 import { convertirNumeroALetras } from '../utils/numberToWords';
+import { sanitizeCertificadoData, isLegacyMockSocialSecurity } from '../utils/securitySocialUtils';
 
 const STORAGE_USERS_KEY = 'alcaldia_quibdo_registered_users';
 const STORAGE_PASSWORDS_KEY = 'alcaldia_quibdo_user_passwords';
@@ -3627,7 +3628,7 @@ export const supabaseService = {
     const docKey = certData.contratistaDocumento || '';
     const cleanDoc = docKey.replace(/[^0-9]/g, '');
     const pagoNroStr = String(certData.pagoNro || '1');
-    let mergedCertData = { ...certData };
+    let mergedCertData = sanitizeCertificadoData({ ...certData });
 
     // 1. Guardar copia en LocalStorage inmediatamente con todas las variantes de clave
     if (typeof localStorage !== 'undefined') {
@@ -3699,6 +3700,7 @@ export const supabaseService = {
         }
       }
 
+      mergedCertData = sanitizeCertificadoData(mergedCertData);
       localStorage.setItem(storageKey, JSON.stringify(mergedCertData));
       if (cleanDoc) {
         localStorage.setItem(`cert_data_${cleanDoc}_${pagoNroStr}`, JSON.stringify(mergedCertData));
@@ -3824,6 +3826,8 @@ export const supabaseService = {
           valorPagadoAcumulado: existingDbForm.valorPagadoAcumulado || mergedCertData.valorPagadoAcumulado,
         };
 
+        mergedCertData = sanitizeCertificadoData(mergedCertData);
+
         if (typeof localStorage !== 'undefined') {
           const storageKey = `cert_data_${docKey}_${pagoNroStr}`;
           localStorage.setItem(storageKey, JSON.stringify(mergedCertData));
@@ -3910,7 +3914,17 @@ export const supabaseService = {
 
         if (!error && data) {
           const form = data.datos_formulario ? (data.datos_formulario as CertificadoSupervisionData) : null;
-          if (form) return form;
+          if (form) {
+            const sanitized = sanitizeCertificadoData(form);
+            if (JSON.stringify(form) !== JSON.stringify(sanitized)) {
+              supabase
+                .from('certificaciones_supervision')
+                .update({ datos_formulario: sanitized })
+                .eq('id', data.id)
+                .then();
+            }
+            return sanitized;
+          }
         }
       }
 
@@ -3926,7 +3940,17 @@ export const supabaseService = {
 
         if (!error && data) {
           const form = data.datos_formulario ? (data.datos_formulario as CertificadoSupervisionData) : null;
-          if (form) return form;
+          if (form) {
+            const sanitized = sanitizeCertificadoData(form);
+            if (JSON.stringify(form) !== JSON.stringify(sanitized)) {
+              supabase
+                .from('certificaciones_supervision')
+                .update({ datos_formulario: sanitized })
+                .eq('id', data.id)
+                .then();
+            }
+            return sanitized;
+          }
         }
       }
     } catch (e) {
@@ -3943,12 +3967,61 @@ export const supabaseService = {
         (pagoNro ? localStorage.getItem(`cert_data_${pagoNro}`) : null);
       if (saved) {
         try {
-          return JSON.parse(saved);
+          return sanitizeCertificadoData(JSON.parse(saved));
         } catch (e) {}
       }
     }
 
     return null;
+  },
+
+  // 14.1. Purga automática de datos estáticos/mock legacy en Certificados (COOSALUD, COLFONDO, POSITIVA, etc.)
+  async purgeLegacyMockCertificates(): Promise<void> {
+    try {
+      // 1. Limpieza de LocalStorage
+      if (typeof localStorage !== 'undefined') {
+        const keysToClean: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('cert_data_') || k.startsWith('informe_data_') || k.startsWith('alcaldia_quibdo_report_'))) {
+            keysToClean.push(k);
+          }
+        }
+
+        keysToClean.forEach(k => {
+          try {
+            const raw = localStorage.getItem(k);
+            if (raw && (raw.includes('COOSALUD') || raw.includes('COLFONDO') || raw.includes('POSITIVA') || raw.includes('87049978') || raw.includes('218.900') || raw.includes('280.200') || raw.includes('9.200'))) {
+              const parsed = JSON.parse(raw);
+              const cleaned = sanitizeCertificadoData(parsed);
+              localStorage.setItem(k, JSON.stringify(cleaned));
+            }
+          } catch (e) {}
+        });
+      }
+
+      // 2. Limpieza de registros existentes en la tabla certificaciones_supervision de Supabase
+      const { data: rows, error } = await supabase
+        .from('certificaciones_supervision')
+        .select('id, datos_formulario')
+        .limit(200);
+
+      if (!error && rows && rows.length > 0) {
+        for (const row of rows) {
+          if (row.datos_formulario) {
+            const cleaned = sanitizeCertificadoData(row.datos_formulario);
+            if (JSON.stringify(row.datos_formulario) !== JSON.stringify(cleaned)) {
+              await supabase
+                .from('certificaciones_supervision')
+                .update({ datos_formulario: cleaned })
+                .eq('id', row.id);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error purging legacy mock certificates from Supabase:', e);
+    }
   },
 
   // 14b. Vaciar / Eliminar registro de Certificado de Supervisión de la tabla certificaciones_supervision y cachés
