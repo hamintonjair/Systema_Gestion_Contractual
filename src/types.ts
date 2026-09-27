@@ -373,6 +373,7 @@ export interface ReportData {
   arpValor?: string;
   arpAseguradora?: string;
   arpPlanilla?: string;
+  resaltarSeguridadSocial?: boolean;
 }
 
 import { getDatosLiquidacionPeriodo, limpiarNumeroMoneda } from './utils/paymentPlanUtils';
@@ -449,6 +450,7 @@ export interface CertificadoSupervisionData {
   arpValor: string;
   arpAseguradora: string;
   arpPlanilla: string;
+  resaltarSeguridadSocial?: boolean;
 
   pagoNro: string;
   periodoDesde: string;
@@ -618,6 +620,7 @@ export const createDefaultCertificadoData = (report?: ReportData): CertificadoSu
     arpValor: rep?.arpValor || '',
     arpAseguradora: rep?.arpAseguradora || '',
     arpPlanilla: rep?.arpPlanilla || '',
+    resaltarSeguridadSocial: rep?.resaltarSeguridadSocial !== undefined ? rep.resaltarSeguridadSocial : true,
 
     pagoNro: pagoNroCalculado,
     periodoDesde: periodoDesdeCalculado,

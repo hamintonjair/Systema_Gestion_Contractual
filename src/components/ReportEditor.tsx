@@ -248,6 +248,8 @@ export default function ReportEditor({
       const liveCert = sanitizeCertificadoData({
         ...createDefaultCertificadoData(nextData),
         ...(existingCert || {}),
+        fechaRegistroPresupuestal: nextData.fechaRegistroPresupuestal ? formatDateSlash(nextData.fechaRegistroPresupuestal) : (existingCert?.fechaRegistroPresupuestal || ''),
+        codigoRubro: nextData.codigoRubro || existingCert?.codigoRubro || '',
         valorRubro: res.valorAPagarTabla,
         valorAPagarSinIva: res.valorAPagarTabla,
         valorTotalAPagar: res.valorAPagarTabla,

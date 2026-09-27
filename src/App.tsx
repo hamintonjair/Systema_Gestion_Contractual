@@ -7,7 +7,7 @@ import ReportPreview from './components/ReportPreview';
 import SecretariaAdminView from './components/SecretariaAdminView';
 import SuperAdminView from './components/SuperAdminView';
 import { AuthUser, DEMO_USERS, ReportData, InformeSummary, initialMockData, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData } from './types';
-import { sanitizeCertificadoData, sanitizeSocialField } from './utils/securitySocialUtils';
+import { sanitizeCertificadoData, sanitizeSocialField, sanitizeBudgetField } from './utils/securitySocialUtils';
 import { supabaseService } from './services/supabaseService';
 import { exportInformeToPDF } from './utils/pdfGenerator';
 import { formatFechaAplicacion, formatDateSlash } from './utils/formatters';
@@ -290,8 +290,8 @@ export default function App() {
             numeroCuenta: savedReportWithId.numeroCuenta || exObj.numeroCuenta || liveCert.numeroCuenta || '',
             banco: savedReportWithId.banco || exObj.banco || liveCert.banco || '',
             tipoCuenta: savedReportWithId.tipoCuenta || exObj.tipoCuenta || liveCert.tipoCuenta || 'AHORRO',
-            fechaRegistroPresupuestal: savedReportWithId.fechaRegistroPresupuestal || exObj.fechaRegistroPresupuestal || liveCert.fechaRegistroPresupuestal || '',
-            codigoRubro: savedReportWithId.codigoRubro || exObj.codigoRubro || liveCert.codigoRubro || '',
+            fechaRegistroPresupuestal: sanitizeBudgetField(savedReportWithId.fechaRegistroPresupuestal ? formatDateSlash(savedReportWithId.fechaRegistroPresupuestal) : (exObj.fechaRegistroPresupuestal ? formatDateSlash(exObj.fechaRegistroPresupuestal) : ''), true),
+            codigoRubro: sanitizeBudgetField(savedReportWithId.codigoRubro || exObj.codigoRubro || '', false),
             saludValor: sanitizeSocialField(exObj.saludValor || liveCert.saludValor),
             saludEps: sanitizeSocialField(exObj.saludEps || liveCert.saludEps),
             saludPlanilla: sanitizeSocialField(exObj.saludPlanilla || liveCert.saludPlanilla),

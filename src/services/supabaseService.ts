@@ -1609,10 +1609,15 @@ export const supabaseService = {
 
     // 4. Actualizar el contratista_id en la tabla contratos
     try {
-      await supabase
-        .from('contratos')
-        .update({ contratista_id: finalUserId })
-        .or(contractor.contratoNro ? `contratista_id.eq.${contractor.id},contrato_nro.eq.${contractor.contratoNro}` : `contratista_id.eq.${contractor.id}`);
+      if (contractor.id && isUuid(contractor.id)) {
+        if (contractor.contratoNro) {
+          await supabase.from('contratos').update({ contratista_id: finalUserId }).or(`contratista_id.eq.${contractor.id},contrato_nro.eq.${contractor.contratoNro}`);
+        } else {
+          await supabase.from('contratos').update({ contratista_id: finalUserId }).eq('contratista_id', contractor.id);
+        }
+      } else if (contractor.contratoNro) {
+        await supabase.from('contratos').update({ contratista_id: finalUserId }).eq('contrato_nro', contractor.contratoNro);
+      }
     } catch (e) {
       console.warn('Contratos update notice during sync:', e);
     }
@@ -1827,7 +1832,7 @@ export const supabaseService = {
       if (isUuid(contractorId)) {
         await supabase.from('profiles').delete().eq('id', contractorId);
       } else {
-        await supabase.from('profiles').delete().or(`id.eq.${contractorId},documento_identidad.eq.${contractorId}`);
+        await supabase.from('profiles').delete().eq('documento_identidad', contractorId);
       }
     } catch (e) {
       console.warn('Error deleting contractor from Supabase:', e);
@@ -1922,10 +1927,20 @@ export const supabaseService = {
     if (!identifier) return null;
     const cleanId = identifier.trim().replace(/\./g, '');
     try {
+      const orConditions: string[] = [];
+      if (isUuid(cleanId)) {
+        orConditions.push(`id.eq.${cleanId}`);
+      }
+      orConditions.push(`documento_identidad.eq.${cleanId}`);
+      if (identifier !== cleanId) {
+        orConditions.push(`documento_identidad.eq.${identifier}`);
+      }
+      orConditions.push(`email.ilike.${cleanId}`);
+
       let { data } = await supabase
         .from('profiles')
         .select('*, sec_secretarias(*), contratos(*)')
-        .or(`id.eq.${cleanId},documento_identidad.eq.${cleanId},email.ilike.${cleanId}`)
+        .or(orConditions.join(','))
         .limit(1);
 
       if (data && data.length > 0) {
@@ -3991,7 +4006,7 @@ export const supabaseService = {
         keysToClean.forEach(k => {
           try {
             const raw = localStorage.getItem(k);
-            if (raw && (raw.includes('COOSALUD') || raw.includes('COLFONDO') || raw.includes('POSITIVA') || raw.includes('87049978') || raw.includes('218.900') || raw.includes('280.200') || raw.includes('9.200'))) {
+            if (raw && (raw.includes('COOSALUD') || raw.includes('COLFONDO') || raw.includes('POSITIVA') || raw.includes('87049978') || raw.includes('218.900') || raw.includes('280.200') || raw.includes('9.200') || raw.includes('2.3.2.02.02.008.04.01.02') || raw.includes('13/08/2026') || raw.includes('31/08/2026'))) {
               const parsed = JSON.parse(raw);
               const cleaned = sanitizeCertificadoData(parsed);
               localStorage.setItem(k, JSON.stringify(cleaned));

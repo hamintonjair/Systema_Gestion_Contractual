@@ -10,7 +10,7 @@ import html2pdf from 'html2pdf.js';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { exportarCertificado } from '../export/certificadoExcel';
-import { sanitizeCertificadoData, sanitizeSocialField } from '../utils/securitySocialUtils';
+import { sanitizeCertificadoData, sanitizeSocialField, sanitizeBudgetField } from '../utils/securitySocialUtils';
 
 interface Props {
   key?: React.Key;
@@ -110,8 +110,8 @@ export default function CertificadoSupervisionDoc({
         tipoCuenta: reportData.tipoCuenta || baseData.tipoCuenta || liveDefaults.tipoCuenta || 'AHORRO',
         periodoDesde: reportData.periodoDesde || baseData.periodoDesde || liveDefaults.periodoDesde,
         periodoHasta: reportData.periodoHasta || baseData.periodoHasta || liveDefaults.periodoHasta,
-        fechaRegistroPresupuestal: reportData.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (baseData.fechaRegistroPresupuestal ? formatDateSlash(baseData.fechaRegistroPresupuestal) : (liveDefaults.fechaRegistroPresupuestal ? formatDateSlash(liveDefaults.fechaRegistroPresupuestal) : '')),
-        codigoRubro: reportData.codigoRubro || baseData.codigoRubro || liveDefaults.codigoRubro || '',
+        fechaRegistroPresupuestal: sanitizeBudgetField(reportData.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (baseData.fechaRegistroPresupuestal ? formatDateSlash(baseData.fechaRegistroPresupuestal) : ''), true),
+        codigoRubro: sanitizeBudgetField(reportData.codigoRubro || baseData.codigoRubro || '', false),
         saludValor: sanitizeSocialField(baseData.saludValor || liveDefaults.saludValor),
         saludEps: sanitizeSocialField(baseData.saludEps || liveDefaults.saludEps),
         saludPlanilla: sanitizeSocialField(baseData.saludPlanilla || liveDefaults.saludPlanilla),
@@ -216,8 +216,8 @@ export default function CertificadoSupervisionDoc({
         numeroCuenta: reportData.numeroCuenta || baseData.numeroCuenta || liveDefaults.numeroCuenta || '',
         banco: reportData.banco || baseData.banco || liveDefaults.banco || '',
         tipoCuenta: reportData.tipoCuenta || baseData.tipoCuenta || liveDefaults.tipoCuenta || 'AHORRO',
-        fechaRegistroPresupuestal: reportData.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (baseData.fechaRegistroPresupuestal ? formatDateSlash(baseData.fechaRegistroPresupuestal) : (liveDefaults.fechaRegistroPresupuestal ? formatDateSlash(liveDefaults.fechaRegistroPresupuestal) : '')),
-        codigoRubro: reportData.codigoRubro || baseData.codigoRubro || liveDefaults.codigoRubro || '',
+        fechaRegistroPresupuestal: sanitizeBudgetField(reportData.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (baseData.fechaRegistroPresupuestal ? formatDateSlash(baseData.fechaRegistroPresupuestal) : ''), true),
+        codigoRubro: sanitizeBudgetField(reportData.codigoRubro || baseData.codigoRubro || '', false),
         saludValor: sanitizeSocialField(baseData.saludValor || liveDefaults.saludValor),
         saludEps: sanitizeSocialField(baseData.saludEps || liveDefaults.saludEps),
         saludPlanilla: sanitizeSocialField(baseData.saludPlanilla || liveDefaults.saludPlanilla),
@@ -247,8 +247,8 @@ export default function CertificadoSupervisionDoc({
             numeroCuenta: reportData?.numeroCuenta || cleanCert.numeroCuenta || prev.numeroCuenta || '',
             banco: reportData?.banco || cleanCert.banco || prev.banco || '',
             tipoCuenta: reportData?.tipoCuenta || cleanCert.tipoCuenta || prev.tipoCuenta || 'AHORRO',
-            fechaRegistroPresupuestal: reportData?.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (cleanCert.fechaRegistroPresupuestal ? formatDateSlash(cleanCert.fechaRegistroPresupuestal) : (prev.fechaRegistroPresupuestal || '')),
-            codigoRubro: reportData?.codigoRubro || cleanCert.codigoRubro || prev.codigoRubro || '',
+            fechaRegistroPresupuestal: sanitizeBudgetField(reportData?.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (cleanCert.fechaRegistroPresupuestal ? formatDateSlash(cleanCert.fechaRegistroPresupuestal) : (prev.fechaRegistroPresupuestal || '')), true),
+            codigoRubro: sanitizeBudgetField(reportData?.codigoRubro || cleanCert.codigoRubro || prev.codigoRubro || '', false),
             saludValor: sanitizeSocialField(cleanCert.saludValor || prev.saludValor),
             saludEps: sanitizeSocialField(cleanCert.saludEps || prev.saludEps),
             saludPlanilla: sanitizeSocialField(cleanCert.saludPlanilla || prev.saludPlanilla),
@@ -1995,190 +1995,171 @@ export default function CertificadoSupervisionDoc({
         </div>
 
         {/* 5. INFORMACIÓN DE APORTES A SEGURIDAD SOCIAL */}
-        <div className="w-full mb-1.5 print:mb-1.5">
-          <div className="bg-[#d1d5db] text-center font-bold py-0.5 text-[10px] uppercase tracking-wide text-black mb-1 border-y border-black/30">
-            INFORMACIÓN DE APORTES A SEGURIDAD SOCIAL
-          </div>
-          
-          {/* Cuadro principal más corto con doble borde exterior y 3 bloques separados por espacios */}
-          <div className="w-[93%] mx-auto border-[2.5px] border-double border-black p-[2px] bg-white">
-            <div className="flex items-stretch justify-between gap-2.5 text-[9.5px]">
+        {(() => {
+          const isEmptySocialCell = (val?: string) => {
+            if (!val) return true;
+            const clean = val.trim().replace(/\$/g, '').replace(/0/g, '').trim();
+            return clean === '';
+          };
+
+          const isAnySocialEmpty =
+            isEmptySocialCell(formData.saludValor) ||
+            isEmptySocialCell(formData.pensionValor) ||
+            isEmptySocialCell(formData.arpValor) ||
+            isEmptySocialCell(formData.saludEps) ||
+            isEmptySocialCell(formData.pensionFondo) ||
+            isEmptySocialCell(formData.arpAseguradora) ||
+            isEmptySocialCell(formData.saludPlanilla) ||
+            isEmptySocialCell(formData.pensionPlanilla) ||
+            isEmptySocialCell(formData.arpPlanilla);
+
+          const renderSocialValueCell = (
+            fieldKey: keyof CertificadoSupervisionData,
+            val: string,
+            align: 'right' | 'left' = 'right',
+            uppercase: boolean = false
+          ) => {
+            const empty = isEmptySocialCell(val);
+            const bgClass = empty ? 'bg-amber-100/90 print:bg-transparent' : 'bg-white';
+
+            if (isEditing) {
+              return (
+                <input
+                  type="text"
+                  value={val}
+                  onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+                  className={`${
+                    empty
+                      ? 'bg-amber-200/80 text-amber-950 font-bold placeholder-amber-700/60 focus:bg-amber-100 ring-1 ring-amber-400'
+                      : 'bg-amber-50 text-black font-normal focus:bg-amber-100'
+                  } ${align === 'right' ? 'text-right' : 'text-left'} ${
+                    uppercase ? 'uppercase' : 'font-mono'
+                  } text-[9.5px] focus:outline-none w-full px-1`}
+                  style={{ color: '#000000' }}
+                  placeholder={empty ? 'Resaltado (Sin datos)' : ''}
+                />
+              );
+            }
+
+            return (
+              <div className={`w-full ${align === 'right' ? 'text-right' : 'text-left'} ${bgClass} px-0.5 py-0.5 min-h-[15px]`}>
+                {empty ? (
+                  <span className="inline-block w-full text-center bg-amber-200/90 text-amber-950 text-[8.5px] font-bold italic print:bg-transparent print:text-transparent">
+                    (Resaltado - Sin datos)
+                  </span>
+                ) : (
+                  <span className={`${uppercase ? 'uppercase' : 'font-mono'} text-[9.5px] text-black`}>
+                    {val}
+                  </span>
+                )}
+              </div>
+            );
+          };
+
+          return (
+            <div className="w-full mb-1.5 print:mb-1.5">
+              <div className={`text-center font-bold py-0.5 text-[10px] uppercase tracking-wide text-black mb-1 border-y border-black/30 flex items-center justify-center gap-1.5 ${
+                isAnySocialEmpty ? 'bg-amber-200 print:bg-[#d1d5db]' : 'bg-[#d1d5db]'
+              }`}>
+                <span>INFORMACIÓN DE APORTES A SEGURIDAD SOCIAL</span>
+                {isAnySocialEmpty && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 bg-amber-600 text-white text-[8px] font-extrabold rounded-full print:hidden">
+                    ⚠️ Resaltado (Sin datos)
+                  </span>
+                )}
+              </div>
               
-              {/* Bloque 1: Salud / Pensión / ARP valores */}
-              <div className="w-[28%] border border-black bg-white">
-                <table className="w-full border-collapse">
-                  <tbody>
-                    <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal w-[46%] text-center text-[9.5px]">Salud</td>
-                      <td className="py-0 px-2 font-mono text-right w-[54%] text-[9.5px]">
-                        {isEditing ? (
-                          <input 
-                            type="text"
-                            value={formData.saludValor}
-                            onChange={(e) => handleFieldChange('saludValor', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
-                            style={{ color: '#000000' }}
-                          />
-                        ) : (
-                          formData.saludValor
-                        )}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Pension</td>
-                      <td className="py-0 px-2 font-mono text-right text-[9.5px]">
-                        {isEditing ? (
-                          <input 
-                            type="text"
-                            value={formData.pensionValor}
-                            onChange={(e) => handleFieldChange('pensionValor', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
-                            style={{ color: '#000000' }}
-                          />
-                        ) : (
-                          formData.pensionValor
-                        )}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">A.R.P</td>
-                      <td className="py-0 px-2 font-mono text-right text-[9.5px]">
-                        {isEditing ? (
-                          <input 
-                            type="text"
-                            value={formData.arpValor}
-                            onChange={(e) => handleFieldChange('arpValor', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
-                            style={{ color: '#000000' }}
-                          />
-                        ) : (
-                          formData.arpValor
-                        )}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              {/* Cuadro principal más corto con doble borde exterior y 3 bloques separados por espacios */}
+              <div className="w-[93%] mx-auto border-[2.5px] border-double border-black p-[2px] bg-white">
+                <div className="flex items-stretch justify-between gap-2.5 text-[9.5px]">
+                  
+                  {/* Bloque 1: Salud / Pensión / ARP valores */}
+                  <div className="w-[28%] border border-black bg-white">
+                    <table className="w-full border-collapse">
+                      <tbody>
+                        <tr className="border-b border-black">
+                          <td className="py-0 px-1.5 border-r border-black font-normal w-[46%] text-center text-[9.5px]">Salud</td>
+                          <td className="py-0 px-1 font-mono text-right w-[54%] text-[9.5px]">
+                            {renderSocialValueCell('saludValor', formData.saludValor, 'right', false)}
+                          </td>
+                        </tr>
+                        <tr className="border-b border-black">
+                          <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Pension</td>
+                          <td className="py-0 px-1 font-mono text-right text-[9.5px]">
+                            {renderSocialValueCell('pensionValor', formData.pensionValor, 'right', false)}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">A.R.P</td>
+                          <td className="py-0 px-1 font-mono text-right text-[9.5px]">
+                            {renderSocialValueCell('arpValor', formData.arpValor, 'right', false)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Bloque 2: EPS, Fondo Pensiones, ARP Entidades */}
+                  <div className="w-[38%] border border-black bg-white">
+                    <table className="w-full border-collapse">
+                      <tbody>
+                        <tr className="border-b border-black">
+                          <td className="py-0 px-1.5 border-r border-black font-normal w-[46%] text-center text-[9.5px]">EPS</td>
+                          <td className="py-0 px-1 font-normal uppercase text-right w-[54%] text-[9.5px]">
+                            {renderSocialValueCell('saludEps', formData.saludEps, 'right', true)}
+                          </td>
+                        </tr>
+                        <tr className="border-b border-black">
+                          <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Fondo Pensiones</td>
+                          <td className="py-0 px-1 font-normal uppercase text-right text-[9.5px]">
+                            {renderSocialValueCell('pensionFondo', formData.pensionFondo, 'right', true)}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">A.R.P</td>
+                          <td className="py-0 px-1 font-normal uppercase text-right text-[9.5px]">
+                            {renderSocialValueCell('arpAseguradora', formData.arpAseguradora, 'right', true)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Bloque 3: Número de planilla */}
+                  <div className="w-[34%] border border-black bg-white">
+                    <table className="w-full border-collapse">
+                      <tbody>
+                        <tr className="border-b border-black">
+                          <td className="py-0 px-1.5 border-r border-black font-normal w-[52%] text-center text-[9.5px]">Número de planilla</td>
+                          <td className="py-0 px-1 font-mono text-right w-[48%] text-[9.5px]">
+                            {renderSocialValueCell('saludPlanilla', formData.saludPlanilla, 'right', false)}
+                          </td>
+                        </tr>
+                        <tr className="border-b border-black">
+                          <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Número de planilla</td>
+                          <td className="py-0 px-1 font-mono text-right text-[9.5px]">
+                            {renderSocialValueCell('pensionPlanilla', formData.pensionPlanilla, 'right', false)}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Número de planilla</td>
+                          <td className="py-0 px-1 font-mono text-right text-[9.5px]">
+                            {renderSocialValueCell('arpPlanilla', formData.arpPlanilla, 'right', false)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                </div>
               </div>
 
-              {/* Bloque 2: EPS, Fondo Pensiones, ARP Entidades */}
-              <div className="w-[38%] border border-black bg-white">
-                <table className="w-full border-collapse">
-                  <tbody>
-                    <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal w-[46%] text-center text-[9.5px]">EPS</td>
-                      <td className="py-0 px-2 font-normal uppercase text-right w-[54%] text-[9.5px]">
-                        {isEditing ? (
-                          <input 
-                            type="text"
-                            value={formData.saludEps}
-                            onChange={(e) => handleFieldChange('saludEps', e.target.value)}
-                            className="bg-amber-50 text-right uppercase text-[9.5px] focus:outline-none w-full"
-                            style={{ color: '#000000' }}
-                          />
-                        ) : (
-                          formData.saludEps
-                        )}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Fondo Pensiones</td>
-                      <td className="py-0 px-2 font-normal uppercase text-right text-[9.5px]">
-                        {isEditing ? (
-                          <input 
-                            type="text"
-                            value={formData.pensionFondo}
-                            onChange={(e) => handleFieldChange('pensionFondo', e.target.value)}
-                            className="bg-amber-50 text-right uppercase text-[9.5px] focus:outline-none w-full"
-                            style={{ color: '#000000' }}
-                          />
-                        ) : (
-                          formData.pensionFondo
-                        )}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">A.R.P</td>
-                      <td className="py-0 px-2 font-normal uppercase text-right text-[9.5px]">
-                        {isEditing ? (
-                          <input 
-                            type="text"
-                            value={formData.arpAseguradora}
-                            onChange={(e) => handleFieldChange('arpAseguradora', e.target.value)}
-                            className="bg-amber-50 text-right uppercase text-[9.5px] focus:outline-none w-full"
-                            style={{ color: '#000000' }}
-                          />
-                        ) : (
-                          formData.arpAseguradora
-                        )}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="pt-0.5 text-[8.5px] text-center font-normal text-black w-[93%] mx-auto leading-tight">
+                ***Nota: El pago del Fondo de Solidaridad Pensional - FSP, aplica únicamente cuando la base de cotizacion es mayor a 4 SMMLV.
               </div>
-
-              {/* Bloque 3: Número de planilla */}
-              <div className="w-[34%] border border-black bg-white">
-                <table className="w-full border-collapse">
-                  <tbody>
-                    <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal w-[52%] text-center text-[9.5px]">Número de planilla</td>
-                      <td className="py-0 px-2 font-mono text-right w-[48%] text-[9.5px]">
-                        {isEditing ? (
-                          <input 
-                            type="text"
-                            value={formData.saludPlanilla}
-                            onChange={(e) => handleFieldChange('saludPlanilla', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
-                            style={{ color: '#000000' }}
-                          />
-                        ) : (
-                          formData.saludPlanilla
-                        )}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-black">
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Número de planilla</td>
-                      <td className="py-0 px-2 font-mono text-right text-[9.5px]">
-                        {isEditing ? (
-                          <input 
-                            type="text"
-                            value={formData.pensionPlanilla}
-                            onChange={(e) => handleFieldChange('pensionPlanilla', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
-                            style={{ color: '#000000' }}
-                          />
-                        ) : (
-                          formData.pensionPlanilla
-                        )}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-0 px-1.5 border-r border-black font-normal text-center text-[9.5px]">Número de planilla</td>
-                      <td className="py-0 px-2 font-mono text-right text-[9.5px]">
-                        {isEditing ? (
-                          <input 
-                            type="text"
-                            value={formData.arpPlanilla}
-                            onChange={(e) => handleFieldChange('arpPlanilla', e.target.value)}
-                            className="bg-amber-50 text-right font-mono text-[9.5px] focus:outline-none w-full"
-                            style={{ color: '#000000' }}
-                          />
-                        ) : (
-                          formData.arpPlanilla
-                        )}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
             </div>
-          </div>
-
-          <div className="pt-0.5 text-[8.5px] text-center font-normal text-black w-[93%] mx-auto leading-tight">
-            ***Nota: El pago del Fondo de Solidaridad Pensional - FSP, aplica únicamente cuando la base de cotizacion es mayor a 4 SMMLV.
-          </div>
-        </div>
+          );
+        })()}
 
         {/* 6. INFORMACIÓN PARA LA LIQUIDACIÓN DEL PAGO */}
         <div className="w-full mb-1.5 print:mb-1.5">

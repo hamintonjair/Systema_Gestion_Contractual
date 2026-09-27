@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { CertificadoSupervisionData, ReportData, createDefaultCertificadoData } from '../types';
+import { sanitizeCertificadoData, sanitizeBudgetField } from '../utils/securitySocialUtils';
+import { formatDateSlash } from '../utils/formatters';
 import CertificadoSupervisionDoc from './CertificadoSupervisionDoc';
 import { X, ShieldCheck, Printer, Download, Sparkles } from 'lucide-react';
 
@@ -19,33 +21,35 @@ export default function CertificadoSupervisionModal({
   isEditable = true,
 }: Props) {
   const [certData, setCertData] = useState<CertificadoSupervisionData>(() => {
-    const defaults = createDefaultCertificadoData(reportData);
+    const defaults = sanitizeCertificadoData(createDefaultCertificadoData(reportData));
     if (initialCertData) {
-      return {
+      const cleanInitial = sanitizeCertificadoData(initialCertData);
+      return sanitizeCertificadoData({
         ...defaults,
-        ...initialCertData,
-        fechaRegistroPresupuestal: reportData?.fechaRegistroPresupuestal || initialCertData.fechaRegistroPresupuestal || defaults.fechaRegistroPresupuestal || '',
-        codigoRubro: reportData?.codigoRubro || initialCertData.codigoRubro || defaults.codigoRubro || '',
-        numeroCuenta: reportData?.numeroCuenta || initialCertData.numeroCuenta || defaults.numeroCuenta || '',
-        banco: reportData?.banco || initialCertData.banco || defaults.banco || '',
-        tipoCuenta: reportData?.tipoCuenta || initialCertData.tipoCuenta || defaults.tipoCuenta || 'AHORRO',
-      };
+        ...cleanInitial,
+        fechaRegistroPresupuestal: sanitizeBudgetField(reportData?.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (cleanInitial.fechaRegistroPresupuestal ? formatDateSlash(cleanInitial.fechaRegistroPresupuestal) : ''), true),
+        codigoRubro: sanitizeBudgetField(reportData?.codigoRubro || cleanInitial.codigoRubro || '', false),
+        numeroCuenta: reportData?.numeroCuenta || cleanInitial.numeroCuenta || defaults.numeroCuenta || '',
+        banco: reportData?.banco || cleanInitial.banco || defaults.banco || '',
+        tipoCuenta: reportData?.tipoCuenta || cleanInitial.tipoCuenta || defaults.tipoCuenta || 'AHORRO',
+      });
     }
     return defaults;
   });
 
   React.useEffect(() => {
-    const defaults = createDefaultCertificadoData(reportData);
+    const defaults = sanitizeCertificadoData(createDefaultCertificadoData(reportData));
     if (initialCertData) {
-      setCertData({
+      const cleanInitial = sanitizeCertificadoData(initialCertData);
+      setCertData(sanitizeCertificadoData({
         ...defaults,
-        ...initialCertData,
-        fechaRegistroPresupuestal: reportData?.fechaRegistroPresupuestal || initialCertData.fechaRegistroPresupuestal || defaults.fechaRegistroPresupuestal || '',
-        codigoRubro: reportData?.codigoRubro || initialCertData.codigoRubro || defaults.codigoRubro || '',
-        numeroCuenta: reportData?.numeroCuenta || initialCertData.numeroCuenta || defaults.numeroCuenta || '',
-        banco: reportData?.banco || initialCertData.banco || defaults.banco || '',
-        tipoCuenta: reportData?.tipoCuenta || initialCertData.tipoCuenta || defaults.tipoCuenta || 'AHORRO',
-      });
+        ...cleanInitial,
+        fechaRegistroPresupuestal: sanitizeBudgetField(reportData?.fechaRegistroPresupuestal ? formatDateSlash(reportData.fechaRegistroPresupuestal) : (cleanInitial.fechaRegistroPresupuestal ? formatDateSlash(cleanInitial.fechaRegistroPresupuestal) : ''), true),
+        codigoRubro: sanitizeBudgetField(reportData?.codigoRubro || cleanInitial.codigoRubro || '', false),
+        numeroCuenta: reportData?.numeroCuenta || cleanInitial.numeroCuenta || defaults.numeroCuenta || '',
+        banco: reportData?.banco || cleanInitial.banco || defaults.banco || '',
+        tipoCuenta: reportData?.tipoCuenta || cleanInitial.tipoCuenta || defaults.tipoCuenta || 'AHORRO',
+      }));
     } else if (reportData) {
       setCertData(defaults);
     }
