@@ -1982,27 +1982,61 @@ export const supabaseService = {
           } catch (ie) {}
         }
 
-        // Fallback: Si no tiene dirección en perfil, intentar buscar en sus informes
+        // Fallback: Si no tiene dirección o datos bancarios en perfil/contrato, intentar buscar en sus informes
         let valMensual = '';
+        let bancoFromReport = '';
+        let numCuentaFromReport = '';
+        let tipoCuentaFromReport = '';
+        let ciudadFromReport = '';
+        let dirFromReport = '';
+        let fechaRegistroFromReport = '';
+        let codigoRubroFromReport = '';
+
         if (cont?.id) {
           try {
             const { data: latestReport } = await supabase
               .from('informes_mensuales')
-              .select('observaciones')
+              .select('observaciones, payload')
               .eq('contrato_id', cont.id)
               .order('informe_nro', { ascending: false })
               .limit(1)
               .maybeSingle();
 
             if (latestReport?.observaciones) {
-              const { valorMensualText } = parseObservacionesAndComments(latestReport.observaciones);
-              if (valorMensualText) {
-                valMensual = valorMensualText;
+              const { 
+                valorMensualText, 
+                bancoText, 
+                numeroCuentaText, 
+                tipoCuentaText, 
+                ciudadText, 
+                fechaRegistroPresupuestalText, 
+                codigoRubroText 
+              } = parseObservacionesAndComments(latestReport.observaciones);
+              if (valorMensualText) valMensual = valorMensualText;
+              if (bancoText) bancoFromReport = bancoText;
+              if (numeroCuentaText) numCuentaFromReport = numeroCuentaText;
+              if (tipoCuentaText) tipoCuentaFromReport = tipoCuentaText;
+              if (ciudadText) ciudadFromReport = ciudadText;
+              if (fechaRegistroPresupuestalText) fechaRegistroFromReport = fechaRegistroPresupuestalText;
+              if (codigoRubroText) codigoRubroFromReport = codigoRubroText;
+            }
+            if (latestReport?.payload) {
+              const p = latestReport.payload;
+              if (p.banco && !bancoFromReport) bancoFromReport = p.banco;
+              if (p.numeroCuenta && !numCuentaFromReport) numCuentaFromReport = p.numeroCuenta;
+              if (p.tipoCuenta && !tipoCuentaFromReport) tipoCuentaFromReport = p.tipoCuenta;
+              if (p.ciudad && !ciudadFromReport) ciudadFromReport = p.ciudad;
+              if ((p.direccion || p.barrio || p.contratistaDireccion) && !dirFromReport) {
+                dirFromReport = p.direccion || p.barrio || p.contratistaDireccion;
               }
             }
           } catch (e) {
             console.warn('Error fetching latest report inside getUserProfile:', e);
           }
+        }
+
+        if (!dirVal && dirFromReport) {
+          dirVal = dirFromReport;
         }
 
         if (!dirVal && row.documento_identidad) {
@@ -2058,11 +2092,13 @@ export const supabaseService = {
           plazo: cont?.plazo_meses ? `${cont.plazo_meses} meses` : '',
           fechaInicio: cont?.fecha_inicio ? formatDateSlash(cont.fecha_inicio) : '',
           fechaTerminacion: cont?.fecha_terminacion ? formatDateSlash(cont.fecha_terminacion) : '',
-          numeroCuenta: cont?.numero_cuenta || '',
-          banco: cont?.banco || '',
-          tipoCuenta: cont?.tipo_cuenta || '',
-          ciudad: cont?.ciudad || '',
-          ciudadCuenta: cont?.ciudad || '',
+          numeroCuenta: cont?.numero_cuenta || numCuentaFromReport || '',
+          banco: cont?.banco || bancoFromReport || '',
+          tipoCuenta: cont?.tipo_cuenta || tipoCuentaFromReport || '',
+          ciudad: cont?.ciudad || ciudadFromReport || '',
+          ciudadCuenta: cont?.ciudad || ciudadFromReport || '',
+          fechaRegistroPresupuestal: fechaRegistroFromReport || '',
+          codigoRubro: codigoRubroFromReport || '',
           supervisorNombre: cont?.supervisor_nombre || '',
           supervisorDocumento: cont?.supervisor_documento || '',
         };
@@ -2756,9 +2792,9 @@ export const supabaseService = {
             apoyo_supervision_nombre: report.apoyoSupervisionNombre && report.apoyoSupervisionNombre !== 'N/A' ? report.apoyoSupervisionNombre : null,
             apoyo_supervision_documento: report.apoyoSupervisionDocumento && report.apoyoSupervisionDocumento !== 'N/A' ? report.apoyoSupervisionDocumento : null,
             numero_cuenta: report.numeroCuenta || user?.numeroCuenta || '',
-            banco: report.banco || user?.banco || 'BANCOLOMBIA',
+            banco: report.banco || user?.banco || '',
             tipo_cuenta: report.tipoCuenta || user?.tipoCuenta || 'AHORRO',
-            ciudad: report.ciudad || report.ciudadCuenta || user?.ciudad || 'CHOCÓ',
+            ciudad: report.ciudad || report.ciudadCuenta || user?.ciudad || '',
           }).eq('id', contratoId);
 
           const dirVal = report.direccion || report.barrio || report.contratistaDireccion;

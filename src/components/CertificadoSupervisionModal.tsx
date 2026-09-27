@@ -27,7 +27,7 @@ export default function CertificadoSupervisionModal({
         fechaRegistroPresupuestal: reportData?.fechaRegistroPresupuestal || initialCertData.fechaRegistroPresupuestal || defaults.fechaRegistroPresupuestal || '',
         codigoRubro: reportData?.codigoRubro || initialCertData.codigoRubro || defaults.codigoRubro || '',
         numeroCuenta: reportData?.numeroCuenta || initialCertData.numeroCuenta || defaults.numeroCuenta || '',
-        banco: reportData?.banco || initialCertData.banco || defaults.banco || 'BANCOLOMBIA',
+        banco: reportData?.banco || initialCertData.banco || defaults.banco || '',
         tipoCuenta: reportData?.tipoCuenta || initialCertData.tipoCuenta || defaults.tipoCuenta || 'AHORRO',
       };
     }
@@ -43,7 +43,7 @@ export default function CertificadoSupervisionModal({
         fechaRegistroPresupuestal: reportData?.fechaRegistroPresupuestal || initialCertData.fechaRegistroPresupuestal || defaults.fechaRegistroPresupuestal || '',
         codigoRubro: reportData?.codigoRubro || initialCertData.codigoRubro || defaults.codigoRubro || '',
         numeroCuenta: reportData?.numeroCuenta || initialCertData.numeroCuenta || defaults.numeroCuenta || '',
-        banco: reportData?.banco || initialCertData.banco || defaults.banco || 'BANCOLOMBIA',
+        banco: reportData?.banco || initialCertData.banco || defaults.banco || '',
         tipoCuenta: reportData?.tipoCuenta || initialCertData.tipoCuenta || defaults.tipoCuenta || 'AHORRO',
       });
     } else if (reportData) {

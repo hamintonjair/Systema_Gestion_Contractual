@@ -103,6 +103,15 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
             if ((!user.nombreCompleto || user.nombreCompleto === 'USUARIO REGISTRADO') && fullProf.nombreCompleto) {
               user.nombreCompleto = fullProf.nombreCompleto;
             }
+            if (!user.banco && fullProf.banco) user.banco = fullProf.banco;
+            if (!user.numeroCuenta && fullProf.numeroCuenta) user.numeroCuenta = fullProf.numeroCuenta;
+            if (!user.tipoCuenta && fullProf.tipoCuenta) user.tipoCuenta = fullProf.tipoCuenta;
+            if (!user.ciudad && fullProf.ciudad) user.ciudad = fullProf.ciudad;
+            if (!user.direccion && fullProf.direccion) user.direccion = fullProf.direccion;
+            if (!user.barrio && fullProf.barrio) user.barrio = fullProf.barrio;
+            if (!user.telefono && fullProf.telefono) user.telefono = fullProf.telefono;
+            if (!user.fechaRegistroPresupuestal && fullProf.fechaRegistroPresupuestal) user.fechaRegistroPresupuestal = fullProf.fechaRegistroPresupuestal;
+            if (!user.codigoRubro && fullProf.codigoRubro) user.codigoRubro = fullProf.codigoRubro;
           }
         } catch (ue) {}
       }
@@ -245,11 +254,15 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
     if (!found) return null;
     return {
       ...found,
+      banco: found.banco || user.banco || '',
+      numeroCuenta: found.numeroCuenta || user.numeroCuenta || '',
+      tipoCuenta: found.tipoCuenta || user.tipoCuenta || '',
+      ciudad: found.ciudad || user.ciudad || user.ciudadCuenta || '',
       barrio: found.barrio || found.direccion || user.barrio || user.direccion || '',
       direccion: found.direccion || found.barrio || user.direccion || user.barrio || '',
       contratistaDireccion: found.contratistaDireccion || found.barrio || found.direccion || user.barrio || user.direccion || '',
     };
-  }, [reportsList, selectedDesembolsoInformeId, user.barrio, user.direccion]);
+  }, [reportsList, selectedDesembolsoInformeId, user.barrio, user.direccion, user.banco, user.numeroCuenta, user.tipoCuenta, user.ciudad, user.ciudadCuenta]);
 
   const [loadingDb, setLoadingDb] = useState(true);
   const [savingReportId, setSavingReportId] = useState<string | null>(null);

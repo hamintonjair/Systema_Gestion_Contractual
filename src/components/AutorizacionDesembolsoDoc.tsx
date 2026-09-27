@@ -108,18 +108,27 @@ export default function AutorizacionDesembolsoDoc({
       const rawExp = reportData.periodoHasta || reportData.fechaPresentacion || '2026-07-14';
       const defaultFechaExp = formatFechaAnioMesDia(rawExp);
 
+      const defaultNombre = (user?.nombreCompleto || reportData.contratistaNombre || '').trim();
+      const defaultNitCc = (user?.documentoIdentidad || reportData.contratistaDocumento || '').trim();
+      const defaultTelefono = (user?.telefono || reportData.contratistaTelefono || '').trim();
+      const defaultDireccion = (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || user?.direccion || user?.barrio || '').trim().toUpperCase();
+      const defaultNroCuenta = (user?.numeroCuenta || reportData.numeroCuenta || '').trim();
+      const defaultBanco = (user?.banco || reportData.banco || '').trim().toUpperCase();
+      const defaultTipoCuenta = (user?.tipoCuenta || reportData.tipoCuenta || 'AHORRO').trim().toUpperCase();
+      const defaultCiudad = (user?.ciudad || user?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || '').trim().toUpperCase();
+
       const defaults: AutorizacionDesembolsoData = {
         reportId: reportData.id,
         fechaExpedicion: defaultFechaExp,
         consecutivoNro: reportData.informeNro || '1',
-        nombre: user?.nombreCompleto || reportData.contratistaNombre || '',
-        nitCc: user?.documentoIdentidad || reportData.contratistaDocumento || '',
-        telefono: user?.telefono || reportData.contratistaTelefono || '',
-        direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || user?.direccion || user?.barrio || '').toUpperCase(),
-        nroCuenta: user?.numeroCuenta || reportData.numeroCuenta || '',
-        banco: (user?.banco || reportData.banco || '').toUpperCase(),
-        tipoCuenta: (user?.tipoCuenta || reportData.tipoCuenta || '').toUpperCase(),
-        ciudad: (user?.ciudad || user?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || '').toUpperCase(),
+        nombre: defaultNombre,
+        nitCc: defaultNitCc,
+        telefono: defaultTelefono,
+        direccion: defaultDireccion,
+        nroCuenta: defaultNroCuenta,
+        banco: defaultBanco,
+        tipoCuenta: defaultTipoCuenta,
+        ciudad: defaultCiudad,
         contratoNro: (reportData.contratoNro || user?.contratoNro) ? (reportData.contratoNro || user?.contratoNro || '').trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
         conceptoNro: (reportData.contratoNro || user?.contratoNro) ? (reportData.contratoNro || user?.contratoNro || '').trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
         concepto: 'PRESTACION DE SERVICIOS',
@@ -160,8 +169,14 @@ export default function AutorizacionDesembolsoDoc({
         objeto: (baseData.objeto && baseData.objeto.trim()) ? baseData.objeto : defaultObjeto,
         fechaExpedicion: (baseData.fechaExpedicion && baseData.fechaExpedicion.trim()) ? baseData.fechaExpedicion : defaultFechaExp,
         consecutivoNro: (baseData.consecutivoNro && baseData.consecutivoNro.trim()) ? baseData.consecutivoNro : (reportData.informeNro || '1'),
-        nombre: (baseData.nombre && baseData.nombre.trim()) ? baseData.nombre : (user?.nombreCompleto || reportData.contratistaNombre || ''),
-        nitCc: (baseData.nitCc && baseData.nitCc.trim()) ? baseData.nitCc : (user?.documentoIdentidad || reportData.contratistaDocumento || ''),
+        nombre: (baseData.nombre && baseData.nombre.trim()) ? baseData.nombre : defaultNombre,
+        nitCc: (baseData.nitCc && baseData.nitCc.trim()) ? baseData.nitCc : defaultNitCc,
+        direccion: (baseData.direccion && baseData.direccion.trim()) ? baseData.direccion : defaultDireccion,
+        banco: (baseData.banco && baseData.banco.trim()) ? baseData.banco : defaultBanco,
+        nroCuenta: (baseData.nroCuenta && baseData.nroCuenta.trim()) ? baseData.nroCuenta : defaultNroCuenta,
+        tipoCuenta: (baseData.tipoCuenta && baseData.tipoCuenta.trim()) ? baseData.tipoCuenta : defaultTipoCuenta,
+        ciudad: (baseData.ciudad && baseData.ciudad.trim()) ? baseData.ciudad : defaultCiudad,
+        telefono: (baseData.telefono && baseData.telefono.trim()) ? baseData.telefono : defaultTelefono,
       };
     }
 
@@ -191,6 +206,8 @@ export default function AutorizacionDesembolsoDoc({
 
     const loadData = async () => {
       let baseData: AutorizacionDesembolsoData | null = null;
+      let dbProfile: AuthUser | null = null;
+
       if (data) {
         baseData = data;
       } else if (reportData) {
@@ -199,6 +216,14 @@ export default function AutorizacionDesembolsoDoc({
         // (initialMockData, documento '1077456123'), que puede coincidir con datos de
         // demostracion guardados en Supabase y filtrarlos hacia una persona real.
         const lookupDoc = user?.documentoIdentidad || reportData.contratistaDocumento;
+
+        if (lookupDoc) {
+          try {
+            dbProfile = await supabaseService.getUserProfile(lookupDoc);
+          } catch (e) {
+            console.warn('Error fetching DB profile for AutorizacionDesembolso:', e);
+          }
+        }
 
         // Cargar desde Supabase o localStorage
         const savedDB = await supabaseService.getAutorizacionDesembolso(
@@ -235,20 +260,29 @@ export default function AutorizacionDesembolsoDoc({
           const rawExp = reportData.periodoHasta || reportData.fechaPresentacion || '2026-07-14';
           const defaultFechaExp = formatFechaAnioMesDia(rawExp);
 
+          const liveBanco = (reportData.banco || user?.banco || dbProfile?.banco || '').trim().toUpperCase();
+          const liveDireccion = (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || user?.direccion || user?.barrio || dbProfile?.direccion || dbProfile?.barrio || '').trim().toUpperCase();
+          const liveNroCuenta = (user?.numeroCuenta || reportData.numeroCuenta || dbProfile?.numeroCuenta || '').trim();
+          const liveTipoCuenta = (user?.tipoCuenta || reportData.tipoCuenta || dbProfile?.tipoCuenta || 'AHORRO').trim().toUpperCase();
+          const liveCiudad = (user?.ciudad || user?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || dbProfile?.ciudad || dbProfile?.ciudadCuenta || '').trim().toUpperCase();
+          const liveTelefono = (user?.telefono || reportData.contratistaTelefono || dbProfile?.telefono || '').trim();
+          const liveNombre = (user?.nombreCompleto || reportData.contratistaNombre || dbProfile?.nombreCompleto || '').trim();
+          const liveNitCc = (user?.documentoIdentidad || reportData.contratistaDocumento || dbProfile?.documentoIdentidad || '').trim();
+
           const defaults: AutorizacionDesembolsoData = {
             reportId: reportData.id,
             fechaExpedicion: defaultFechaExp,
             consecutivoNro: reportData.informeNro || '1',
-            nombre: user?.nombreCompleto || reportData.contratistaNombre || '',
-            nitCc: user?.documentoIdentidad || reportData.contratistaDocumento || '',
-            telefono: user?.telefono || reportData.contratistaTelefono || '',
-            direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || user?.direccion || user?.barrio || '').toUpperCase(),
-            nroCuenta: user?.numeroCuenta || reportData.numeroCuenta || '',
-            banco: (user?.banco || reportData.banco || '').toUpperCase(),
-            tipoCuenta: (user?.tipoCuenta || reportData.tipoCuenta || '').toUpperCase(),
-            ciudad: (user?.ciudad || user?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || '').toUpperCase(),
-            contratoNro: (reportData.contratoNro || user?.contratoNro) ? (reportData.contratoNro || user?.contratoNro || '').trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
-            conceptoNro: (reportData.contratoNro || user?.contratoNro) ? (reportData.contratoNro || user?.contratoNro || '').trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
+            nombre: liveNombre,
+            nitCc: liveNitCc,
+            telefono: liveTelefono,
+            direccion: liveDireccion,
+            nroCuenta: liveNroCuenta,
+            banco: liveBanco,
+            tipoCuenta: liveTipoCuenta,
+            ciudad: liveCiudad,
+            contratoNro: (reportData.contratoNro || user?.contratoNro || dbProfile?.contratoNro) ? (reportData.contratoNro || user?.contratoNro || dbProfile?.contratoNro || '').trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
+            conceptoNro: (reportData.contratoNro || user?.contratoNro || dbProfile?.contratoNro) ? (reportData.contratoNro || user?.contratoNro || dbProfile?.contratoNro || '').trim().split(/[\s\-\/]+/)[0].replace(/\D/g, '') : '',
             concepto: 'PRESTACION DE SERVICIOS',
             objeto: defaultObjeto,
             valorNumeros: valorNumeroFormateado,
@@ -286,14 +320,14 @@ export default function AutorizacionDesembolsoDoc({
               objeto: (baseData.objeto && baseData.objeto.trim()) ? baseData.objeto : defaultObjeto,
               fechaExpedicion: (baseData.fechaExpedicion && baseData.fechaExpedicion.trim()) ? baseData.fechaExpedicion : defaultFechaExp,
               consecutivoNro: (baseData.consecutivoNro && baseData.consecutivoNro.trim()) ? baseData.consecutivoNro : (reportData.informeNro || '1'),
-              nombre: (baseData.nombre && baseData.nombre.trim()) ? baseData.nombre : (user?.nombreCompleto || reportData.contratistaNombre || ''),
-              nitCc: (baseData.nitCc && baseData.nitCc.trim()) ? baseData.nitCc : (user?.documentoIdentidad || reportData.contratistaDocumento || ''),
-              direccion: (baseData.direccion && baseData.direccion.trim()) ? baseData.direccion : (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || user?.direccion || user?.barrio || '').toUpperCase(),
-              telefono: (baseData.telefono && baseData.telefono.trim()) ? baseData.telefono : (user?.telefono || reportData.contratistaTelefono || ''),
-              nroCuenta: (baseData.nroCuenta && baseData.nroCuenta.trim()) ? baseData.nroCuenta : (user?.numeroCuenta || reportData.numeroCuenta || ''),
-              banco: (baseData.banco && baseData.banco.trim()) ? baseData.banco : (user?.banco || reportData.banco || '').toUpperCase(),
-              tipoCuenta: (baseData.tipoCuenta && baseData.tipoCuenta.trim()) ? baseData.tipoCuenta : (user?.tipoCuenta || reportData.tipoCuenta || '').toUpperCase(),
-              ciudad: (baseData.ciudad && baseData.ciudad.trim()) ? baseData.ciudad : (user?.ciudad || user?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || '').toUpperCase(),
+              nombre: (baseData.nombre && baseData.nombre.trim()) ? baseData.nombre : liveNombre,
+              nitCc: (baseData.nitCc && baseData.nitCc.trim()) ? baseData.nitCc : liveNitCc,
+              direccion: (baseData.direccion && baseData.direccion.trim()) ? baseData.direccion : liveDireccion,
+              telefono: (baseData.telefono && baseData.telefono.trim()) ? baseData.telefono : liveTelefono,
+              nroCuenta: (baseData.nroCuenta && baseData.nroCuenta.trim()) ? baseData.nroCuenta : liveNroCuenta,
+              banco: (baseData.banco && baseData.banco.trim()) ? baseData.banco : liveBanco,
+              tipoCuenta: (baseData.tipoCuenta && baseData.tipoCuenta.trim()) ? baseData.tipoCuenta : liveTipoCuenta,
+              ciudad: (baseData.ciudad && baseData.ciudad.trim()) ? baseData.ciudad : liveCiudad,
             });
           }
         } else if (baseData) {

@@ -285,7 +285,7 @@ export default function App() {
             supervisorNombre: savedReportWithId.supervisorNombre || exObj.supervisorNombre,
             objeto: savedReportWithId.objeto || exObj.objeto,
             numeroCuenta: savedReportWithId.numeroCuenta || exObj.numeroCuenta || liveCert.numeroCuenta || '',
-            banco: savedReportWithId.banco || exObj.banco || liveCert.banco || 'BANCOLOMBIA',
+            banco: savedReportWithId.banco || exObj.banco || liveCert.banco || '',
             tipoCuenta: savedReportWithId.tipoCuenta || exObj.tipoCuenta || liveCert.tipoCuenta || 'AHORRO',
             fechaRegistroPresupuestal: savedReportWithId.fechaRegistroPresupuestal || exObj.fechaRegistroPresupuestal || liveCert.fechaRegistroPresupuestal || '',
             codigoRubro: savedReportWithId.codigoRubro || exObj.codigoRubro || liveCert.codigoRubro || '',
