@@ -3990,53 +3990,9 @@ export const supabaseService = {
     return null;
   },
 
-  // 14.1. Purga automática de datos estáticos/mock legacy en Certificados (COOSALUD, COLFONDO, POSITIVA, etc.)
+  // 14.1. Purga deshabilitada para prevenir sobrescritura de datos reales del usuario
   async purgeLegacyMockCertificates(): Promise<void> {
-    try {
-      // 1. Limpieza de LocalStorage
-      if (typeof localStorage !== 'undefined') {
-        const keysToClean: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && (k.startsWith('cert_data_') || k.startsWith('informe_data_') || k.startsWith('alcaldia_quibdo_report_'))) {
-            keysToClean.push(k);
-          }
-        }
-
-        keysToClean.forEach(k => {
-          try {
-            const raw = localStorage.getItem(k);
-            if (raw && (raw.includes('COOSALUD') || raw.includes('COLFONDO') || raw.includes('POSITIVA') || raw.includes('87049978') || raw.includes('218.900') || raw.includes('280.200') || raw.includes('9.200') || raw.includes('2.3.2.02.02.008.04.01.02') || raw.includes('13/08/2026') || raw.includes('31/08/2026'))) {
-              const parsed = JSON.parse(raw);
-              const cleaned = sanitizeCertificadoData(parsed);
-              localStorage.setItem(k, JSON.stringify(cleaned));
-            }
-          } catch (e) {}
-        });
-      }
-
-      // 2. Limpieza de registros existentes en la tabla certificaciones_supervision de Supabase
-      const { data: rows, error } = await supabase
-        .from('certificaciones_supervision')
-        .select('id, datos_formulario')
-        .limit(200);
-
-      if (!error && rows && rows.length > 0) {
-        for (const row of rows) {
-          if (row.datos_formulario) {
-            const cleaned = sanitizeCertificadoData(row.datos_formulario);
-            if (JSON.stringify(row.datos_formulario) !== JSON.stringify(cleaned)) {
-              await supabase
-                .from('certificaciones_supervision')
-                .update({ datos_formulario: cleaned })
-                .eq('id', row.id);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Error purging legacy mock certificates from Supabase:', e);
-    }
+    return Promise.resolve();
   },
 
   // 14b. Vaciar / Eliminar registro de Certificado de Supervisión de la tabla certificaciones_supervision y cachés

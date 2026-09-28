@@ -68,7 +68,6 @@ export default function App() {
       }
     }).catch(() => {});
 
-    supabaseService.purgeLegacyMockCertificates().catch(() => {});
   }, []);
 
   // Al cambiar de usuario, redirigir a su vista correspondiente

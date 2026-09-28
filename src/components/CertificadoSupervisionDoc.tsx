@@ -179,9 +179,6 @@ export default function CertificadoSupervisionDoc({
       return;
     }
 
-    // Ejecutar purga de claves y datos mock heredados en segundo plano
-    supabaseService.purgeLegacyMockCertificates().catch(() => {});
-
     if (reportData) {
       const liveDefaults = createDefaultCertificadoData(reportData);
       setFormData({
