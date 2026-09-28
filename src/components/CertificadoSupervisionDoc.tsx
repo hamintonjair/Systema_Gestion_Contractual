@@ -1997,9 +1997,8 @@ export default function CertificadoSupervisionDoc({
         {/* 5. INFORMACIÓN DE APORTES A SEGURIDAD SOCIAL */}
         {(() => {
           const isEmptySocialCell = (val?: string) => {
-            if (!val) return true;
-            const clean = val.trim().replace(/\$/g, '').replace(/0/g, '').trim();
-            return clean === '';
+            if (!val || typeof val !== 'string') return true;
+            return val.trim() === '';
           };
 
           const isAnySocialEmpty =
