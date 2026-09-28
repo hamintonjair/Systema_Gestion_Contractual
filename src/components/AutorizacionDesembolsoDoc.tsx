@@ -111,7 +111,9 @@ export default function AutorizacionDesembolsoDoc({
       const defaultNombre = (user?.nombreCompleto || reportData.contratistaNombre || '').trim();
       const defaultNitCc = (user?.documentoIdentidad || reportData.contratistaDocumento || '').trim();
       const defaultTelefono = (user?.telefono || reportData.contratistaTelefono || '').trim();
-      const defaultDireccion = (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || user?.direccion || user?.barrio || '').trim().toUpperCase();
+      const profileDirInit = (user?.direccion || user?.barrio || '').trim().toUpperCase();
+      const reportDirInit = (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || '').trim().toUpperCase();
+      const defaultDireccion = profileDirInit || reportDirInit;
       const defaultNroCuenta = (user?.numeroCuenta || reportData.numeroCuenta || '').trim();
       const defaultBanco = (user?.banco || reportData.banco || '').trim().toUpperCase();
       const defaultTipoCuenta = (user?.tipoCuenta || reportData.tipoCuenta || 'AHORRO').trim().toUpperCase();
@@ -260,14 +262,16 @@ export default function AutorizacionDesembolsoDoc({
           const rawExp = reportData.periodoHasta || reportData.fechaPresentacion || '2026-07-14';
           const defaultFechaExp = formatFechaAnioMesDia(rawExp);
 
-          const liveBanco = (reportData.banco || user?.banco || dbProfile?.banco || '').trim().toUpperCase();
-          const liveDireccion = (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || user?.direccion || user?.barrio || dbProfile?.direccion || dbProfile?.barrio || '').trim().toUpperCase();
-          const liveNroCuenta = (user?.numeroCuenta || reportData.numeroCuenta || dbProfile?.numeroCuenta || '').trim();
-          const liveTipoCuenta = (user?.tipoCuenta || reportData.tipoCuenta || dbProfile?.tipoCuenta || 'AHORRO').trim().toUpperCase();
-          const liveCiudad = (user?.ciudad || user?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || dbProfile?.ciudad || dbProfile?.ciudadCuenta || '').trim().toUpperCase();
-          const liveTelefono = (user?.telefono || reportData.contratistaTelefono || dbProfile?.telefono || '').trim();
-          const liveNombre = (user?.nombreCompleto || reportData.contratistaNombre || dbProfile?.nombreCompleto || '').trim();
-          const liveNitCc = (user?.documentoIdentidad || reportData.contratistaDocumento || dbProfile?.documentoIdentidad || '').trim();
+          const liveBanco = (user?.banco || dbProfile?.banco || reportData.banco || '').trim().toUpperCase();
+          const profileDirFromDb = (user?.direccion || dbProfile?.direccion || user?.barrio || dbProfile?.barrio || '').trim().toUpperCase();
+          const reportDir = (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || '').trim().toUpperCase();
+          const liveDireccion = profileDirFromDb || reportDir;
+          const liveNroCuenta = (user?.numeroCuenta || dbProfile?.numeroCuenta || reportData.numeroCuenta || '').trim();
+          const liveTipoCuenta = (user?.tipoCuenta || dbProfile?.tipoCuenta || reportData.tipoCuenta || 'AHORRO').trim().toUpperCase();
+          const liveCiudad = (user?.ciudad || user?.ciudadCuenta || dbProfile?.ciudad || dbProfile?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || '').trim().toUpperCase();
+          const liveTelefono = (user?.telefono || dbProfile?.telefono || reportData.contratistaTelefono || '').trim();
+          const liveNombre = (user?.nombreCompleto || dbProfile?.nombreCompleto || reportData.contratistaNombre || '').trim();
+          const liveNitCc = (user?.documentoIdentidad || dbProfile?.documentoIdentidad || reportData.contratistaDocumento || '').trim();
 
           const defaults: AutorizacionDesembolsoData = {
             reportId: reportData.id,
@@ -322,7 +326,7 @@ export default function AutorizacionDesembolsoDoc({
               consecutivoNro: (baseData.consecutivoNro && baseData.consecutivoNro.trim()) ? baseData.consecutivoNro : (reportData.informeNro || '1'),
               nombre: (baseData.nombre && baseData.nombre.trim()) ? baseData.nombre : liveNombre,
               nitCc: (baseData.nitCc && baseData.nitCc.trim()) ? baseData.nitCc : liveNitCc,
-              direccion: (baseData.direccion && baseData.direccion.trim()) ? baseData.direccion : liveDireccion,
+              direccion: profileDirFromDb || ((baseData.direccion && baseData.direccion.trim()) ? baseData.direccion : liveDireccion),
               telefono: (baseData.telefono && baseData.telefono.trim()) ? baseData.telefono : liveTelefono,
               nroCuenta: (baseData.nroCuenta && baseData.nroCuenta.trim()) ? baseData.nroCuenta : liveNroCuenta,
               banco: (baseData.banco && baseData.banco.trim()) ? baseData.banco : liveBanco,
