@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
-import { ZoomIn, ZoomOut, RotateCw, Download, Loader2, AlertCircle, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { ZoomIn, ZoomOut, Download, Loader2, FileText, ExternalLink, RefreshCw } from 'lucide-react';
 
 // Configurar Worker de PDF.js desde CDN para compatibilidad universal en Vite
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '3.11.174'}/pdf.worker.min.js`;
@@ -12,11 +12,11 @@ interface Props {
 
 export default function PdfCanvasViewer({ fileUrl, fileName = 'documento.pdf' }: Props) {
   const [numPages, setNumPages] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.2);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<boolean>(false);
   const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
@@ -36,42 +36,50 @@ export default function PdfCanvasViewer({ fileUrl, fileName = 'documento.pdf' }:
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
-    setError(null);
+    setError(false);
     setPdfDoc(null);
 
-    const loadPdf = async () => {
+    const loadPdfData = async () => {
       try {
-        let loadingTask;
+        let bytes: Uint8Array;
 
         if (fileUrl.startsWith('data:')) {
-          const uint8Array = dataUrlToUint8Array(fileUrl);
-          loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+          bytes = dataUrlToUint8Array(fileUrl);
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          if (isMounted) setBlobUrl(URL.createObjectURL(blob));
         } else {
-          loadingTask = pdfjsLib.getDocument(fileUrl);
+          const response = await fetch(fileUrl);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const arrayBuf = await response.arrayBuffer();
+          bytes = new Uint8Array(arrayBuf);
+          const blob = new Blob([arrayBuf], { type: 'application/pdf' });
+          if (isMounted) setBlobUrl(URL.createObjectURL(blob));
         }
 
+        // Cargar documento en PDF.js pasando el array binario en memoria
+        const loadingTask = pdfjsLib.getDocument({ data: bytes });
         const pdf = await loadingTask.promise;
-        if (!isMounted) return;
 
+        if (!isMounted) return;
         setPdfDoc(pdf);
         setNumPages(pdf.numPages);
         setLoading(false);
-      } catch (err: any) {
-        console.warn('Error al cargar PDF con pdfjs-dist:', err);
+      } catch (err) {
+        console.warn('Advertencia en carga PDF.js, activando visor alternativo nativo/embed:', err);
         if (!isMounted) return;
-        setError(err?.message || 'No se pudo renderizar la vista previa interactiva del PDF.');
+        setError(true);
         setLoading(false);
       }
     };
 
-    loadPdf();
+    loadPdfData();
 
     return () => {
       isMounted = false;
     };
   }, [fileUrl]);
 
-  // Renderizar páginas en canvas
+  // Renderizar páginas en canvas cuando pdfDoc esté listo
   useEffect(() => {
     if (!pdfDoc || numPages === 0) return;
 
@@ -102,7 +110,7 @@ export default function PdfCanvasViewer({ fileUrl, fileName = 'documento.pdf' }:
             await page.render(renderContext).promise;
           }
         } catch (e) {
-          console.warn(`Error renderizando página ${i} del PDF:`, e);
+          console.warn(`Error renderizando página ${i}:`, e);
         }
       }
     };
@@ -119,51 +127,74 @@ export default function PdfCanvasViewer({ fileUrl, fileName = 'documento.pdf' }:
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] w-full p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-3">
+      <div className="flex flex-col items-center justify-center min-h-[65vh] w-full p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-3">
         <Loader2 className="w-10 h-10 text-[#006b33] animate-spin" />
-        <p className="font-bold text-slate-800 text-sm">Cargando páginas del archivo PDF...</p>
-        <p className="text-xs text-slate-500">Renderizando alta definición en pantalla.</p>
+        <p className="font-bold text-slate-800 text-sm">Cargando páginas del documento PDF...</p>
+        <p className="text-xs text-slate-500">Procesando vista previa interactiva en pantalla.</p>
       </div>
     );
   }
 
-  if (error) {
+  // Si falló el renderizado Canvas por alguna razón, usar el visor nativo de objetos/embed de navegador o Google Docs Viewer
+  if (error || !pdfDoc) {
+    const targetUrl = blobUrl || fileUrl;
+    const isHttp = fileUrl.startsWith('http://') || fileUrl.startsWith('https://');
+
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] w-full p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-4 max-w-lg mx-auto">
-        <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center">
-          <AlertCircle size={28} />
+      <div className="flex flex-col w-full h-full min-h-[75vh] bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-xl">
+        <div className="bg-slate-950 text-white px-4 py-2.5 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2 text-xs text-slate-300 font-mono">
+            <FileText size={16} className="text-red-400" />
+            <span>Vista de Documento PDF</span>
+          </div>
         </div>
-        <div className="space-y-1">
-          <h4 className="font-bold text-slate-900 text-base">Vista previa no disponible en pantalla</h4>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            El archivo PDF requiere descarga directa o usa una codificación especial.
-          </p>
+
+        <div className="flex-1 w-full h-full bg-slate-100 flex items-center justify-center p-2">
+          {targetUrl ? (
+            <object
+              data={targetUrl}
+              type="application/pdf"
+              className="w-full h-full min-h-[72vh] rounded-xl border border-slate-300 bg-white shadow-sm"
+            >
+              {isHttp ? (
+                <iframe
+                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`}
+                  title={fileName}
+                  className="w-full h-full min-h-[72vh] rounded-xl border border-slate-300 bg-white"
+                />
+              ) : (
+                <embed src={targetUrl} type="application/pdf" className="w-full h-full min-h-[72vh]" />
+              )}
+            </object>
+          ) : (
+            <div className="text-center p-8 space-y-4">
+              <p className="text-slate-700 font-bold">Documento disponible para visualización y descarga.</p>
+              <a
+                href={fileUrl}
+                download={fileName}
+                className="px-6 py-2.5 bg-[#006b33] text-white font-bold rounded-xl text-xs inline-flex items-center gap-2"
+              >
+                <Download size={16} />
+                <span>Abrir / Descargar PDF</span>
+              </a>
+            </div>
+          )}
         </div>
-        <a
-          href={fileUrl}
-          download={fileName}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-6 py-2.5 bg-[#006b33] hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition-all"
-        >
-          <Download size={16} />
-          <span>Descargar y Abrir PDF</span>
-        </a>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col w-full h-full min-h-[75vh] bg-slate-900/90 rounded-2xl overflow-hidden border border-slate-800 shadow-xl">
+    <div className="flex flex-col w-full h-full min-h-[75vh] bg-slate-900/95 rounded-2xl overflow-hidden border border-slate-800 shadow-xl">
       
-      {/* Barra de Herramientas del Visor PDF */}
+      {/* Toolbar */}
       <div className="bg-slate-950 text-white px-4 py-2.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-2 text-xs text-slate-300 font-mono">
           <FileText size={16} className="text-red-400" />
           <span>{numPages} {numPages === 1 ? 'Página' : 'Páginas'} en total</span>
         </div>
 
-        {/* Controles de Zoom */}
+        {/* Zoom Controls */}
         <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
           <button
             onClick={handleZoomOut}
@@ -185,24 +216,12 @@ export default function PdfCanvasViewer({ fileUrl, fileName = 'documento.pdf' }:
             <ZoomIn size={16} />
           </button>
         </div>
-
-        {/* Botón Descargar */}
-        <a
-          href={fileUrl}
-          download={fileName}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-gray-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-xs"
-        >
-          <Download size={14} />
-          <span>Descargar PDF</span>
-        </a>
       </div>
 
-      {/* Área de Desplazamiento de Páginas Renderizadas */}
+      {/* Rendered pages container */}
       <div
         ref={containerRef}
-        className="flex-1 p-4 sm:p-8 overflow-y-auto flex flex-col items-center space-y-6 bg-slate-800/80 custom-scrollbar"
+        className="flex-1 p-4 sm:p-8 overflow-y-auto flex flex-col items-center space-y-6 bg-slate-800/80 custom-scrollbar max-h-[75vh]"
       >
         {Array.from({ length: numPages }, (_, index) => (
           <div key={index + 1} className="flex flex-col items-center space-y-2 max-w-full">
