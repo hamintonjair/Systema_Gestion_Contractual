@@ -2202,6 +2202,7 @@ export default function ContratistaDashboard({ user, onOpenReportEditor, onDirec
             <SoporteFiduciariaDoc
               key={`fid_${selectedFidReport?.id || selectedFidReport?.informeNro || '1'}`}
               reportData={selectedFidReport || reportsList[0] || initialMockData}
+              user={user}
               storageKey={`fid_data_${user.documentoIdentidad || ''}_${selectedFidReport?.informeNro || '1'}`}
               isEditable={true}
             />

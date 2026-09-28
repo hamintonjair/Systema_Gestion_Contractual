@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SoporteFiduciariaData, ReportData, createDefaultFiduciariaData, FieldComment } from '../types';
+import { SoporteFiduciariaData, ReportData, AuthUser, createDefaultFiduciariaData, FieldComment } from '../types';
 import { obtenerValoresMonetariosReporte, convertirNumeroALetras, formatFechaFiduciaria } from '../utils/numberToWords';
 import { limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
 import { supabaseService } from '../services/supabaseService';
@@ -13,6 +13,7 @@ interface Props {
   key?: React.Key;
   data?: SoporteFiduciariaData;
   reportData?: ReportData;
+  user?: AuthUser;
   onChange?: (updated: SoporteFiduciariaData) => void;
   onSave?: (saved: SoporteFiduciariaData) => void;
   isEditable?: boolean;
@@ -28,6 +29,7 @@ interface Props {
 export default function SoporteFiduciariaDoc({
   data,
   reportData,
+  user,
   onChange,
   onSave,
   isEditable = true,
@@ -77,14 +79,17 @@ export default function SoporteFiduciariaDoc({
 
     if (reportData) {
       const { valorNumeroFormateado, sumaTotalConCentavos, valorLetras } = obtenerValoresMonetariosReporte(reportData);
+      const profileDirInit = (user?.direccion || user?.barrio || '').trim().toUpperCase();
+      const reportDirInit = (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || '').trim().toUpperCase();
+      const defaultDireccion = profileDirInit || reportDirInit;
 
       const defaults = {
         reportId: reportData.id,
-        nombresApellidos: reportData.contratistaNombre,
-        cedula: reportData.contratistaDocumento,
-        telefono: reportData.contratistaTelefono,
-        direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
-        ciudad: (reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
+        nombresApellidos: user?.nombreCompleto || reportData.contratistaNombre,
+        cedula: user?.documentoIdentidad || reportData.contratistaDocumento,
+        telefono: user?.telefono || reportData.contratistaTelefono,
+        direccion: defaultDireccion,
+        ciudad: (user?.ciudad || user?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
         sumaTotal: sumaTotalConCentavos,
         valorLetras: valorLetras,
         subTotal: valorNumeroFormateado,
@@ -100,6 +105,7 @@ export default function SoporteFiduciariaDoc({
       return {
         ...defaults,
         ...baseData,
+        direccion: profileDirInit || (baseData && (baseData as any).direccion ? (baseData as any).direccion : defaultDireccion),
         reportId: reportData.id, // always keep current report id
       };
     }
@@ -131,18 +137,29 @@ export default function SoporteFiduciariaDoc({
 
     const loadData = async () => {
       let baseData: SoporteFiduciariaData | null = null;
+      let dbProfile: AuthUser | null = null;
+
       if (data) {
         baseData = data;
       } else if (reportData) {
+        const lookupDoc = user?.documentoIdentidad || reportData.contratistaDocumento;
+        if (lookupDoc) {
+          try {
+            dbProfile = await supabaseService.getUserProfile(lookupDoc);
+          } catch (e) {
+            console.warn('Error fetching DB profile for SoporteFiduciaria:', e);
+          }
+        }
+
         const savedDB = await supabaseService.getSoporteFiduciaria(
           reportData.id,
-          reportData.contratistaDocumento,
+          lookupDoc,
           reportData.informeNro?.toString()
         );
         if (savedDB) {
           baseData = savedDB as SoporteFiduciariaData;
         } else {
-          const key = storageKey || `fid_data_${reportData.contratistaDocumento || ''}_${reportData.informeNro || '1'}`;
+          const key = storageKey || `fid_data_${lookupDoc || ''}_${reportData.informeNro || '1'}`;
           const saved = localStorage.getItem(key);
           if (saved) {
             try { baseData = JSON.parse(saved); } catch (e) { baseData = createDefaultFiduciariaData(reportData); }
@@ -157,14 +174,20 @@ export default function SoporteFiduciariaDoc({
       if (loadedKeyRef.current === currentKey) {
         if (reportData) {
           const { valorNumeroFormateado, sumaTotalConCentavos, valorLetras } = obtenerValoresMonetariosReporte(reportData);
+          const profileDirFromDb = (user?.direccion || dbProfile?.direccion || user?.barrio || dbProfile?.barrio || '').trim().toUpperCase();
+          const reportDir = (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || '').trim().toUpperCase();
+          const liveDireccion = profileDirFromDb || reportDir;
+          const liveNombre = (user?.nombreCompleto || dbProfile?.nombreCompleto || reportData.contratistaNombre || '').trim();
+          const liveNitCc = (user?.documentoIdentidad || dbProfile?.documentoIdentidad || reportData.contratistaDocumento || '').trim();
+          const liveTelefono = (user?.telefono || dbProfile?.telefono || reportData.contratistaTelefono || '').trim();
 
           const defaults = {
             reportId: reportData.id,
-            nombresApellidos: reportData.contratistaNombre,
-            cedula: reportData.contratistaDocumento,
-            telefono: reportData.contratistaTelefono,
-            direccion: (reportData.direccion || reportData.barrio || reportData.contratistaDireccion || 'BARRIO BUENOS AIRES').toUpperCase(),
-            ciudad: (reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
+            nombresApellidos: liveNombre,
+            cedula: liveNitCc,
+            telefono: liveTelefono,
+            direccion: liveDireccion,
+            ciudad: (user?.ciudad || user?.ciudadCuenta || dbProfile?.ciudad || dbProfile?.ciudadCuenta || reportData.ciudad || reportData.ciudadCuenta || 'CHOCÓ').toUpperCase(),
             sumaTotal: sumaTotalConCentavos,
             valorLetras: valorLetras,
             subTotal: valorNumeroFormateado,
@@ -180,6 +203,10 @@ export default function SoporteFiduciariaDoc({
           setFormData({
             ...defaults,
             ...baseData,
+            direccion: profileDirFromDb || ((baseData && (baseData as any).direccion) ? (baseData as any).direccion : liveDireccion),
+            nombresApellidos: (baseData && (baseData as any).nombresApellidos) ? (baseData as any).nombresApellidos : liveNombre,
+            cedula: (baseData && (baseData as any).cedula) ? (baseData as any).cedula : liveNitCc,
+            telefono: (baseData && (baseData as any).telefono) ? (baseData as any).telefono : liveTelefono,
             reportId: reportData.id, // always keep current report id
           });
         } else if (baseData) {
@@ -188,7 +215,7 @@ export default function SoporteFiduciariaDoc({
       }
     };
     loadData();
-  }, [data, reportData?.id, reportData?.informeNro, reportData?.contratistaNombre, reportData?.contratistaDocumento, reportData?.contratistaTelefono, reportData?.barrio, reportData?.direccion, reportData?.ciudad, reportData?.numeroCuenta, reportData?.banco, reportData?.tipoCuenta, reportData?.valorPagar, reportData?.valorContrato, reportData?.valorMensual, reportData?.periodoDesde, reportData?.periodoHasta, reportData?.fechaPresentacion, storageKey]);
+  }, [data, reportData?.id, reportData?.informeNro, reportData?.contratistaNombre, reportData?.contratistaDocumento, reportData?.contratistaTelefono, reportData?.barrio, reportData?.direccion, reportData?.ciudad, reportData?.numeroCuenta, reportData?.banco, reportData?.tipoCuenta, reportData?.valorPagar, reportData?.valorContrato, reportData?.valorMensual, reportData?.periodoDesde, reportData?.periodoHasta, reportData?.fechaPresentacion, user?.direccion, user?.barrio, user?.nombreCompleto, user?.documentoIdentidad, storageKey]);
 
   useEffect(() => {
     const handleSyncEvent = (e: any) => {
