@@ -5456,5 +5456,160 @@ export const supabaseService = {
     }
 
     return true;
+  },
+
+  // 24. Módulo de Documentos e Instructivos Institucionales
+  async getSecretariaDocumentos(secretariaId?: string): Promise<SecretariaDocumento[]> {
+    try {
+      const { data, error } = await supabase
+        .from('secretaria_documentos')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data.map((row: any) => ({
+          id: row.id,
+          secretariaId: row.secretaria_id,
+          nombre: row.nombre || row.file_name || 'Documento Institucional',
+          categoria: row.categoria || 'General',
+          descripcion: row.descripcion || '',
+          fileName: row.file_name || row.nombre || 'documento',
+          fileSize: row.file_size || 0,
+          mimeType: row.mime_type || 'application/octet-stream',
+          fileUrl: row.file_url || '',
+          fechaSubida: row.created_at ? formatDateSlash(row.created_at) : new Date().toLocaleDateString('es-CO'),
+          subidoPorNombre: row.subido_por_nombre || '',
+          subidoPorDocumento: row.subido_por_documento || '',
+        }));
+      }
+    } catch (e) {
+      console.warn('Supabase getSecretariaDocumentos fallback to localStorage:', e);
+    }
+
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('alcaldia_quibdo_secretaria_docs');
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) {}
+      }
+    }
+    return [];
+  },
+
+  async saveSecretariaDocumento(doc: {
+    secretariaId?: string;
+    nombre: string;
+    categoria?: string;
+    descripcion?: string;
+    fileName: string;
+    fileSize: number;
+    mimeType: string;
+    fileUrl: string;
+    subidoPorNombre?: string;
+    subidoPorDocumento?: string;
+    file?: File;
+  }): Promise<{ success: boolean; doc?: SecretariaDocumento; error?: string }> {
+    try {
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      let finalFileUrl = doc.fileUrl;
+
+      if (doc.file) {
+        try {
+          const fileExt = doc.file.name.split('.').pop() || 'file';
+          const storagePath = `docs/${id}_${Date.now()}.${fileExt}`;
+          const { data: uploadData, error: uploadErr } = await supabase
+            .storage
+            .from('anexos')
+            .upload(storagePath, doc.file, { upsert: true });
+
+          if (!uploadErr && uploadData) {
+            const { data: publicUrlData } = supabase.storage.from('anexos').getPublicUrl(storagePath);
+            if (publicUrlData?.publicUrl) {
+              finalFileUrl = publicUrlData.publicUrl;
+            }
+          }
+        } catch (stErr) {
+          console.warn('Storage upload error, using Data URL fallback:', stErr);
+        }
+      }
+
+      const newDoc: SecretariaDocumento = {
+        id,
+        secretariaId: doc.secretariaId || '170',
+        nombre: doc.nombre,
+        categoria: doc.categoria || 'General',
+        descripcion: doc.descripcion || '',
+        fileName: doc.fileName,
+        fileSize: doc.fileSize,
+        mimeType: doc.mimeType,
+        fileUrl: finalFileUrl,
+        fechaSubida: new Date().toLocaleDateString('es-CO'),
+        subidoPorNombre: doc.subidoPorNombre || '',
+        subidoPorDocumento: doc.subidoPorDocumento || '',
+      };
+
+      try {
+        await supabase.from('secretaria_documentos').insert([{
+          id,
+          secretaria_id: doc.secretariaId || '170',
+          nombre: doc.nombre,
+          categoria: doc.categoria || 'General',
+          descripcion: doc.descripcion || '',
+          file_name: doc.fileName,
+          file_size: doc.fileSize,
+          mime_type: doc.mimeType,
+          file_url: finalFileUrl,
+          subido_por_nombre: doc.subidoPorNombre || '',
+          subido_por_documento: doc.subidoPorDocumento || '',
+          created_at: now,
+        }]);
+      } catch (dbErr) {
+        console.warn('Supabase insert secretaria_documentos error:', dbErr);
+      }
+
+      if (typeof localStorage !== 'undefined') {
+        const saved = localStorage.getItem('alcaldia_quibdo_secretaria_docs');
+        const list: SecretariaDocumento[] = saved ? JSON.parse(saved) : [];
+        list.unshift(newDoc);
+        localStorage.setItem('alcaldia_quibdo_secretaria_docs', JSON.stringify(list));
+      }
+
+      return { success: true, doc: newDoc };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Error al guardar el documento' };
+    }
+  },
+
+  async deleteSecretariaDocumento(id: string): Promise<boolean> {
+    try {
+      await supabase.from('secretaria_documentos').delete().eq('id', id);
+    } catch (e) {}
+
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('alcaldia_quibdo_secretaria_docs');
+      if (saved) {
+        try {
+          const list: SecretariaDocumento[] = JSON.parse(saved);
+          const filtered = list.filter(d => d.id !== id);
+          localStorage.setItem('alcaldia_quibdo_secretaria_docs', JSON.stringify(filtered));
+        } catch (e) {}
+      }
+    }
+    return true;
   }
 };
+
+export interface SecretariaDocumento {
+  id: string;
+  secretariaId?: string;
+  nombre: string;
+  categoria?: string;
+  descripcion?: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  fileUrl: string;
+  fechaSubida: string;
+  subidoPorNombre?: string;
+  subidoPorDocumento?: string;
+}

@@ -9,6 +9,7 @@ import CertificadoSupervisionDoc from './CertificadoSupervisionDoc';
 import SoporteFiduciariaDoc from './SoporteFiduciariaDoc';
 import DeclaracionRentaDoc from './DeclaracionRentaDoc';
 import AutorizacionDesembolsoDoc from './AutorizacionDesembolsoDoc';
+import SecretariaDocumentosManager from './SecretariaDocumentosManager';
 import ReportPreview from './ReportPreview';
 import CertificadoSupervisionModal from './CertificadoSupervisionModal';
 import WhatsAppNotifyModal from './WhatsAppNotifyModal';
@@ -55,7 +56,8 @@ import {
   Landmark,
   Scale,
   CreditCard,
-  History
+  History,
+  FolderOpen
 } from 'lucide-react';
 
 interface Props {
@@ -66,7 +68,7 @@ interface Props {
 }
 
 export default function SecretariaAdminView({ user, onSelectInformeToView, onPrintInforme, onGoToContractorDashboard }: Props) {
-  const [activeTab, setActiveTab] = useState<'informes' | 'aprobados' | 'pasados' | 'contratistas'>('informes');
+  const [activeTab, setActiveTab] = useState<'informes' | 'aprobados' | 'pasados' | 'contratistas' | 'documentos'>('informes');
   
   // Informes State
   const [informes, setInformes] = useState<InformeSummary[]>([]);
@@ -1164,6 +1166,18 @@ Por seguridad, cambia esta contraseña la próxima vez que ingreses.`;
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-mono font-bold">
               {contractors.length}
             </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('documentos')}
+            className={`py-3.5 px-3 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'documentos'
+                ? 'border-[#006b33] text-[#006b33] bg-emerald-50/50'
+                : 'border-transparent text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <FolderOpen size={17} className="text-emerald-700" />
+            <span>5. Documentos e Instructivos</span>
           </button>
 
         {activeTab === 'contratistas' && (
@@ -2538,6 +2552,11 @@ Por seguridad, cambia esta contraseña la próxima vez que ingreses.`;
 
           </div>
         </div>
+      )}
+
+      {/* PESTAÑA 5: DOCUMENTOS E INSTRUCTIVOS INSTITUCIONALES */}
+      {activeTab === 'documentos' && (
+        <SecretariaDocumentosManager user={user} isAdminView={true} />
       )}
 
       {/* MODAL DE INSPECCIÓN COMPLETA CON 5 PESTAÑAS Y MODO REVISIÓN */}
