@@ -5458,41 +5458,83 @@ export const supabaseService = {
     return true;
   },
 
-  // 24. Módulo de Documentos e Instructivos Institucionales
+  // 24. Módulo de Documentos e Instructivos Institucionales (Supabase Storage: Bucket anexos/documentos)
   async getSecretariaDocumentos(secretariaId?: string): Promise<SecretariaDocumento[]> {
-    try {
-      const { data, error } = await supabase
-        .from('secretaria_documentos')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!error && data && data.length > 0) {
-        return data.map((row: any) => ({
-          id: row.id,
-          secretariaId: row.secretaria_id,
-          nombre: row.nombre || row.file_name || 'Documento Institucional',
-          categoria: row.categoria || 'General',
-          descripcion: row.descripcion || '',
-          fileName: row.file_name || row.nombre || 'documento',
-          fileSize: row.file_size || 0,
-          mimeType: row.mime_type || 'application/octet-stream',
-          fileUrl: row.file_url || '',
-          fechaSubida: row.created_at ? formatDateSlash(row.created_at) : new Date().toLocaleDateString('es-CO'),
-          subidoPorNombre: row.subido_por_nombre || '',
-          subidoPorDocumento: row.subido_por_documento || '',
-        }));
-      }
-    } catch (e) {
-      console.warn('Supabase getSecretariaDocumentos fallback to localStorage:', e);
-    }
-
+    const localList: SecretariaDocumento[] = [];
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem('alcaldia_quibdo_secretaria_docs');
       if (saved) {
-        try { return JSON.parse(saved); } catch (e) {}
+        try {
+          localList.push(...JSON.parse(saved));
+        } catch (e) {}
       }
     }
-    return [];
+
+    try {
+      // Obtener archivos remotos guardados en Supabase Storage (Bucket anexos / Carpeta documentos)
+      const { data: storageFiles, error: storageErr } = await supabase
+        .storage
+        .from('anexos')
+        .list('documentos');
+
+      if (!storageErr && storageFiles && storageFiles.length > 0) {
+        const remoteDocs: SecretariaDocumento[] = storageFiles
+          .filter(f => f.name && !f.name.startsWith('.'))
+          .map(file => {
+            const path = `documentos/${file.name}`;
+            const { data: publicUrlData } = supabase.storage.from('anexos').getPublicUrl(path);
+            const url = publicUrlData?.publicUrl || '';
+
+            // Asociar con metadatos guardados previamente en local si existen
+            const matchedLocal = localList.find(
+              l => l.storagePath === path || (l.fileUrl && l.fileUrl === url) || (l.id && file.name.includes(l.id))
+            );
+
+            if (matchedLocal) {
+              return {
+                ...matchedLocal,
+                fileUrl: url || matchedLocal.fileUrl,
+                storagePath: path,
+                fileSize: file.metadata?.size || matchedLocal.fileSize,
+              };
+            }
+
+            const cleanName = file.name.replace(/^[a-f0-9-]{36}_/, '').replace(/_/g, ' ');
+            const isPdf = file.name.endsWith('.pdf');
+            const isWord = file.name.endsWith('.doc') || file.name.endsWith('.docx');
+            const isExcel = file.name.endsWith('.xls') || file.name.endsWith('.xlsx');
+
+            let mimeType = 'application/octet-stream';
+            if (isPdf) mimeType = 'application/pdf';
+            else if (isWord) mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            else if (isExcel) mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+            return {
+              id: file.id || file.name,
+              secretariaId: secretariaId || '170',
+              nombre: cleanName.replace(/\.[^/.]+$/, ''),
+              categoria: 'Formatos Institucionales',
+              descripcion: '',
+              fileName: cleanName,
+              fileSize: file.metadata?.size || 0,
+              mimeType,
+              fileUrl: url,
+              storagePath: path,
+              fechaSubida: file.created_at ? formatDateSlash(file.created_at) : new Date().toLocaleDateString('es-CO'),
+            };
+          });
+
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('alcaldia_quibdo_secretaria_docs', JSON.stringify(remoteDocs));
+        }
+
+        return remoteDocs;
+      }
+    } catch (e) {
+      console.warn('Aviso al sincronizar Supabase Storage anexos/documentos:', e);
+    }
+
+    return localList;
   },
 
   async saveSecretariaDocumento(doc: {
@@ -5510,26 +5552,30 @@ export const supabaseService = {
   }): Promise<{ success: boolean; doc?: SecretariaDocumento; error?: string }> {
     try {
       const id = crypto.randomUUID();
-      const now = new Date().toISOString();
       let finalFileUrl = doc.fileUrl;
+      let finalStoragePath = '';
 
       if (doc.file) {
         try {
-          const fileExt = doc.file.name.split('.').pop() || 'file';
-          const storagePath = `docs/${id}_${Date.now()}.${fileExt}`;
+          const cleanFileName = doc.fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+          // Guardar en el bucket 'anexos' de Supabase Storage bajo la ruta 'documentos/'
+          finalStoragePath = `documentos/${id}_${cleanFileName}`;
+
           const { data: uploadData, error: uploadErr } = await supabase
             .storage
             .from('anexos')
-            .upload(storagePath, doc.file, { upsert: true });
+            .upload(finalStoragePath, doc.file, { upsert: true });
 
           if (!uploadErr && uploadData) {
-            const { data: publicUrlData } = supabase.storage.from('anexos').getPublicUrl(storagePath);
+            const { data: publicUrlData } = supabase.storage.from('anexos').getPublicUrl(finalStoragePath);
             if (publicUrlData?.publicUrl) {
               finalFileUrl = publicUrlData.publicUrl;
             }
+          } else if (uploadErr) {
+            console.warn('Supabase Storage upload error:', uploadErr);
           }
         } catch (stErr) {
-          console.warn('Storage upload error, using Data URL fallback:', stErr);
+          console.warn('Storage upload error:', stErr);
         }
       }
 
@@ -5543,35 +5589,18 @@ export const supabaseService = {
         fileSize: doc.fileSize,
         mimeType: doc.mimeType,
         fileUrl: finalFileUrl,
+        storagePath: finalStoragePath,
         fechaSubida: new Date().toLocaleDateString('es-CO'),
         subidoPorNombre: doc.subidoPorNombre || '',
         subidoPorDocumento: doc.subidoPorDocumento || '',
       };
 
-      try {
-        await supabase.from('secretaria_documentos').insert([{
-          id,
-          secretaria_id: doc.secretariaId || '170',
-          nombre: doc.nombre,
-          categoria: doc.categoria || 'General',
-          descripcion: doc.descripcion || '',
-          file_name: doc.fileName,
-          file_size: doc.fileSize,
-          mime_type: doc.mimeType,
-          file_url: finalFileUrl,
-          subido_por_nombre: doc.subidoPorNombre || '',
-          subido_por_documento: doc.subidoPorDocumento || '',
-          created_at: now,
-        }]);
-      } catch (dbErr) {
-        console.warn('Supabase insert secretaria_documentos error:', dbErr);
-      }
-
       if (typeof localStorage !== 'undefined') {
         const saved = localStorage.getItem('alcaldia_quibdo_secretaria_docs');
         const list: SecretariaDocumento[] = saved ? JSON.parse(saved) : [];
-        list.unshift(newDoc);
-        localStorage.setItem('alcaldia_quibdo_secretaria_docs', JSON.stringify(list));
+        const filtered = list.filter(d => d.id !== id);
+        filtered.unshift(newDoc);
+        localStorage.setItem('alcaldia_quibdo_secretaria_docs', JSON.stringify(filtered));
       }
 
       return { success: true, doc: newDoc };
@@ -5580,17 +5609,37 @@ export const supabaseService = {
     }
   },
 
-  async deleteSecretariaDocumento(id: string): Promise<boolean> {
+  async deleteSecretariaDocumento(id: string, fileUrl?: string, storagePath?: string): Promise<boolean> {
     try {
-      await supabase.from('secretaria_documentos').delete().eq('id', id);
-    } catch (e) {}
+      // 1. Eliminar archivo físico de Supabase Storage (Bucket anexos / Carpeta documentos/)
+      let pathToRemove = storagePath;
+      if (!pathToRemove && fileUrl && fileUrl.includes('/storage/v1/object/public/anexos/')) {
+        pathToRemove = fileUrl.split('/storage/v1/object/public/anexos/')[1];
+      }
 
+      if (pathToRemove) {
+        await supabase.storage.from('anexos').remove([pathToRemove]);
+      } else if (id) {
+        const { data: files } = await supabase.storage.from('anexos').list('documentos');
+        if (files && files.length > 0) {
+          const matching = files.filter(f => f.name.includes(id));
+          if (matching.length > 0) {
+            const paths = matching.map(m => `documentos/${m.name}`);
+            await supabase.storage.from('anexos').remove(paths);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error eliminando archivo de Supabase Storage:', e);
+    }
+
+    // 2. Limpiar registro local
     if (typeof localStorage !== 'undefined') {
       const saved = localStorage.getItem('alcaldia_quibdo_secretaria_docs');
       if (saved) {
         try {
           const list: SecretariaDocumento[] = JSON.parse(saved);
-          const filtered = list.filter(d => d.id !== id);
+          const filtered = list.filter(d => d.id !== id && d.storagePath !== storagePath && d.fileUrl !== fileUrl);
           localStorage.setItem('alcaldia_quibdo_secretaria_docs', JSON.stringify(filtered));
         } catch (e) {}
       }
@@ -5609,6 +5658,7 @@ export interface SecretariaDocumento {
   fileSize: number;
   mimeType: string;
   fileUrl: string;
+  storagePath?: string;
   fechaSubida: string;
   subidoPorNombre?: string;
   subidoPorDocumento?: string;

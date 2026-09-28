@@ -270,7 +270,7 @@ export default function SecretariaDocumentosManager({ user, isAdminView = false 
     if (!deletingDoc) return;
     setIsDeleting(true);
     try {
-      await supabaseService.deleteSecretariaDocumento(deletingDoc.id);
+      await supabaseService.deleteSecretariaDocumento(deletingDoc.id, deletingDoc.fileUrl, deletingDoc.storagePath);
       setDocumentos(prev => prev.filter(d => d.id !== deletingDoc.id));
       setDeletingDoc(null);
     } catch (e) {
