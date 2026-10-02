@@ -5601,6 +5601,171 @@ export const supabaseService = {
       }
     }
     return true;
+  },
+
+  // 25. Módulo de Firma Digitalizada del Contratista (Bucket Supabase: firma y Tabla profiles)
+  async uploadFirmaContratista(userDoc: string, file: File, previousUrl?: string): Promise<{ success: boolean; url?: string; error?: string }> {
+    try {
+      const cleanDoc = userDoc ? userDoc.replace(/[^0-9a-zA-Z]/g, '') : 'contratista';
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const fileName = `${cleanDoc}_firma_${Date.now()}.${ext}`;
+
+      // 1. Eliminar automáticamente cualquier archivo de firma anterior de este contratista en el bucket 'firma'
+      try {
+        if (previousUrl && previousUrl.includes('/storage/v1/object/public/firma/')) {
+          const oldPath = previousUrl.split('/storage/v1/object/public/firma/')[1];
+          if (oldPath) {
+            await supabase.storage.from('firma').remove([oldPath]);
+          }
+        }
+
+        const { data: existingFiles } = await supabase.storage.from('firma').list('');
+        if (existingFiles && existingFiles.length > 0) {
+          const oldMatching = existingFiles.filter(f => f.name.startsWith(`${cleanDoc}_firma_`));
+          if (oldMatching.length > 0) {
+            await supabase.storage.from('firma').remove(oldMatching.map(m => m.name));
+          }
+        }
+      } catch (cleanErr) {
+        console.warn('Aviso limpiando archivos previos de firma en Supabase:', cleanErr);
+      }
+
+      let finalUrl = '';
+
+      // 2. Subida directa del nuevo archivo al bucket 'firma' en Supabase Storage
+      const { data: uploadData, error: uploadErr } = await supabase
+        .storage
+        .from('firma')
+        .upload(fileName, file, { upsert: true, contentType: file.type || 'image/png' });
+
+      if (uploadErr) {
+        console.error('Error subiendo al bucket firma de Supabase:', uploadErr);
+        return { success: false, error: uploadErr.message || 'Error al subir la firma al bucket' };
+      }
+
+      if (uploadData) {
+        const { data: publicUrlData } = supabase.storage.from('firma').getPublicUrl(fileName);
+        if (publicUrlData?.publicUrl) {
+          finalUrl = publicUrlData.publicUrl;
+        }
+      }
+
+      if (!finalUrl) {
+        return { success: false, error: 'No se pudo obtener la URL pública de la firma' };
+      }
+
+      // 3. Guardar en la tabla 'profiles' de Supabase (columna firma_url)
+      if (userDoc) {
+        try {
+          await supabase
+            .from('profiles')
+            .update({ firma_url: finalUrl })
+            .or(`documento_identidad.eq.${userDoc},documento_identidad.eq.${cleanDoc}`);
+        } catch (dbErr) {
+          console.warn('Aviso al actualizar profiles con firma_url:', dbErr);
+        }
+      }
+
+      // 4. Limpiar cualquier clave residual de localStorage para garantizar almacenamiento exclusivo en nube
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(`alcaldia_quibdo_firma_${cleanDoc}`);
+        localStorage.removeItem('alcaldia_quibdo_global_firma');
+      }
+
+      // 5. Notificar a todas las vistas y componentes abiertos para actualizar la firma en tiempo real
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('firma_contratista_actualizada', { detail: { url: finalUrl, userDoc } }));
+      }
+
+      return { success: true, url: finalUrl };
+    } catch (err: any) {
+      console.error('Error en uploadFirmaContratista:', err);
+      return { success: false, error: err?.message || 'Error al procesar la firma' };
+    }
+  },
+
+  async deleteFirmaContratista(userDoc: string, fileUrl?: string): Promise<boolean> {
+    const cleanDoc = userDoc ? userDoc.replace(/[^0-9a-zA-Z]/g, '') : 'contratista';
+
+    try {
+      // 1. Eliminar archivo físico de Supabase Storage en el bucket 'firma'
+      let pathToRemove = '';
+      if (fileUrl && fileUrl.includes('/storage/v1/object/public/firma/')) {
+        pathToRemove = fileUrl.split('/storage/v1/object/public/firma/')[1];
+      }
+
+      if (pathToRemove) {
+        await supabase.storage.from('firma').remove([pathToRemove]);
+      } else {
+        const { data: files } = await supabase.storage.from('firma').list('');
+        if (files && files.length > 0) {
+          const matching = files.filter(f => f.name.includes(cleanDoc));
+          if (matching.length > 0) {
+            await supabase.storage.from('firma').remove(matching.map(m => m.name));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error eliminando firma de Supabase Storage:', e);
+    }
+
+    // 2. Limpiar columna firma_url en la tabla 'profiles' de Supabase
+    if (userDoc) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ firma_url: null })
+          .or(`documento_identidad.eq.${userDoc},documento_identidad.eq.${cleanDoc}`);
+      } catch (e) {}
+    }
+
+    // 3. Limpiar cualquier clave residual de localStorage
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(`alcaldia_quibdo_firma_${cleanDoc}`);
+      localStorage.removeItem('alcaldia_quibdo_global_firma');
+    }
+
+    // 4. Notificar a todos los componentes
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('firma_contratista_actualizada', { detail: { url: '', userDoc } }));
+    }
+
+    return true;
+  },
+
+  async getFirmaContratista(userDoc: string): Promise<string | null> {
+    const cleanDoc = userDoc ? userDoc.replace(/[^0-9a-zA-Z]/g, '') : 'contratista';
+
+    try {
+      // 1. Consultar directamente en la tabla 'profiles' de Supabase
+      if (userDoc) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('firma_url')
+          .or(`documento_identidad.eq.${userDoc},documento_identidad.eq.${cleanDoc}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (data?.firma_url) {
+          return data.firma_url;
+        }
+      }
+
+      // 2. Si no está en profiles, verificar si existe el archivo en el bucket 'firma'
+      const { data: files } = await supabase.storage.from('firma').list('');
+      if (files && files.length > 0) {
+        const matching = files.filter(f => f.name.includes(cleanDoc));
+        if (matching.length > 0) {
+          const sorted = matching.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+          const { data: pUrl } = supabase.storage.from('firma').getPublicUrl(sorted[0].name);
+          if (pUrl?.publicUrl) {
+            return pUrl.publicUrl;
+          }
+        }
+      }
+    } catch (e) {}
+
+    return null;
   }
 };
 

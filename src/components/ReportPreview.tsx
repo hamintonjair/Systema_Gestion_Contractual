@@ -34,6 +34,7 @@ export default function ReportPreview({
   });
 
   const [globalMembrete, setGlobalMembrete] = useState<string | null>(null);
+  const [activeFirma, setActiveFirma] = useState<string>(data.firmaUrl || '');
 
   useEffect(() => {
     let isMounted = true;
@@ -44,10 +45,28 @@ export default function ReportPreview({
         }
       }).catch(() => {});
     }
+
+    const cleanDoc = data.contratistaDocumento ? data.contratistaDocumento.replace(/[^0-9a-zA-Z]/g, '') : '';
+    if (data.firmaUrl) {
+      setActiveFirma(data.firmaUrl);
+    } else if (cleanDoc) {
+      supabaseService.getFirmaContratista(cleanDoc).then(url => {
+        if (isMounted && url) setActiveFirma(url);
+      });
+    }
+
+    const handleFirmaUpdate = (e: any) => {
+      if (isMounted && e.detail?.url !== undefined) {
+        setActiveFirma(e.detail.url);
+      }
+    };
+
+    window.addEventListener('firma_contratista_actualizada', handleFirmaUpdate);
     return () => {
       isMounted = false;
+      window.removeEventListener('firma_contratista_actualizada', handleFirmaUpdate);
     };
-  }, [data.watermarkImage]);
+  }, [data.watermarkImage, data.firmaUrl, data.contratistaDocumento]);
 
   const watermarkUrl = data.watermarkImage || globalMembrete;
 
@@ -749,10 +768,17 @@ export default function ReportPreview({
                   {/* 3. Cuadro de Firmas en 2 Columnas con división central */}
                   <div className="grid grid-cols-2 divide-x divide-black text-center min-h-[160px] bg-white">
                     {/* Columna Contratista */}
-                    <div className="p-3 pt-6 flex flex-col justify-between">
-                      <div className="h-20 flex items-end justify-center pb-2">
-                        {/* Espacio para firma visual */}
-                        <div className="text-[8pt] text-gray-300 italic"></div>
+                    <div className="p-3 pt-4 flex flex-col justify-between">
+                      <div className="h-20 flex items-end justify-center pb-1">
+                        {activeFirma ? (
+                          <img
+                            src={activeFirma}
+                            alt="Firma Contratista"
+                            className="max-h-16 max-w-[200px] object-contain block mx-auto pointer-events-none select-none"
+                          />
+                        ) : (
+                          <div className="text-[8pt] text-gray-300 italic"></div>
+                        )}
                       </div>
                       <div>
                         <div className="w-[85%] mx-auto border-t border-black pt-1 mb-1">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ReportPreview from './ReportPreview';
 import { createPortal } from 'react-dom';
+import FirmaDigitalUploader from './FirmaDigitalUploader';
 import { Obligacion, ReportData, Anexo, EstadoInforme, FieldComment, extractContratoNroOnly, createDefaultCertificadoData, createDefaultFiduciariaData, createDefaultAutorizacionDesembolsoData } from '../types';
 import { sanitizeCertificadoData } from '../utils/securitySocialUtils';
 import { 
@@ -2186,6 +2187,14 @@ export default function ReportEditor({
                 </p>
               </div>
             </div>
+
+            {/* MÓDULO DE CARGA DE FIRMA DIGITALIZADA */}
+            <FirmaDigitalUploader
+              userDoc={data.contratistaDocumento}
+              firmaUrl={data.firmaUrl}
+              onFirmaChange={(url) => handleChange('firmaUrl', url)}
+              title="Firma Digitalizada del Contratista"
+            />
 
             {/* Botón de Guardado directo en la pestaña de firmas */}
             {onSave && (

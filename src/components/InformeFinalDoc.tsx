@@ -20,7 +20,8 @@ import {
   HelpCircle,
   FileDown,
   RotateCcw,
-  Lock
+  Lock,
+  Upload
 } from 'lucide-react';
 import { InformeFinalData, ReportData, AuthUser, ActividadInformeFinal, AnexoFotograficoFinal, parseContractNumberAndYear } from '../types';
 import { generateInformeFinalWithAI, resolveGeminiConfig } from '../services/geminiService';
@@ -96,6 +97,7 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
   onBack
 }) => {
   const [data, setData] = useState<InformeFinalData>(initialData);
+  const [activeFirma, setActiveFirma] = useState<string>(data?.firmaContratistaUrl || data?.firmaUrl || '');
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -106,6 +108,29 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
   const [aiError, setAiError] = useState<string | null>(null);
   const [exportValidationErrors, setExportValidationErrors] = useState<string[] | null>(null);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
+
+  useEffect(() => {
+    const cleanDoc = (data.contratistaDocumento || user?.documentoIdentidad || '').replace(/[^0-9a-zA-Z]/g, '');
+    if (data.firmaContratistaUrl || data.firmaUrl) {
+      setActiveFirma(data.firmaContratistaUrl || data.firmaUrl || '');
+    } else if (cleanDoc) {
+      supabaseService.getFirmaContratista(cleanDoc).then(url => {
+        if (url) setActiveFirma(url);
+      });
+    }
+
+    const handleFirmaUpdate = (e: any) => {
+      if (e.detail?.url !== undefined) {
+        setActiveFirma(e.detail.url);
+        setData(prev => ({ ...prev, firmaUrl: e.detail.url, firmaContratistaUrl: e.detail.url }));
+      }
+    };
+
+    window.addEventListener('firma_contratista_actualizada', handleFirmaUpdate);
+    return () => {
+      window.removeEventListener('firma_contratista_actualizada', handleFirmaUpdate);
+    };
+  }, [data.contratistaDocumento, data.firmaUrl, data.firmaContratistaUrl, user?.documentoIdentidad]);
 
   // Form states for AI modal & initial configuration
   const initialParsedContrato = useMemo(() => {
@@ -1646,9 +1671,20 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
         </div>
 
         {/* Firmas Institucionales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-12 pb-8 border-t border-slate-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-8 pb-8 border-t border-slate-200">
           <div className="text-center space-y-2">
-            <p className="text-xs font-semibold text-slate-600 mb-8">Elaborado por:</p>
+            <p className="text-xs font-semibold text-slate-600 mb-2">Elaborado por:</p>
+            <div className="h-16 flex items-end justify-center pb-1">
+              {activeFirma ? (
+                <img
+                  src={activeFirma}
+                  alt="Firma Contratista"
+                  className="max-h-16 max-w-[190px] object-contain block mx-auto pointer-events-none select-none"
+                />
+              ) : (
+                <div className="h-10"></div>
+              )}
+            </div>
             <div className="w-48 h-0.5 bg-slate-900 mx-auto"></div>
             <p className="text-xs font-bold text-slate-900 uppercase">{data.contratistaNombre}</p>
             <p className="text-[11px] text-slate-600">Contratista</p>
@@ -1666,6 +1702,44 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
                 <span className="font-semibold text-slate-900">{data.contratistaLugarDoc || user?.ciudad || 'Bogotá D.C'}</span>
               )}
             </p>
+            {isEditing && (
+              <div className="flex items-center justify-center gap-2 pt-1 print:hidden">
+                <label className="cursor-pointer inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 transition-colors">
+                  <Upload size={11} />
+                  <span>{activeFirma ? 'Cambiar firma' : 'Cargar firma'}</span>
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp"
+                    className="hidden"
+                    onChange={async (e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const cleanDoc = (data.contratistaDocumento || user?.documentoIdentidad || '').replace(/[^0-9a-zA-Z]/g, '');
+                        const res = await supabaseService.uploadFirmaContratista(cleanDoc, e.target.files[0], activeFirma);
+                        if (res.success && res.url) {
+                          setActiveFirma(res.url);
+                          setData(prev => ({ ...prev, firmaUrl: res.url, firmaContratistaUrl: res.url }));
+                        }
+                      }
+                    }}
+                  />
+                </label>
+                {activeFirma && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const cleanDoc = (data.contratistaDocumento || user?.documentoIdentidad || '').replace(/[^0-9a-zA-Z]/g, '');
+                      await supabaseService.deleteFirmaContratista(cleanDoc, activeFirma);
+                      setActiveFirma('');
+                      setData(prev => ({ ...prev, firmaUrl: '', firmaContratistaUrl: '' }));
+                    }}
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded border border-red-200 transition-colors"
+                  >
+                    <Trash2 size={11} />
+                    <span>Eliminar firma</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="text-center space-y-2">

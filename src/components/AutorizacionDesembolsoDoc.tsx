@@ -5,7 +5,7 @@ import { limpiarNumeroMoneda } from '../utils/paymentPlanUtils';
 import { formatDateSlash } from '../utils/formatters';
 import { supabaseService } from '../services/supabaseService';
 import FieldCommentModal from './FieldCommentModal';
-import { Printer, Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { Printer, Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, CheckCircle2, FileSpreadsheet, Upload, Trash2 } from 'lucide-react';
 import { exportarAutorizacion } from '../export/autorizacionExcel';
 import QuibdoLogo from './QuibdoLogo';
 
@@ -192,11 +192,35 @@ export default function AutorizacionDesembolsoDoc({
   };
 
   const loadedKeyRef = useRef<string>('');
+  const [activeFirma, setActiveFirma] = useState<string>(data?.firmaUrl || reportData?.firmaUrl || '');
   const [formData, setFormData] = useState<AutorizacionDesembolsoData>(getInitialData);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [isExportingExcel, setIsExportingExcel] = useState<boolean>(false);
+
+  useEffect(() => {
+    const cleanDoc = (formData.nitCc || reportData?.contratistaDocumento || user?.documentoIdentidad || '').replace(/[^0-9a-zA-Z]/g, '');
+    if (formData.firmaUrl) {
+      setActiveFirma(formData.firmaUrl);
+    } else if (cleanDoc) {
+      supabaseService.getFirmaContratista(cleanDoc).then(url => {
+        if (url) setActiveFirma(url);
+      });
+    }
+
+    const handleFirmaUpdate = (e: any) => {
+      if (e.detail?.url !== undefined) {
+        setActiveFirma(e.detail.url);
+        setFormData(prev => ({ ...prev, firmaUrl: e.detail.url }));
+      }
+    };
+
+    window.addEventListener('firma_contratista_actualizada', handleFirmaUpdate);
+    return () => {
+      window.removeEventListener('firma_contratista_actualizada', handleFirmaUpdate);
+    };
+  }, [formData.nitCc, formData.firmaUrl, reportData?.contratistaDocumento, user?.documentoIdentidad]);
 
   useEffect(() => {
     const currentKey = getIdentityKey();
@@ -1542,8 +1566,14 @@ export default function AutorizacionDesembolsoDoc({
               {/* Fila FIRMA */}
               <div className="flex flex-row items-end">
                 <div className="w-[110px] font-bold text-[12px] leading-none pb-1">FIRMA</div>
-                <div className="border-b-2 border-black w-[320px] sm:w-[360px] h-9 flex items-end pl-2 pb-0.5 relative">
-                  {isEditing ? (
+                <div className="border-b-2 border-black w-[320px] sm:w-[360px] h-12 flex items-end pl-2 pb-0.5 relative">
+                  {activeFirma ? (
+                    <img
+                      src={activeFirma}
+                      alt="Firma Contratista"
+                      className="max-h-11 max-w-[200px] object-contain block pointer-events-none select-none"
+                    />
+                  ) : isEditing ? (
                     <input 
                       type="text" 
                       className="w-full bg-amber-50 outline-none text-xs font-serif italic text-gray-500" 
@@ -1552,6 +1582,45 @@ export default function AutorizacionDesembolsoDoc({
                   ) : null}
                 </div>
               </div>
+
+              {isEditing && (
+                <div className="ml-[110px] flex items-center gap-2 pt-0.5 pb-1 print:hidden">
+                  <label className="cursor-pointer inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 transition-colors">
+                    <Upload size={11} />
+                    <span>{activeFirma ? 'Cambiar firma' : 'Cargar firma'}</span>
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/webp"
+                      className="hidden"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const lookupDoc = formData.nitCc || reportData?.contratistaDocumento || user?.documentoIdentidad || '';
+                          const res = await supabaseService.uploadFirmaContratista(lookupDoc, e.target.files[0], activeFirma);
+                          if (res.success && res.url) {
+                            setActiveFirma(res.url);
+                            handleFieldChange('firmaUrl', res.url);
+                          }
+                        }
+                      }}
+                    />
+                  </label>
+                  {activeFirma && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const lookupDoc = formData.nitCc || reportData?.contratistaDocumento || user?.documentoIdentidad || '';
+                        await supabaseService.deleteFirmaContratista(lookupDoc, activeFirma);
+                        setActiveFirma('');
+                        handleFieldChange('firmaUrl', '');
+                      }}
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded border border-red-200 transition-colors"
+                    >
+                      <Trash2 size={11} />
+                      <span>Eliminar firma</span>
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Fila DIRECCIÓN */}
               <div className="flex flex-row items-center">

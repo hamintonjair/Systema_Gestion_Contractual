@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DeclaracionRentaData, ReportData, createDefaultDeclaracionRentaData, FieldComment } from '../types';
 import { supabaseService } from '../services/supabaseService';
 import FieldCommentModal from './FieldCommentModal';
-import { Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, CheckCircle2, FileText } from 'lucide-react';
+import { Save, Check, Edit3, Sparkles, MessageSquare, AlertTriangle, CheckCircle2, FileText, Upload, Trash2 } from 'lucide-react';
 import { exportDeclaracionRentaToWord } from '../export/declaracionRentaWord';
 import { formatFechaDeclaracionRenta } from '../utils/formatters';
 
@@ -68,6 +68,7 @@ export default function DeclaracionRentaDoc({
   };
 
   const loadedKeyRef = useRef<string>('');
+  const [activeFirma, setActiveFirma] = useState<string>(data?.firmaUrl || reportData?.firmaUrl || '');
   const [formData, setFormData] = useState<DeclaracionRentaData>(() => {
     let initial: DeclaracionRentaData;
     if (data) initial = data;
@@ -82,6 +83,29 @@ export default function DeclaracionRentaDoc({
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [isExportingWord, setIsExportingWord] = useState<boolean>(false);
+
+  useEffect(() => {
+    const cleanDoc = (formData.cedula || reportData?.contratistaDocumento || '').replace(/[^0-9a-zA-Z]/g, '');
+    if (formData.firmaUrl) {
+      setActiveFirma(formData.firmaUrl);
+    } else if (cleanDoc) {
+      supabaseService.getFirmaContratista(cleanDoc).then(url => {
+        if (url) setActiveFirma(url);
+      });
+    }
+
+    const handleFirmaUpdate = (e: any) => {
+      if (e.detail?.url !== undefined) {
+        setActiveFirma(e.detail.url);
+        setFormData(prev => ({ ...prev, firmaUrl: e.detail.url }));
+      }
+    };
+
+    window.addEventListener('firma_contratista_actualizada', handleFirmaUpdate);
+    return () => {
+      window.removeEventListener('firma_contratista_actualizada', handleFirmaUpdate);
+    };
+  }, [formData.cedula, formData.firmaUrl, reportData?.contratistaDocumento, reportData?.firmaUrl]);
 
   const handleExportWord = async () => {
     setIsExportingWord(true);
@@ -753,9 +777,18 @@ export default function DeclaracionRentaDoc({
             Cordialmente,
           </div>
 
-          <div className="mt-14 print:break-inside-avoid">
+          <div className="mt-8 print:break-inside-avoid">
             {/* Firma */}
             <div className="w-[300px]">
+              {activeFirma && (
+                <div className="h-16 flex items-end pb-1">
+                  <img
+                    src={activeFirma}
+                    alt="Firma Contratista"
+                    className="max-h-16 max-w-[200px] object-contain block pointer-events-none select-none"
+                  />
+                </div>
+              )}
               {isEditing ? (
                 <>
                   <input
@@ -779,6 +812,40 @@ export default function DeclaracionRentaDoc({
                       onChange={(e) => handleFieldChange('firmaExpedicion', e.target.value)}
                       className="bg-amber-50 outline-none border-b border-transparent hover:border-slate-300 focus:border-emerald-500 w-32 ml-1 text-[11pt]"
                     />
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 print:hidden">
+                    <label className="cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded border border-emerald-200 transition-colors">
+                      <Upload size={12} />
+                      <span>{activeFirma ? 'Cambiar firma' : 'Cargar firma'}</span>
+                      <input
+                        type="file"
+                        accept="image/png, image/jpeg, image/webp"
+                        className="hidden"
+                        onChange={async (e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            const res = await supabaseService.uploadFirmaContratista(formData.cedula, e.target.files[0], activeFirma);
+                            if (res.success && res.url) {
+                              setActiveFirma(res.url);
+                              handleFieldChange('firmaUrl', res.url);
+                            }
+                          }
+                        }}
+                      />
+                    </label>
+                    {activeFirma && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await supabaseService.deleteFirmaContratista(formData.cedula, activeFirma);
+                          setActiveFirma('');
+                          handleFieldChange('firmaUrl', '');
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-2 py-1 rounded border border-red-200 transition-colors"
+                      >
+                        <Trash2 size={12} />
+                        <span>Eliminar firma</span>
+                      </button>
+                    )}
                   </div>
                 </>
               ) : (

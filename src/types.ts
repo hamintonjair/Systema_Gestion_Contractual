@@ -374,6 +374,8 @@ export interface ReportData {
   arpAseguradora?: string;
   arpPlanilla?: string;
   resaltarSeguridadSocial?: boolean;
+  firmaUrl?: string;
+  firmaSupervisorUrl?: string;
 }
 
 import { getDatosLiquidacionPeriodo, limpiarNumeroMoneda } from './utils/paymentPlanUtils';
@@ -808,6 +810,7 @@ export interface DeclaracionRentaData {
   firmaNombre: string;
   firmaCedula: string;
   firmaExpedicion: string;
+  firmaUrl?: string;
 }
 
 export const createDefaultDeclaracionRentaData = (report?: ReportData): DeclaracionRentaData => {
@@ -865,6 +868,7 @@ export interface AutorizacionDesembolsoData {
   endoso2Tipo: string;
   endoso2Concepto: string;
   endoso2Valor: string;
+  firmaUrl?: string;
 }
 
 export const createDefaultAutorizacionDesembolsoData = (report?: ReportData): AutorizacionDesembolsoData => {
@@ -999,6 +1003,10 @@ export interface InformeFinalData {
   recomendaciones: string[];
   
   anexosFotograficos: AnexoFotograficoFinal[];
+  
+  firmaUrl?: string;
+  firmaContratistaUrl?: string;
+  firmaSupervisorUrl?: string;
   
   estado?: 'Borrador' | 'Finalizado';
   generadoConIA?: boolean;
