@@ -15,6 +15,8 @@ import CertificadoSupervisionModal from './CertificadoSupervisionModal';
 import WhatsAppNotifyModal from './WhatsAppNotifyModal';
 import RowActionsMenu from './RowActionsMenu';
 import Footer from './Footer';
+import AIReviewReportModal from './AIReviewReportModal';
+import AIManualModal from './AIManualModal';
 import { WhatsAppNotificationPayload } from '../utils/whatsappNotifier';
 import { 
   Building2, 
@@ -57,7 +59,9 @@ import {
   Scale,
   CreditCard,
   History,
-  FolderOpen
+  FolderOpen,
+  Sparkles,
+  BookOpen
 } from 'lucide-react';
 
 interface Props {
@@ -76,6 +80,8 @@ export default function SecretariaAdminView({ user, onSelectInformeToView, onPri
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [inspectingInforme, setInspectingInforme] = useState<ReportData | null>(null);
+  const [showAIReviewModal, setShowAIReviewModal] = useState<boolean>(false);
+  const [showAIManualModal, setShowAIManualModal] = useState<boolean>(false);
   const [adminModuleTab, setAdminModuleTab] = useState<'informe' | 'supervision' | 'fiduciaria' | 'juramento' | 'desembolso'>('informe');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -749,6 +755,68 @@ Por seguridad, cambia esta contraseña la próxima vez que ingreses.`;
       inf.id === inspectingInforme.id || 
       (inf.contratista_documento === inspectingInforme.contratistaDocumento && String(inf.informe_nro) === String(inspectingInforme.informeNro))
         ? { ...inf, estado: newStatus, comentariosCampos: updatedComments }
+        : inf
+    ));
+  };
+
+  const handleApplyAllAIComments = async (commentsList: { fieldId: string; fieldName: string; comentario: string }[]) => {
+    if (!inspectingInforme || commentsList.length === 0) return;
+    const nowFormatted = new Date().toLocaleString('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const newComments = { ...(inspectingInforme.comentariosCampos || {}) };
+    commentsList.forEach(c => {
+      newComments[c.fieldId] = {
+        campoId: c.fieldId,
+        nombreCampo: c.fieldName,
+        comentario: c.comentario.trim(),
+        autor: user.nombreCompleto || 'Supervisora / Administradora',
+        fecha: nowFormatted
+      };
+    });
+
+    let newStatus: EstadoInforme = inspectingInforme.estado;
+    if (inspectingInforme.estado !== 'Aprobado') {
+      const hasRemainingMain = Object.values(newComments).some((c: any) => !c.corregido && isMainReportComment(c));
+      newStatus = hasRemainingMain ? 'Devuelto' : 'Enviado';
+    }
+
+    const updatedInforme: ReportData = {
+      ...inspectingInforme,
+      comentariosCampos: newComments,
+      estado: newStatus
+    };
+
+    setInspectingInforme(updatedInforme);
+
+    await supabaseService.saveReportComments(
+      inspectingInforme.id || '',
+      inspectingInforme.informeNro,
+      inspectingInforme.contratistaDocumento || '',
+      newComments,
+      newStatus
+    );
+
+    const userDocKey = inspectingInforme.contratistaDocumento ? `_${inspectingInforme.contratistaDocumento}` : '';
+    const storageKeyInforme = `informe_data${userDocKey}_${inspectingInforme.informeNro}`;
+    localStorage.setItem(storageKeyInforme, JSON.stringify(updatedInforme));
+    if (!userDocKey) {
+      localStorage.setItem(`informe_data_${inspectingInforme.informeNro}`, JSON.stringify(updatedInforme));
+    }
+    localStorage.setItem('last_data_update_timestamp', Date.now().toString());
+
+    window.dispatchEvent(new CustomEvent('informe_comments_updated'));
+    window.dispatchEvent(new CustomEvent('notificaciones_actualizadas'));
+
+    setInformes(prev => prev.map(inf => 
+      inf.id === inspectingInforme.id || 
+      (inf.contratista_documento === inspectingInforme.contratistaDocumento && String(inf.informe_nro) === String(inspectingInforme.informeNro))
+        ? { ...inf, estado: newStatus, comentariosCampos: newComments }
         : inf
     ));
   };
@@ -2781,7 +2849,7 @@ Por seguridad, cambia esta contraseña la próxima vez que ingreses.`;
 
                   {/* Banner Informativo de Revisión y Estado de Subsanación */}
                   <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-amber-950 shrink-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="px-2 py-0.5 bg-amber-200 text-amber-950 font-black rounded text-[10.5px]">
                         📝 MODO REVISIÓN & COMENTARIOS
                       </span>
@@ -2791,6 +2859,126 @@ Por seguridad, cambia esta contraseña la próxima vez que ingreses.`;
                           : 'Revisa los datos del documento. Puedes añadir, editar o validar observaciones con los botones correspondientes.'
                         }
                       </span>
+
+                      {adminModuleTab === 'informe' && (
+                        <div className="flex items-center gap-1.5 ml-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowAIReviewModal(true)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gradient-to-r from-[#006b33] to-[#0b8043] hover:from-[#005226] text-white rounded-md text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Ejecutar revisión integral con Inteligencia Artificial Gemini"
+                          >
+                            <Sparkles size={11} className="text-amber-300 animate-pulse" />
+                            <span>Auditar con IA</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowAIManualModal(true)}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-white hover:bg-slate-100 text-slate-800 border border-amber-300 rounded-md text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Consultar manual y criterios de auditoría IA"
+                          >
+                            <BookOpen size={11} className="text-emerald-700" />
+                            <span>Manual IA</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {adminModuleTab === 'supervision' && (
+                        <div className="flex items-center gap-1.5 ml-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowAIReviewModal(true)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gradient-to-r from-[#006b33] to-[#0b8043] hover:from-[#005226] text-white rounded-md text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Ejecutar auditoría integral del Certificado de Supervisión con Gemini IA"
+                          >
+                            <Sparkles size={11} className="text-amber-300 animate-pulse" />
+                            <span>Auditar con IA</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowAIManualModal(true)}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-white hover:bg-slate-100 text-slate-800 border border-amber-300 rounded-md text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Consultar manual y criterios de auditoría IA para el Certificado"
+                          >
+                            <BookOpen size={11} className="text-emerald-700" />
+                            <span>Manual IA</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {adminModuleTab === 'fiduciaria' && (
+                        <div className="flex items-center gap-1.5 ml-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowAIReviewModal(true)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gradient-to-r from-[#006b33] to-[#0b8043] hover:from-[#005226] text-white rounded-md text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Ejecutar auditoría integral del Soporte Fiduciaria con Gemini IA"
+                          >
+                            <Sparkles size={11} className="text-amber-300 animate-pulse" />
+                            <span>Auditar con IA</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowAIManualModal(true)}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-white hover:bg-slate-100 text-slate-800 border border-amber-300 rounded-md text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Consultar manual y criterios de auditoría IA para el Soporte Fiduciario"
+                          >
+                            <BookOpen size={11} className="text-emerald-700" />
+                            <span>Manual IA</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {adminModuleTab === 'juramento' && (
+                        <div className="flex items-center gap-1.5 ml-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowAIReviewModal(true)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gradient-to-r from-[#006b33] to-[#0b8043] hover:from-[#005226] text-white rounded-md text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Ejecutar auditoría integral de la Declaración Bajo Juramento con Gemini IA"
+                          >
+                            <Sparkles size={11} className="text-amber-300 animate-pulse" />
+                            <span>Auditar con IA</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowAIManualModal(true)}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-white hover:bg-slate-100 text-slate-800 border border-amber-300 rounded-md text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Consultar manual y criterios de auditoría IA para la Declaración Bajo Juramento"
+                          >
+                            <BookOpen size={11} className="text-emerald-700" />
+                            <span>Manual IA</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {adminModuleTab === 'desembolso' && (
+                        <div className="flex items-center gap-1.5 ml-1">
+                          <button
+                            type="button"
+                            onClick={() => setShowAIReviewModal(true)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gradient-to-r from-[#006b33] to-[#0b8043] hover:from-[#005226] text-white rounded-md text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Ejecutar auditoría integral de la Autorización de Desembolso con Gemini IA"
+                          >
+                            <Sparkles size={11} className="text-amber-300 animate-pulse" />
+                            <span>Auditar con IA</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowAIManualModal(true)}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-white hover:bg-slate-100 text-slate-800 border border-amber-300 rounded-md text-[11px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Consultar manual y criterios de auditoría IA para la Autorización de Desembolso"
+                          >
+                            <BookOpen size={11} className="text-emerald-700" />
+                            <span>Manual IA</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Stats de observaciones según pestaña activa */}
@@ -2926,6 +3114,28 @@ Por seguridad, cambia esta contraseña la próxima vez que ingreses.`;
 
           </div>
         </div>
+      )}
+
+      {/* MODAL DE AUDITORÍA E INTELIGENCIA ARTIFICIAL GEMINI */}
+      {showAIReviewModal && inspectingInforme && (
+        <AIReviewReportModal
+          isOpen={showAIReviewModal}
+          onClose={() => setShowAIReviewModal(false)}
+          report={inspectingInforme}
+          user={user}
+          documentType={adminModuleTab === 'supervision' ? 'supervision' : adminModuleTab === 'fiduciaria' ? 'fiduciaria' : adminModuleTab === 'juramento' ? 'juramento' : adminModuleTab === 'desembolso' ? 'desembolso' : 'informe'}
+          onApplyComment={handleSaveComment}
+          onApplyAllComments={handleApplyAllAIComments}
+        />
+      )}
+
+      {/* MODAL MANUAL DE AUDITORÍA IA */}
+      {showAIManualModal && (
+        <AIManualModal
+          isOpen={showAIManualModal}
+          onClose={() => setShowAIManualModal(false)}
+          documentType={adminModuleTab === 'supervision' ? 'supervision' : adminModuleTab === 'fiduciaria' ? 'fiduciaria' : adminModuleTab === 'juramento' ? 'juramento' : adminModuleTab === 'desembolso' ? 'desembolso' : 'informe'}
+        />
       )}
 
       {/* MODAL PARA EDITAR DATOS DEL CONTRATISTA */}

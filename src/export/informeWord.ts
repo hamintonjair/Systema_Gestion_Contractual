@@ -131,8 +131,11 @@ export async function generarInformeWordDocx(data: ReportData): Promise<Blob> {
   const valorLetrasCompleto = valorLetras || 'CERO PESOS M/CTE';
 
   // 3. Application Date / Header Date
-  const rawFechaApp = data.fechaAplicacion || '';
-  const fechaAplicacionTexto = formatFechaAplicacion(rawFechaApp).toUpperCase();
+  const rawFechaApp = (data.fechaAplicacion || '').trim();
+  const fechaAplicacionTexto = formatFechaAplicacion(
+    rawFechaApp || data.periodoHasta || data.periodoDesde,
+    data.periodoDesde || data.periodoHasta
+  ).toUpperCase();
 
   // 4. Update Headers (header2.xml, header1.xml, header3.xml)
   ['header1.xml', 'header2.xml', 'header3.xml'].forEach(headerFile => {

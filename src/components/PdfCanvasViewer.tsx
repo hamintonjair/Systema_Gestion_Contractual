@@ -102,9 +102,10 @@ export default function PdfCanvasViewer({ fileUrl, fileName = 'documento.pdf' }:
             canvas.height = viewport.height;
             canvas.width = viewport.width;
 
-            const renderContext = {
+            const renderContext: any = {
               canvasContext: context,
               viewport: viewport,
+              canvas: canvas,
             };
 
             await page.render(renderContext).promise;
@@ -227,7 +228,9 @@ export default function PdfCanvasViewer({ fileUrl, fileName = 'documento.pdf' }:
           <div key={index + 1} className="flex flex-col items-center space-y-2 max-w-full">
             <div className="bg-white p-2 rounded-xl shadow-2xl border border-slate-700/50 max-w-full overflow-x-auto">
               <canvas
-                ref={(el) => (canvasRefs.current[index] = el)}
+                ref={(el) => {
+                  canvasRefs.current[index] = el;
+                }}
                 className="max-w-full h-auto block rounded-lg bg-white"
               />
             </div>

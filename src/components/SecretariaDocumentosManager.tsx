@@ -49,7 +49,7 @@ function enhanceWordTableHtml(rawHtml: string): string {
       let dataRowCounter = 1;
 
       rows.forEach((row, rowIndex) => {
-        const cells = Array.from(row.querySelectorAll('th, td'));
+        const cells = Array.from(row.querySelectorAll('th, td')) as HTMLElement[];
         const isHeaderRow = rowIndex === 0 || row.parentElement?.tagName === 'THEAD';
 
         cells.forEach((cell, colIndex) => {

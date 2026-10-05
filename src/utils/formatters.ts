@@ -229,47 +229,97 @@ export const formatDateSlash = (val?: string): string => {
 };
 
 /**
- * Genera la Fecha de Aplicación del Formato en MAYÚSCULAS (ej. "FEBRERO DE 2026")
- * a partir de una fecha o período (periodoHasta o periodoDesde).
+ * Genera la Fecha de Aplicación del Formato en MAYÚSCULAS (ej. "ENERO DE 2026", "FEBRERO DE 2026")
+ * a partir de la fecha de aplicación registrada, período o fecha.
  */
 export const formatFechaAplicacion = (periodoHasta?: string, periodoDesde?: string): string => {
-  const target = periodoHasta || periodoDesde;
   const monthNames = [
     'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
     'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
   ];
 
-  if (target && target !== 'N/A') {
-    const str = String(target).trim();
-    try {
-      if (str.includes('/')) {
-        const parts = str.split('/');
-        if (parts.length === 3) {
+  const parseCandidate = (candidate?: string): { monthIndex: number; year: string } | null => {
+    if (!candidate || candidate === 'N/A') return null;
+    const str = String(candidate).trim();
+    if (!str) return null;
+
+    // 1. Verificar si ya contiene un nombre de mes en español (ej. "ENERO DE 2026", "Enero 2026", "31 de enero de 2026", "JULIO")
+    const cleanStr = str.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    for (let idx = 0; idx < monthNames.length; idx++) {
+      const mName = monthNames[idx];
+      const regex = new RegExp(`\\b${mName}\\b`, 'i');
+      if (regex.test(cleanStr)) {
+        const yearMatch = cleanStr.match(/\b(20\d{2})\b/);
+        const year = yearMatch ? yearMatch[1] : '';
+        return { monthIndex: idx, year };
+      }
+    }
+
+    // 2. Formato con barra diagonal: DD/MM/YYYY o YYYY/MM/DD
+    if (str.includes('/')) {
+      const parts = str.split('/');
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          // YYYY/MM/DD
+          const mIdx = parseInt(parts[1], 10) - 1;
+          const yr = parts[0];
+          if (mIdx >= 0 && mIdx < 12 && yr) {
+            return { monthIndex: mIdx, year: yr };
+          }
+        } else {
+          // DD/MM/YYYY
           const mIdx = parseInt(parts[1], 10) - 1;
           const yr = parts[2];
           if (mIdx >= 0 && mIdx < 12 && yr) {
-            return `${monthNames[mIdx]} DE ${yr}`;
-          }
-        }
-      } else if (str.includes('-')) {
-        const parts = str.split('-');
-        if (parts.length === 3) {
-          if (parts[0].length === 4) {
-            const mIdx = parseInt(parts[1], 10) - 1;
-            const yr = parts[0];
-            if (mIdx >= 0 && mIdx < 12 && yr) {
-              return `${monthNames[mIdx]} DE ${yr}`;
-            }
-          } else {
-            const mIdx = parseInt(parts[1], 10) - 1;
-            const yr = parts[2];
-            if (mIdx >= 0 && mIdx < 12 && yr) {
-              return `${monthNames[mIdx]} DE ${yr}`;
-            }
+            return { monthIndex: mIdx, year: yr };
           }
         }
       }
-    } catch (e) {}
+    }
+
+    // 3. Formato con guion: YYYY-MM-DD o DD-MM-YYYY
+    if (str.includes('-')) {
+      const parts = str.split('-');
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          // YYYY-MM-DD
+          const mIdx = parseInt(parts[1], 10) - 1;
+          const yr = parts[0];
+          if (mIdx >= 0 && mIdx < 12 && yr) {
+            return { monthIndex: mIdx, year: yr };
+          }
+        } else {
+          // DD-MM-YYYY
+          const mIdx = parseInt(parts[1], 10) - 1;
+          const yr = parts[2];
+          if (mIdx >= 0 && mIdx < 12 && yr) {
+            return { monthIndex: mIdx, year: yr };
+          }
+        }
+      }
+    }
+
+    return null;
+  };
+
+  // Prioridad 1: Candidato principal (fechaAplicacion registrada o periodoHasta)
+  let parsed = parseCandidate(periodoHasta);
+
+  // Prioridad 2: Segundo candidato (periodoDesde)
+  if (!parsed && periodoDesde) {
+    parsed = parseCandidate(periodoDesde);
+  }
+
+  if (parsed) {
+    let year = parsed.year;
+    if (!year && periodoDesde) {
+      const yrMatch = String(periodoDesde).match(/\b(20\d{2})\b/);
+      if (yrMatch) year = yrMatch[1];
+    }
+    if (!year) {
+      year = '2026';
+    }
+    return `${monthNames[parsed.monthIndex]} DE ${year}`;
   }
 
   const now = new Date();
