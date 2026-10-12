@@ -110,7 +110,7 @@ export default function DeclaracionRentaDoc({
   const handleExportWord = async () => {
     setIsExportingWord(true);
     try {
-      const blob = await exportDeclaracionRentaToWord(formData, reportData);
+      const blob = await exportDeclaracionRentaToWord({ ...formData, firmaUrl: activeFirma || formData.firmaUrl }, reportData);
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       const nombreClean = (formData.nombresApellidos || 'Contratista').replace(/\s+/g, '_');

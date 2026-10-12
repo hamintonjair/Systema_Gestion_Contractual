@@ -1,6 +1,7 @@
 import PizZip from 'pizzip';
 import { DeclaracionRentaData, ReportData } from '../types';
 import { formatFechaDeclaracionRenta } from '../utils/formatters';
+import { supabaseService } from '../services/supabaseService';
 
 /**
  * Escapes XML special characters for safe inclusion in Word XML.
@@ -23,13 +24,14 @@ async function fetchImageBuffer(url: string): Promise<{ buffer: ArrayBuffer; ext
   try {
     if (url.startsWith('data:')) {
       const parts = url.split(',');
-      const meta = parts[0];
-      const base64Data = parts[1];
+      const meta = parts[0] || '';
+      const base64Data = parts[1] || '';
       let ext = 'png';
       if (meta.includes('jpeg') || meta.includes('jpg')) ext = 'jpeg';
       else if (meta.includes('png')) ext = 'png';
+      else if (meta.includes('webp')) ext = 'png';
 
-      const byteCharacters = atob(base64Data);
+      const byteCharacters = atob(base64Data.replace(/\s/g, ''));
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
         byteNumbers[i] = byteCharacters.charCodeAt(i);
@@ -179,8 +181,92 @@ export async function exportDeclaracionRentaToWord(
     documentXml = documentXml.replace(/<w:p\b[^>]*w14:paraId="24A643ED"[\s\S]*?<\/w:p>/, cordXml);
   }
 
-  // Remove signature drawing/image completely
-  documentXml = documentXml.replace(/<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?<w:drawing\b[\s\S]*?<\/w:p>/g, blankSigSpaceXml);
+  // Process signature image if available
+  const cleanDoc = (cedulaContratista || data.firmaCedula || data.cedula || reportData?.contratistaDocumento || '').replace(/[^0-9a-zA-Z]/g, '');
+  let firmaUrl = data.firmaUrl;
+  if (!firmaUrl && cleanDoc) {
+    try {
+      firmaUrl = (await supabaseService.getFirmaContratista(cleanDoc)) || undefined;
+    } catch (e) {}
+  }
+
+  let relsXml = zip.file('word/_rels/document.xml.rels')?.asText() || '';
+  let contentTypesXml = zip.file('[Content_Types].xml')?.asText() || '';
+
+  const asegurarContentType = (ext: string, mime: string) => {
+    const extLower = ext.toLowerCase();
+    const yaDeclarado = new RegExp(`<Default\\s+Extension="${extLower}"`, 'i').test(contentTypesXml);
+    if (!yaDeclarado) {
+      contentTypesXml = contentTypesXml.replace('</Types>', `<Default Extension="${extLower}" ContentType="${mime}"/></Types>`);
+    }
+  };
+
+  let sigDrawingXml = blankSigSpaceXml;
+  if (firmaUrl) {
+    const imgData = await fetchImageBuffer(firmaUrl);
+    if (imgData) {
+      const rId = 'rIdSigContratista1';
+      const imgFileName = `firma_declaracion.${imgData.ext}`;
+      
+      // Save binary image to docx zip
+      zip.file(`word/media/${imgFileName}`, imgData.buffer, { binary: true });
+
+      // Add or update relationship in word/_rels/document.xml.rels
+      if (!relsXml.includes(rId)) {
+        const relNode = `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${imgFileName}"/>`;
+        relsXml = relsXml.replace('</Relationships>', `${relNode}</Relationships>`);
+      }
+
+      asegurarContentType(imgData.ext, imgData.ext === 'png' ? 'image/png' : 'image/jpeg');
+
+      const cx = 1737360;
+      const cy = 685800;
+
+      sigDrawingXml = `
+        <w:p w14:paraId="1988B28B" w14:textId="531361DC" w:rsidR="00A856BF" w:rsidRDefault="00AC639B" w:rsidP="00A856BF">
+          <w:pPr>
+            <w:spacing w:before="60" w:after="60" w:line="240" w:lineRule="auto"/>
+            <w:jc w:val="left"/>
+          </w:pPr>
+          <w:r>
+            <w:drawing>
+              <wp:inline distT="0" distB="0" distL="0" distR="0">
+                <wp:extent cx="${cx}" cy="${cy}"/>
+                <wp:effectExtent l="0" t="0" r="0" b="0"/>
+                <wp:docPr id="888" name="Firma Contratista"/>
+                <wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>
+                <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                    <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                      <pic:nvPicPr>
+                        <pic:cNvPr id="888" name="Firma Contratista"/>
+                        <pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr>
+                      </pic:nvPicPr>
+                      <pic:blipFill>
+                        <a:blip r:embed="${rId}"/>
+                        <a:stretch><a:fillRect/></a:stretch>
+                      </pic:blipFill>
+                      <pic:spPr>
+                        <a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>
+                        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                      </pic:spPr>
+                    </pic:pic>
+                  </a:graphicData>
+                </a:graphic>
+              </wp:inline>
+            </w:drawing>
+          </w:r>
+        </w:p>
+      `;
+    }
+  }
+
+  // Replace signature drawing in template
+  if (documentXml.includes('1988B28B')) {
+    documentXml = documentXml.replace(/<w:p\b[^>]*w14:paraId="1988B28B"[\s\S]*?<\/w:p>/, sigDrawingXml);
+  } else {
+    documentXml = documentXml.replace(/<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?<w:drawing\b[\s\S]*?<\/w:p>/g, sigDrawingXml);
+  }
 
   if (documentXml.includes('7F2499DF')) {
     documentXml = documentXml.replace(/<w:p\b[^>]*w14:paraId="7F2499DF"[\s\S]*?<\/w:p>/, firmaNombreXml);
@@ -199,15 +285,10 @@ export async function exportDeclaracionRentaToWord(
     }
   }
 
-  // 4. Clean up signature image files if present
-  try {
-    zip.remove('word/media/image1.jpeg');
-  } catch (e) {
-    // ignore if not present
-  }
-
-  // 5. Save modified document.xml
+  // 4. Save modified document.xml, rels, and content types
   zip.file('word/document.xml', documentXml);
+  zip.file('word/_rels/document.xml.rels', relsXml);
+  zip.file('[Content_Types].xml', contentTypesXml);
 
   // 6. Generate Blob
   const outBlob = zip.generate({

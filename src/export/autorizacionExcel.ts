@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { AutorizacionDesembolsoData } from '../types';
 import { formatDateSlash } from '../utils/formatters';
+import { supabaseService } from '../services/supabaseService';
 
 /**
  * Parses a string or number into a clean number, removing currency symbols, spaces, and separators.
@@ -225,6 +226,56 @@ export async function exportarAutorizacion(data: AutorizacionDesembolsoData): Pr
     const cleanTel = data.telefono.replace(/\D/g, '');
     const numTel = parseInt(cleanTel, 10);
     sheet.getCell('D42').value = !isNaN(numTel) ? numTel : data.telefono;
+  }
+
+  // Insert contractor signature if available
+  const cleanDoc = (data.nitCc || '').replace(/[^0-9a-zA-Z]/g, '');
+  let firmaUrl = data.firmaUrl;
+  if (!firmaUrl && cleanDoc) {
+    try {
+      firmaUrl = (await supabaseService.getFirmaContratista(cleanDoc)) || undefined;
+    } catch (e) {}
+  }
+
+  if (firmaUrl) {
+    try {
+      let base64 = '';
+      let extension: 'png' | 'jpeg' = 'png';
+      if (firmaUrl.startsWith('data:')) {
+        const parts = firmaUrl.split(',');
+        base64 = (parts[1] || '').replace(/\s/g, '');
+        if (parts[0].includes('jpeg') || parts[0].includes('jpg')) extension = 'jpeg';
+      } else {
+        const res = await fetch(firmaUrl);
+        if (res.ok) {
+          const ab = await res.arrayBuffer();
+          const bytes = new Uint8Array(ab);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          base64 = btoa(binary);
+          const ct = res.headers.get('content-type') || '';
+          if (ct.includes('jpeg') || ct.includes('jpg')) extension = 'jpeg';
+        }
+      }
+
+      if (base64) {
+        const imageId = workbook.addImage({
+          base64: base64,
+          extension: extension,
+        });
+
+        // Insert inside the FIRMA area at row 40
+        sheet.addImage(imageId, {
+          tl: { col: 3.2, row: 39.1 },
+          ext: { width: 160, height: 48 },
+          editAs: 'oneCell',
+        });
+      }
+    } catch (sigErr) {
+      console.warn('[autorizacionExcel] Error al incrustar la firma en Excel:', sigErr);
+    }
   }
 
   // Force Excel to re-evaluate all formulas

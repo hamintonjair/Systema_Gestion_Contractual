@@ -8,6 +8,7 @@ import {
   formatDateSlash 
 } from '../utils/formatters';
 import { obtenerValoresMonetariosReporte } from '../utils/numberToWords';
+import { supabaseService } from '../services/supabaseService';
 
 /**
  * Escapes characters for XML safe insertion
@@ -72,26 +73,29 @@ async function fetchImageBuffer(url: string): Promise<{ buffer: ArrayBuffer; ext
     if (!url) return null;
 
     if (url.startsWith('data:')) {
-      const match = url.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.*)$/i);
-      if (!match) return null;
-      const ext = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
-      const base64Data = match[2];
-      const binaryString = atob(base64Data);
+      const parts = url.split(',');
+      const meta = parts[0] || '';
+      const base64Data = parts[1] || '';
+      let ext = 'png';
+      if (meta.includes('jpeg') || meta.includes('jpg')) ext = 'jpeg';
+      else if (meta.includes('png')) ext = 'png';
+      else if (meta.includes('webp')) ext = 'png';
+
+      const binaryString = atob(base64Data.replace(/\s/g, ''));
       const len = binaryString.length;
       const bytes = new Uint8Array(len);
       for (let i = 0; i < len; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      return { buffer: bytes.buffer, ext: ext === 'jpg' ? 'jpeg' : ext };
+      return { buffer: bytes.buffer, ext };
     }
 
     const res = await fetch(url);
     if (!res.ok) return null;
     const arrayBuffer = await res.arrayBuffer();
     const contentType = res.headers.get('content-type') || '';
-    let ext = 'jpeg';
-    if (contentType.includes('png')) ext = 'png';
-    else if (contentType.includes('webp')) ext = 'png'; // treat as png or jpeg
+    let ext = 'png';
+    if (contentType.includes('jpeg') || contentType.includes('jpg') || url.endsWith('.jpg') || url.endsWith('.jpeg')) ext = 'jpeg';
     return { buffer: arrayBuffer, ext };
   } catch (e) {
     console.warn('No se pudo cargar la imagen para exportar a Word:', url, e);
@@ -772,6 +776,74 @@ export async function generarInformeWordDocx(data: ReportData): Promise<Blob> {
     </w:tr>
   `);
 
+  // Load contractor signature
+  const cleanDoc = (data.contratistaDocumento || (data as any).cedula || (data as any).firmaCedula || (data as any).nitCc || '').replace(/[^0-9a-zA-Z]/g, '');
+  let firmaContratistaUrl = data.firmaUrl || data.firmaContratistaUrl;
+  if (!firmaContratistaUrl && cleanDoc) {
+    try {
+      firmaContratistaUrl = await supabaseService.getFirmaContratista(cleanDoc);
+    } catch (e) {}
+  }
+
+  let relsXml = zip.file('word/_rels/document.xml.rels')?.asText() || '';
+  let imageCounter = 100;
+  let firmaContratistaDrawingXml = '';
+
+  if (firmaContratistaUrl) {
+    const firmaImg = await fetchImageBuffer(firmaContratistaUrl);
+    if (firmaImg) {
+      imageCounter++;
+      const rIdFirma = `rIdFirmaContratista${imageCounter}`;
+      const imgFileName = `firma_contratista_${imageCounter}.${firmaImg.ext}`;
+      
+      zip.file(`word/media/${imgFileName}`, firmaImg.buffer, { binary: true });
+      
+      const relNode = `<Relationship Id="${rIdFirma}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${imgFileName}"/>`;
+      relsXml = relsXml.replace('</Relationships>', `${relNode}</Relationships>`);
+      
+      // Width ~1.9 inches = 1737360 EMUs, Height ~0.75 inches = 685800 EMUs
+      const cx = 1737360;
+      const cy = 685800;
+      
+      firmaContratistaDrawingXml = `
+        <w:p>
+          <w:pPr>
+            <w:spacing w:before="60" w:after="60" w:line="240" w:lineRule="auto"/>
+            <w:jc w:val="center"/>
+          </w:pPr>
+          <w:r>
+            <w:drawing>
+              <wp:inline distT="0" distB="0" distL="0" distR="0">
+                <wp:extent cx="${cx}" cy="${cy}"/>
+                <wp:effectExtent l="0" t="0" r="0" b="0"/>
+                <wp:docPr id="${imageCounter}" name="Firma Contratista"/>
+                <wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>
+                <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                    <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                      <pic:nvPicPr>
+                        <pic:cNvPr id="${imageCounter}" name="Firma Contratista"/>
+                        <pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr>
+                      </pic:nvPicPr>
+                      <pic:blipFill>
+                        <a:blip r:embed="${rIdFirma}"/>
+                        <a:stretch><a:fillRect/></a:stretch>
+                      </pic:blipFill>
+                      <pic:spPr>
+                        <a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>
+                        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                      </pic:spPr>
+                    </pic:pic>
+                  </a:graphicData>
+                </a:graphic>
+              </wp:inline>
+            </w:drawing>
+          </w:r>
+        </w:p>
+      `;
+    }
+  }
+
   // ROW 32: SIGNATURES BLOCK (2 COLUMNS)
   rowsXml.push(`
     <w:tr w:rsidR="00006205">
@@ -782,8 +854,7 @@ export async function generarInformeWordDocx(data: ReportData): Promise<Blob> {
           <w:tcW w:w="2542" w:type="pct"/><w:gridSpan w:val="8"/>
           <w:vAlign w:val="bottom"/>
         </w:tcPr>
-        <w:p><w:pPr><w:spacing w:line="259" w:lineRule="auto"/></w:pPr></w:p>
-        <w:p><w:pPr><w:spacing w:line="259" w:lineRule="auto"/></w:pPr></w:p>
+        ${firmaContratistaDrawingXml ? firmaContratistaDrawingXml : `<w:p><w:pPr><w:spacing w:line="259" w:lineRule="auto"/></w:pPr></w:p><w:p><w:pPr><w:spacing w:line="259" w:lineRule="auto"/></w:pPr></w:p>`}
         <w:p>
           <w:pPr>
             <w:spacing w:line="259" w:lineRule="auto"/><w:jc w:val="center"/>
@@ -951,8 +1022,6 @@ export async function generarInformeWordDocx(data: ReportData): Promise<Blob> {
   }
 
   // 7. Process Image Attachments & Relationships
-  let relsXml = zip.file('word/_rels/document.xml.rels')?.asText() || '';
-  let imageCounter = 200;
   const anexosXmlRuns: string[] = [];
 
   const hasAnyPhotos = obligationPhotosMap.size > 0 || generalAnexos.length > 0;

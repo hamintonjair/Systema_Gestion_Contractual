@@ -375,6 +375,7 @@ export interface ReportData {
   arpPlanilla?: string;
   resaltarSeguridadSocial?: boolean;
   firmaUrl?: string;
+  firmaContratistaUrl?: string;
   firmaSupervisorUrl?: string;
 }
 

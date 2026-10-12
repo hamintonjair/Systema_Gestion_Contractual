@@ -1,6 +1,7 @@
 import PizZip from 'pizzip';
 import { InformeFinalData, ActividadInformeFinal, AnexoFotograficoFinal } from '../types';
 import { formatDateSlash } from '../utils/formatters';
+import { supabaseService } from '../services/supabaseService';
 
 /**
  * Escapes XML special characters for safe inclusion in Word XML.
@@ -453,6 +454,82 @@ export async function exportInformeFinalToWord(data: InformeFinalData): Promise<
   docXml = docXml.replace(/(<w:t[^>]*>)(HAMINTON MENA MENA)(<\/w:t>)/gi, `$1${escapeXml(data.contratistaNombre.toUpperCase())}$3`);
   docXml = docXml.replace(/(<w:t[^>]*>)(DIANA ANDREA MOSQUERA GARCIA)(<\/w:t>)/gi, `$1${escapeXml(data.supervisorNombre.toUpperCase())}$3`);
   docXml = docXml.replace(/(<w:t[^>]*>)(Secretaria de Inclusion Social)(<\/w:t>)/gi, `$1${escapeXml(data.supervisorCargo || data.dependencia)}$3`);
+
+  // 13.1 Incrustar Firma Digitalizada del Contratista si existe
+  const cleanDoc = (data.contratistaDocumento || '').replace(/[^0-9a-zA-Z]/g, '');
+  let firmaContratistaUrl = data.firmaContratistaUrl || data.firmaUrl;
+  if (!firmaContratistaUrl && cleanDoc) {
+    try {
+      firmaContratistaUrl = (await supabaseService.getFirmaContratista(cleanDoc)) || undefined;
+    } catch (e) {}
+  }
+
+  if (firmaContratistaUrl) {
+    try {
+      const firmaImg = await fetchImageBuffer(firmaContratistaUrl);
+      if (firmaImg) {
+        const rIdFirma = 'rIdFirmaContratistaFinal';
+        const imgFileName = `media/firma_contratista_final.${firmaImg.ext}`;
+        asegurarContentType(firmaImg.ext, firmaImg.ext === 'png' ? 'image/png' : 'image/jpeg');
+
+        zip.file(`word/${imgFileName}`, firmaImg.buffer);
+
+        const relEntry = `<Relationship Id="${rIdFirma}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${imgFileName}"/>`;
+        if (!relsXml.includes(relEntry)) {
+          relsXml = relsXml.replace('</Relationships>', `${relEntry}</Relationships>`);
+        }
+
+        const cx = 1737360;
+        const cy = 685800;
+
+        const firmaDrawingXml = `
+          <w:p>
+            <w:pPr>
+              <w:spacing w:before="60" w:after="60" w:line="240" w:lineRule="auto"/>
+              <w:jc w:val="left"/>
+            </w:pPr>
+            <w:r>
+              <w:drawing>
+                <wp:inline distT="0" distB="0" distL="0" distR="0">
+                  <wp:extent cx="${cx}" cy="${cy}"/>
+                  <wp:effectExtent l="0" t="0" r="0" b="0"/>
+                  <wp:docPr id="999" name="Firma Contratista"/>
+                  <wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>
+                  <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                    <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                      <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                        <pic:nvPicPr>
+                          <pic:cNvPr id="999" name="Firma Contratista"/>
+                          <pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr>
+                        </pic:nvPicPr>
+                        <pic:blipFill>
+                          <a:blip r:embed="${rIdFirma}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
+                          <a:stretch><a:fillRect/></a:stretch>
+                        </pic:blipFill>
+                        <pic:spPr>
+                          <a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>
+                          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                        </pic:spPr>
+                      </pic:pic>
+                    </a:graphicData>
+                  </a:graphic>
+                </wp:inline>
+              </w:drawing>
+            </w:r>
+          </w:p>
+        `;
+
+        // Insertar la firma justo encima de la línea ____________________________________
+        if (docXml.includes('<w:t>Elaborado por:</w:t></w:r></w:p>')) {
+          docXml = docXml.replace('<w:t>Elaborado por:</w:t></w:r></w:p>', `<w:t>Elaborado por:</w:t></w:r></w:p>${firmaDrawingXml}`);
+        } else {
+          docXml = docXml.replace(/(<w:t[^>]*>Elaborado por:<\/w:t>[\s\S]*?<\/w:p>)/, `$1${firmaDrawingXml}`);
+        }
+      }
+    } catch (firmaErr) {
+      console.warn('Error al incrustar firma del contratista en Informe Final:', firmaErr);
+    }
+  }
 
   // 14. Anexos fotográficos dinámicos si existen en data.anexosFotograficos
   if (data.anexosFotograficos && data.anexosFotograficos.length > 0) {

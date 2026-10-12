@@ -449,7 +449,10 @@ export const InformeFinalDoc: React.FC<InformeFinalDocProps> = ({
 
     setIsExporting(true);
     try {
-      const blob = await exportInformeFinalToWord(data);
+      const blob = await exportInformeFinalToWord({
+        ...data,
+        firmaContratistaUrl: activeFirma || data.firmaContratistaUrl || data.firmaUrl,
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

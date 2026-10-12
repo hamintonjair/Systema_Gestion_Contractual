@@ -487,7 +487,10 @@ export default function AutorizacionDesembolsoDoc({
   const handleExportExcel = async () => {
     setIsExportingExcel(true);
     try {
-      const blob = await exportarAutorizacion(formData);
+      const blob = await exportarAutorizacion({
+        ...formData,
+        firmaUrl: activeFirma || formData.firmaUrl
+      });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = `Autorizacion_de_Desembolso_${formData.nombre.replace(/\s+/g, '_')}_Nro_${formData.consecutivoNro}.xlsx`;
